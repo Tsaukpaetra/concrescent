@@ -445,9 +445,10 @@ final class PaymentBuilder
                 }
             }
         }
-        //If they're already attempting to pay, skip some interfering checks
+        //If they're already attempting to pay, and this badge type is one that needs to be approved first,
+        // skip some interfering checks
 
-        if ($this->cart['payment_status'] == 'Incomplete' && $this->CanPay && $this->AllowPay) {
+        if ($this->cart['payment_status'] == 'Incomplete' && $this->CanPay && $this->AllowPay && (!empty($bt['payment_deferred']) && $bt['payment_deferred'])) {
             $this->SetIgnoreBadgeTypeAvailability(true);
         }
         if ($this->cart['payment_status'] == 'AwaitingApproval' && $this->CanPay && $this->AllowPay) {
@@ -846,7 +847,7 @@ final class PaymentBuilder
             //and not already accepted
             if ($bi === false) {
                 if ($item['context_code'] != 'A' && !$this->is_submitted_status($item['application_status'])) {
-                    $item['application_status'] = ($item['context_code'] == 'S'  || !(!$bt['payment_deferred']??false)) ? 'Submitted' : 'PendingAcceptance';
+                    $item['application_status'] = ($item['context_code'] == 'S') ? 'Submitted' : 'PendingAcceptance';
                 }
 
 
@@ -890,7 +891,6 @@ final class PaymentBuilder
                 if ($this->pp->ConfirmOrder()) {
                     $payment_details = $this->pp->GetDetails();
                     $this->cart['payment_status'] = 'Incomplete';
-                    $this->saveCart();
                     return true;
                 } else {
                     throw new \Exception('Failed to confirm order with provider.');
