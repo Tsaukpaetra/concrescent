@@ -1,6 +1,6 @@
 <?php
 
-require_once dirname(__FILE__).'/../config/config.php';
+require_once __DIR__ .'/../config/config.php';
 
 $cm_admin_nav_home = (
 	array(
@@ -73,10 +73,17 @@ $cm_admin_nav_attendee = (
 			'permission' => 'attendee-mail'
 		),
 		array(
-			'id' => 'attendee-csv',
-			'href' => '/admin/attendee/csv.php',
-			'name' => 'Attendee CSV Export',
-			'description' => 'Download a CSV file of attendee registration records.',
+			'id' => 'attendee-export',
+			'href' => '/admin/attendee/export.php',
+			'name' => 'Attendee File Export',
+			'description' => 'Download a file of attendee registration records.',
+			'permission' => 'attendee-csv'
+		),
+		array(
+			'id' => 'attendee-sponsors',
+			'href' => '/admin/attendee/sponsors.php',
+			'name' => 'Attendee Sponsors',
+			'description' => 'Get public sponsors from a Json endpoint',
 			'permission' => 'attendee-csv'
 		),
 	)

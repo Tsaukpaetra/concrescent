@@ -1,11 +1,16 @@
 # Config Files
-concrescent.php
-msmtprc
-docker-compose.yaml
-docker-compose.cm2.yaml
+/init/concrescent-reg.sql
+/concrescent.php
+/msmtprc
+/.env
+/vendor
+/docker-compose.local.yaml
 
 # Data directories
-mysql-data
+/var
+
+#CM3 logs directory
+logs/
 
 # Concrescent 3 files
 cm3/backend/logs

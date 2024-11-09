@@ -1,15 +1,17 @@
 <?php
 
+use JetBrains\PhpStorm\NoReturn;
+
 session_name('PHPSESSID_CMAPPLYSTAFF');
 session_start();
 
-require_once dirname(__FILE__).'/../config/config.php';
-require_once dirname(__FILE__).'/../lib/database/database.php';
-require_once dirname(__FILE__).'/../lib/database/staff.php';
-require_once dirname(__FILE__).'/../lib/database/forms.php';
-require_once dirname(__FILE__).'/../lib/database/mail.php';
-require_once dirname(__FILE__).'/../lib/util/res.php';
-require_once dirname(__FILE__).'/../lib/util/util.php';
+require_once __DIR__ .'/../config/config.php';
+require_once __DIR__ .'/../lib/database/database.php';
+require_once __DIR__ .'/../lib/database/staff.php';
+require_once __DIR__ .'/../lib/database/forms.php';
+require_once __DIR__ .'/../lib/database/mail.php';
+require_once __DIR__ .'/../lib/util/res.php';
+require_once __DIR__ .'/../lib/util/util.php';
 
 $event_name = $cm_config['event']['name'];
 $db = new cm_db();
@@ -75,7 +77,9 @@ function cm_app_tail() {
 	echo '</html>';
 }
 
-function cm_app_closed() {
+#[NoReturn]
+function cm_app_closed(?DateTimeImmutable $datetime = null): void
+{
 	global $event_name, $contact_address;
 	cm_app_head('Staff Applications Closed');
 	cm_app_body('Staff Applications Closed');
@@ -85,7 +89,12 @@ function cm_app_closed() {
 	echo '<p>';
 	echo 'Staff applications for <b>';
 	echo htmlspecialchars($event_name);
-	echo '</b> are currently closed.';
+	echo '</b>';
+	if ($datetime) {
+		echo " will open on {$datetime->format('F d, Y')}.";
+	} else {
+		echo ' are currently closed.';
+	}
 	if ($contact_address) {
 		echo ' Please <b><a href="mailto:';
 		echo htmlspecialchars($contact_address);
@@ -99,6 +108,7 @@ function cm_app_closed() {
 	exit(0);
 }
 
+#[NoReturn]
 function cm_app_message($title, $custom_text_name, $default_text, $fields = null) {
 	global $event_name, $fdb, $contact_address;
 	cm_app_head($title);

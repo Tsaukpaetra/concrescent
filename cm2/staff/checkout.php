@@ -1,8 +1,8 @@
 <?php
 
-require_once dirname(__FILE__).'/../lib/util/util.php';
-require_once dirname(__FILE__).'/../lib/util/paypal.php';
-require_once dirname(__FILE__).'/staff.php';
+require_once __DIR__ .'/../lib/util/util.php';
+require_once __DIR__ .'/../lib/util/paypal.php';
+require_once __DIR__ .'/staff.php';
 
 $site_url = get_site_url(true);
 
@@ -19,8 +19,8 @@ if (!$_GET) {
 		$staff_ids[] = $item['id'];
 	}
 
+	$group_uuid = $db->uuid();
 	if ($total_price <= 0) {
-		$group_uuid = $db->uuid();
 		$payment_date = $db->now();
 		foreach ($staff_ids as $id) {
 			$sdb->update_payment_status($id, 'Completed', 'Free Ride', $group_uuid, $total_price, $payment_date, 'Free Ride');
@@ -47,11 +47,11 @@ if (!$_GET) {
 		$items = array();
 		foreach ($_SESSION['cart'] as $item) {
 			$badge_type_id = (int)$item['badge-type-id'];
-			$badge_type_name = isset($name_map[$badge_type_id]) ? $name_map[$badge_type_id] : $badge_type_id;
+			$badge_type_name = $name_map[$badge_type_id] ?? $badge_type_id;
 			$items[] = $paypal->create_item($badge_type_name, $item['payment-badge-price']);
 		}
 		$total = $paypal->create_total($total_price);
-		$txn = $paypal->create_transaction($items, $total);
+		$txn = $paypal->create_transaction($items, $total, $group_uuid."::".$db->uuid());
 
 		$payment = $paypal->create_payment_pp(
 			$site_url.'/staff/checkout.php?return',
@@ -98,7 +98,7 @@ if (isset($_GET['return'])) {
 	$paypal = new cm_paypal($token);
 
 	$payment_id = $_SESSION['payment_id'];
-	$payer_id = isset($_GET['PayerID']) ? $_GET['PayerID'] : null;
+	$payer_id = $_GET['PayerID'] ?? null;
 	$sale = $paypal->execute_payment($payment_id, $payer_id);
 	$transaction_id = $paypal->get_transaction_id($sale);
 	$details = json_encode($sale);

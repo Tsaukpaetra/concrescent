@@ -1,14 +1,14 @@
 <?php
 
-require_once dirname(__FILE__).'/../../lib/database/attendee.php';
-require_once dirname(__FILE__).'/../../lib/database/forms.php';
-require_once dirname(__FILE__).'/../../lib/database/mail.php';
-require_once dirname(__FILE__).'/../../lib/util/util.php';
-require_once dirname(__FILE__).'/../../lib/util/res.php';
-require_once dirname(__FILE__).'/../../lib/util/cmforms.php';
-require_once dirname(__FILE__).'/../../lib/util/slack.php';
-require_once dirname(__FILE__).'/../../lib/util/paypal.php';
-require_once dirname(__FILE__).'/../admin.php';
+require_once __DIR__ .'/../../lib/database/attendee.php';
+require_once __DIR__ .'/../../lib/database/forms.php';
+require_once __DIR__ .'/../../lib/database/mail.php';
+require_once __DIR__ .'/../../lib/util/util.php';
+require_once __DIR__ .'/../../lib/util/res.php';
+require_once __DIR__ .'/../../lib/util/cmforms.php';
+require_once __DIR__ .'/../../lib/util/slack.php';
+require_once __DIR__ .'/../../lib/util/paypal.php';
+require_once __DIR__ .'/../admin.php';
 
 cm_admin_check_permission('attendees', array('||', 'attendees-edit', 'attendees-refund'));
 $can_edit = $adb->user_has_permission($admin_user, 'attendees-refund');
@@ -20,7 +20,7 @@ $id = $new ? -1 : (int)$_GET['id'];
 $item = $new ? array() : $atdb->get_attendee($id, false);
 $submitted = isset($_POST['payment-txn-id']);
 
-$name = isset($item['display-name']) ? $item['display-name'] : null;
+$name = $item['display-name'] ?? null;
 
 $transactions = transaction_details_listTransactions($item['payment-details']);
 

@@ -1,13 +1,13 @@
 <?php
 
-require_once dirname(__FILE__).'/../../config/config.php';
-require_once dirname(__FILE__).'/../../lib/database/application.php';
-require_once dirname(__FILE__).'/../../lib/database/attendee.php';
-require_once dirname(__FILE__).'/../../lib/database/forms.php';
-require_once dirname(__FILE__).'/../../lib/util/util.php';
-require_once dirname(__FILE__).'/../../lib/util/res.php';
-require_once dirname(__FILE__).'/../../lib/util/cmlists.php';
-require_once dirname(__FILE__).'/../admin.php';
+require_once __DIR__ .'/../../config/config.php';
+require_once __DIR__ .'/../../lib/database/application.php';
+require_once __DIR__ .'/../../lib/database/attendee.php';
+require_once __DIR__ .'/../../lib/database/forms.php';
+require_once __DIR__ .'/../../lib/util/util.php';
+require_once __DIR__ .'/../../lib/util/res.php';
+require_once __DIR__ .'/../../lib/util/cmlists.php';
+require_once __DIR__ .'/../admin.php';
 
 $context = (isset($_GET['c']) ? trim($_GET['c']) : null);
 if (!$context) {
@@ -17,8 +17,7 @@ if (!$context) {
 $ctx_lc = strtolower($context);
 $ctx_uc = strtoupper($context);
 $ctx_info = (
-	isset($cm_config['application_types'][$ctx_uc]) ?
-	$cm_config['application_types'][$ctx_uc] : null
+	$cm_config['application_types'][$ctx_uc] ?? null
 );
 if (!$ctx_info) {
 	header('Location: ../');
@@ -131,6 +130,8 @@ if (isset($_POST['cm-list-action'])) {
 	exit(0);
 }
 
+$errorMessage = '';
+
 if ($submitted) {
 	/* Basic Information */
 	$item['first-name'] = trim($_POST['first-name']);
@@ -156,17 +157,22 @@ if ($submitted) {
 	$item['notes'] = $_POST['notes'];
 
 	/* Write Changes */
-	if ($new) {
-		$id = $apdb->create_applicant($item);
-		$new = ($id === false);
-		$changed = ($id !== false);
-		if ($changed) {
-			$action_url = 'badge-edit.php?c=' . $ctx_lc . '&id=' . $id;
-			$list_def['ajax-url'] = get_site_url(false) . '/admin/application/' . $action_url;
-		}
-	} else {
-		$changed = $apdb->update_applicant($item);
-	}
+  try {
+      if ($new) {
+          $id = $apdb->create_applicant($item);
+          $new = ($id === false);
+          $changed = ($id !== false);
+          if ($changed) {
+              $action_url = 'badge-edit.php?c=' . $ctx_lc . '&id=' . $id;
+              $list_def['ajax-url'] = get_site_url(false) . '/admin/application/' . $action_url;
+          }
+      } else {
+          $changed = $apdb->update_applicant($item);
+      }
+  } catch (mysqli_sql_exception|InvalidArgumentException $e) {
+      $errorMessage = $e->getMessage();
+  }
+
 	if ($changed) {
 		if (isset($_POST['print']) && $_POST['print']) $apdb->applicant_printed($id, $_POST['print'] === 'reset');
 		if (isset($_POST['checkin']) && $_POST['checkin']) $apdb->applicant_checked_in($id, $_POST['checkin'] === 'reset');
@@ -187,7 +193,7 @@ if ($submitted) {
 }
 
 $title = ($new ? 'Add ' : 'Edit ') . $ctx_name . ' Badge';
-$name = isset($item['display-name']) ? $item['display-name'] : null;
+$name = $item['display-name'] ?? null;
 $full_title = (!$new && $name) ? ($title . ' - ' . $name) : $title;
 
 cm_admin_head($full_title);
@@ -218,7 +224,7 @@ echo '<article>';
 				if ($changed) {
 					echo '<p class="cm-success-box">Changes saved.</p>';
 				} else {
-					echo '<p class="cm-error-box">Save failed. Please try again.</p>';
+					echo "<p class=\"cm-error-box\">Save failed. Please try again. $errorMessage</p>";
 				}
 			}
 			if (($attendee_blacklisted = $atdb->is_blacklisted($item))) {
@@ -241,10 +247,10 @@ echo '<article>';
 					}
 				echo '</div>';
 			}
-			if ($item['age'] && $item['age'] < 18) {
+			if (($item['age'] ?? 18) < 18) {
 				echo '<p class="cm-note-box">This person is under 18.</p>';
 			}
-			if (($can_edit && $submitted) || $attendee_blacklisted || $applicant_blacklisted || ($item['age'] && $item['age'] < 18)) {
+			if (($can_edit && $submitted) || $attendee_blacklisted || $applicant_blacklisted || (($item['age'] ?? 18) < 18)) {
 				echo '<hr>';
 			}
 			echo '<table border="0" cellpadding="0" cellspacing="0" class="cm-form-table">';
@@ -366,10 +372,10 @@ echo '<article>';
 						echo '<td><a href="mailto:' . $value . '">' . $value . '</a></td>';
 					}
 				echo '</tr>';
-				
+
 				echo '<tr>';
 					echo '<th>&nbsp;</th>';
-					$value = isset($item['subscribed']) ? $item['subscribed'] : true;
+					$value = $item['subscribed'] ?? true;
 					if ($can_edit) {
 						echo '<td><label>';
 							echo '<input type="checkbox" name="subscribed" value="1"' . ($value ? ' checked>' : '>');

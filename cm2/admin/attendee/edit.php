@@ -1,12 +1,16 @@
 <?php
 
-require_once dirname(__FILE__).'/../../lib/database/attendee.php';
-require_once dirname(__FILE__).'/../../lib/database/forms.php';
-require_once dirname(__FILE__).'/../../lib/database/mail.php';
-require_once dirname(__FILE__).'/../../lib/util/util.php';
-require_once dirname(__FILE__).'/../../lib/util/res.php';
-require_once dirname(__FILE__).'/../../lib/util/cmforms.php';
-require_once dirname(__FILE__).'/../admin.php';
+require_once __DIR__ .'/../../lib/database/attendee.php';
+require_once __DIR__ .'/../../lib/database/forms.php';
+require_once __DIR__ .'/../../lib/database/mail.php';
+require_once __DIR__ .'/../../lib/database/misc.php';
+require_once __DIR__ .'/../../lib/util/util.php';
+require_once __DIR__ .'/../../lib/util/res.php';
+require_once __DIR__ .'/../../lib/util/cmforms.php';
+require_once __DIR__ .'/../admin.php';
+require_once __DIR__ .'/../../../vendor/autoload.php';
+
+global $log;
 
 cm_admin_check_permission('attendees', array('||', 'attendees-view', 'attendees-edit'));
 $can_edit = $adb->user_has_permission($admin_user, 'attendees-edit') && !isset($_GET['ro']);
@@ -18,11 +22,24 @@ $all_addons = $atdb->list_addons(false, false, false, $name_map);
 $fdb = new cm_forms_db($db, 'attendee');
 $questions = $fdb->list_questions();
 
+$miscDb = new cm_misc_db($db);
+$taskSponsorPublishable = new \App\Task\SponsorPublishableTask(
+    $miscDb,
+    new \App\Hook\CloudflareApi(
+        $log
+    ),
+    $log,
+);
+
 $new = !isset($_GET['id']);
 $id = $new ? -1 : (int)$_GET['id'];
-$item = $new ? array() : $atdb->get_attendee($id, false, $name_map, $fdb);
+$item = $new ? [
+	'age' => 0,
+	'addon-ids' => [],
+] : $atdb->get_attendee($id, false, $name_map, $fdb);
 $submitted = $can_edit && isset($_POST['submit']);
 $changed = false;
+$errorMessage = '';
 
 if ($submitted) {
 	/* Basic Information */
@@ -119,9 +136,13 @@ if ($submitted) {
 
 	/* Write Changes */
 	if ($new) {
-		$id = $atdb->create_attendee($item, $fdb);
-		$new = ($id === false);
-		$changed = ($id !== false);
+		try {
+			$id = $atdb->create_attendee($item, $fdb);
+			$new = ($id === false);
+			$changed = ($id !== false);
+		} catch (mysqli_sql_exception|InvalidArgumentException $e) {
+			$errorMessage = $e->getMessage();
+		}
 	} else {
 		$changed = $atdb->update_attendee($item, $fdb);
 	}
@@ -140,10 +161,12 @@ if ($submitted) {
 			$template = $mdb->get_mail_template('attendee-paid');
 			$mdb->send_mail($item['email-address'], $template, $item);
 		}
+
+        $taskSponsorPublishable->onAttendeeManualUpdate();
 	}
 }
 
-$name = isset($item['display-name']) ? $item['display-name'] : null;
+$name = $item['display-name'] ?? null;
 cm_admin_head($new ? 'Add Attendee' : ($name ? ('Edit Attendee - ' . $name) : 'Edit Attendee'));
 echo '<script type="text/javascript" src="edit.js"></script>';
 cm_admin_body($new ? 'Add Attendee' : 'Edit Attendee');
@@ -164,7 +187,7 @@ echo '<article>';
 				if ($changed) {
 					echo '<p class="cm-success-box">Changes saved.</p>';
 				} else {
-					echo '<p class="cm-error-box">Save failed. Please try again.</p>';
+					echo "<p class=\"cm-error-box\">Save failed. Please try again. $errorMessage</p>";
 				}
 			}
 			if (($blacklisted = $atdb->is_blacklisted($item))) {
@@ -403,7 +426,7 @@ echo '<article>';
 
 				echo '<tr>';
 					echo '<th>&nbsp;</th>';
-					$value = isset($item['subscribed']) ? $item['subscribed'] : true;
+					$value = $item['subscribed'] ?? true;
 					if ($can_edit) {
 						echo '<td><label>';
 							echo '<input type="checkbox" name="subscribed" value="1"' . ($value ? ' checked>' : '>');
@@ -691,7 +714,7 @@ echo '<article>';
 					echo '</tr>';
 				}
 
-				if ($adb->user_has_permission($admin_user, 'attendees-refund') ) {
+				if (!$new && $adb->user_has_permission($admin_user, 'attendees-refund') ) {
 					echo '<tr>';
 						echo '<th>Refund</th>';
 						echo '<td><a href="refund.php?id=' . $item['id'] . '" >Initiate refund</a></td>';
@@ -823,7 +846,7 @@ echo '<article>';
 		echo '</div>';
 		if ($can_edit) {
 			echo '<div class="card-buttons">';
-				echo '<input type="submit" name="submit" value="Save Changes">';
+				echo '<input type="submit" name="submit" value="'.($new ? 'Create new' : 'Save Changes').'">';
 			echo '</div>';
 		}
 	if ($can_edit) {

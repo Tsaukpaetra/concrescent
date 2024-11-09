@@ -1,8 +1,8 @@
 <?php
 
-require_once dirname(__FILE__).'/../lib/util/util.php';
-require_once dirname(__FILE__).'/../lib/util/paypal.php';
-require_once dirname(__FILE__).'/register.php';
+require_once __DIR__ .'/../lib/util/util.php';
+require_once __DIR__ .'/../lib/util/paypal.php';
+require_once __DIR__ .'/register.php';
 
 function merge_post_purchase_changes(
 	&$old_item, &$new_item, $payment_status, $payment_uuid, $payment_type,
@@ -78,8 +78,8 @@ if (!$_GET) {
 	$item = cm_reg_post_edit_get();
 	$total_price = cm_reg_post_edit_total();
 
+	$group_uuid = $db->uuid();
 	if ($total_price <= 0) {
-		$group_uuid = $db->uuid();
 		$payment_date = $db->now();
 
 		$attendee = $atdb->get_attendee($item['id'], false, $name_map, $fdb);
@@ -110,7 +110,7 @@ if (!$_GET) {
 
 		$items = create_post_purchase_paypal_items($paypal, $item);
 		$total = $paypal->create_total($total_price);
-		$txn = $paypal->create_transaction($items, $total);
+		$txn = $paypal->create_transaction($items, $total, $group_uuid."::".$db->uuid());
 
 		$payment = $paypal->create_payment_pp(
 			$site_url.'/register/post-purchase-checkout.php?return',
@@ -153,7 +153,7 @@ if (isset($_GET['return'])) {
 	$paypal = new cm_paypal($token);
 
 	$payment_id = $_SESSION['payment_id'];
-	$payer_id = isset($_GET['PayerID']) ? $_GET['PayerID'] : null;
+	$payer_id = $_GET['PayerID'] ?? null;
 	$sale = $paypal->execute_payment($payment_id, $payer_id);
 	$transaction_id = $paypal->get_transaction_id($sale);
 	$details = json_encode($sale);

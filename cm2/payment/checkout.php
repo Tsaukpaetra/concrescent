@@ -1,8 +1,8 @@
 <?php
 
-require_once dirname(__FILE__).'/../lib/util/util.php';
-require_once dirname(__FILE__).'/../lib/util/paypal.php';
-require_once dirname(__FILE__).'/payment.php';
+require_once __DIR__ .'/../lib/util/util.php';
+require_once __DIR__ .'/../lib/util/paypal.php';
+require_once __DIR__ .'/payment.php';
 
 $site_url = get_site_url(true);
 
@@ -12,11 +12,12 @@ if (!$_GET) {
 		exit(0);
 	}
 
+	$group_id = $db->uuid();
 	$item = $_SESSION['cart'];
 	$price = (float)$item['payment-price'];
 
 	if ($price <= 0) {
-		$pdb->update_payment_status($item['id'], 'Completed', 'Free Ride', $db->uuid(), $price, $db->now(), 'Free Ride');
+		$pdb->update_payment_status($item['id'], 'Completed', 'Free Ride', $group_id, $price, $db->now(), 'Free Ride');
 		$item = $pdb->get_payment($item['id']);
 		$template_name = 'payment-completed-' . $item['mail-template'];
 		$template = $mdb->get_mail_template($template_name);
@@ -38,7 +39,7 @@ if (!$_GET) {
 
 		$items = array($paypal->create_item($item['payment-name'], $price));
 		$total = $paypal->create_total($price);
-		$txn = $paypal->create_transaction($items, $total);
+		$txn = $paypal->create_transaction($items, $total, $group_id."::".$db->uuid());
 
 		$payment = $paypal->create_payment_pp(
 			$site_url.'/payment/checkout.php?return',
@@ -84,7 +85,7 @@ if (isset($_GET['return'])) {
 	$paypal = new cm_paypal($token);
 
 	$payment_id = $_SESSION['payment_id'];
-	$payer_id = isset($_GET['PayerID']) ? $_GET['PayerID'] : null;
+	$payer_id = $_GET['PayerID'] ?? null;
 	$sale = $paypal->execute_payment($payment_id, $payer_id);
 	$transaction_id = $paypal->get_transaction_id($sale);
 	$details = json_encode($sale);

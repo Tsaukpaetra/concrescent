@@ -1,17 +1,15 @@
 <?php
 
-require_once dirname(__FILE__).'/../../config/config.php';
+require_once __DIR__ .'/../../config/config.php';
 
 class cm_db {
 
-	public $table_prefix;
-	public $connection;
-	public $known_tables;
+	public mysqli $connection;
+	public array $known_tables;
 
 	public function __construct() {
 		/* Load configuration */
 		$config = $GLOBALS['cm_config']['database'];
-		$this->table_prefix = $config['prefix'];
 
 		/* Connect to database */
 		$this->connection = new mysqli(
@@ -20,7 +18,7 @@ class cm_db {
 		);
 
 		/* Set text encoding */
-		$this->connection->set_charset('utf8');
+		$this->connection->set_charset('utf8mb4');
 
 		/* Set time zone */
 		$stmt = $this->connection->prepare('set time_zone = ?');
@@ -45,24 +43,19 @@ class cm_db {
 	}
 
 	public function table_def($table, $def) {
-		$tn = $this->table_prefix . $table;
-		if (!isset($this->known_tables[$tn])) {
-			$this->known_tables[$tn] = true;
+		if (!isset($this->known_tables[$table])) {
+			$this->known_tables[$table] = true;
 			$this->connection->query(
 				'CREATE TABLE IF NOT EXISTS '.
-				'`' . $tn . '` '.
+				'`' . $table . '` '.
 				'(' . $def . ')'
 			);
 		}
 	}
 
-	public function table_name($table) {
-		return '`' . $this->table_prefix . $table . '`';
-	}
-
-	public function table_is_empty($table) {
-		$tn = $this->table_name($table);
-		$result = $this->connection->query('SELECT 1 FROM ' . $tn . ' LIMIT 1');
+	public function table_is_empty($table): bool
+	{
+		$result = $this->connection->query("SELECT 1 FROM `$table` LIMIT 1");
 		if ($result) {
 			$is_empty = !$result->num_rows;
 			$result->close();

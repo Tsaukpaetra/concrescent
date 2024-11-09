@@ -1,15 +1,15 @@
 <?php
 
-require_once dirname(__FILE__).'/../../config/config.php';
-require_once dirname(__FILE__).'/../util/util.php';
-require_once dirname(__FILE__).'/database.php';
+require_once __DIR__ .'/../../config/config.php';
+require_once __DIR__ .'/../util/util.php';
+require_once __DIR__ .'/database.php';
 
 class cm_mail_db {
 
-	public $event_info;
-	public $cm_db;
+	public mixed $event_info;
+	public cm_db $cm_db;
 
-	public function __construct($cm_db) {
+	public function __construct(cm_db $cm_db) {
 		$this->event_info = $GLOBALS['cm_config']['event'];
 		$this->cm_db = $cm_db;
 		$this->cm_db->table_def('mail_templates', (
@@ -217,7 +217,7 @@ class cm_mail_db {
 		if (!$name) return false;
 		$stmt = $this->cm_db->connection->prepare(
 			'SELECT `contact_address`'.
-			' FROM '.$this->cm_db->table_name('mail_templates').
+			' FROM `mail_templates`' .
 			' WHERE `name` = ? LIMIT 1'
 		);
 		$stmt->bind_param('s', $name);
@@ -232,7 +232,7 @@ class cm_mail_db {
 		if (!$name) return false;
 		$stmt = $this->cm_db->connection->prepare(
 			'SELECT `name`, `contact_address`, `from`, `bcc`, `subject`, `type`, `body`'.
-			' FROM '.$this->cm_db->table_name('mail_templates').
+			' FROM `mail_templates`' .
 			' WHERE `name` = ? LIMIT 1'
 		);
 		$stmt->bind_param('s', $name);
@@ -260,7 +260,7 @@ class cm_mail_db {
 		$templates = array();
 		$stmt = $this->cm_db->connection->prepare(
 			'SELECT `name`, `contact_address`, `from`, `bcc`, `subject`, `type`, `body`'.
-			' FROM '.$this->cm_db->table_name('mail_templates').
+			' FROM `mail_templates`' .
 			' ORDER BY `name`'
 		);
 		$stmt->execute();
@@ -284,7 +284,7 @@ class cm_mail_db {
 	public function set_mail_template($template) {
 		if (!$template || !isset($template['name']) || !$template['name']) return false;
 		$stmt = $this->cm_db->connection->prepare(
-			'INSERT INTO '.$this->cm_db->table_name('mail_templates').' SET '.
+			'INSERT INTO `mail_templates` SET '.
 			'`name` = ?, `contact_address` = ?, `from` = ?, `bcc` = ?, `subject` = ?, `type` = ?, `body` = ?'.
 			' ON DUPLICATE KEY UPDATE '.
 			'`name` = ?, `contact_address` = ?, `from` = ?, `bcc` = ?, `subject` = ?, `type` = ?, `body` = ?'
@@ -302,7 +302,7 @@ class cm_mail_db {
 	public function clear_mail_template($name) {
 		if (!$name) return false;
 		$stmt = $this->cm_db->connection->prepare(
-			'DELETE FROM '.$this->cm_db->table_name('mail_templates').
+			'DELETE FROM `mail_templates`' .
 			' WHERE `name` = ? LIMIT 1'
 		);
 		$stmt->bind_param('s', $name);

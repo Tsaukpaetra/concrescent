@@ -1,10 +1,10 @@
 <?php
 
-require_once dirname(__FILE__).'/database.php';
+require_once __DIR__ .'/database.php';
 
 class cm_badge_artwork_db {
 
-	public $field_keys = array(
+	public array $field_keys = array(
 		'only-name' => 'Only Name',
 		'large-name' => 'Large Name',
 		'small-name' => 'Small Name',
@@ -26,9 +26,9 @@ class cm_badge_artwork_db {
 		'display-name' => 'Display Name'
 	);
 
-	public $cm_db;
+	public cm_db $cm_db;
 
-	public function __construct($cm_db) {
+	public function __construct(cm_db $cm_db) {
 		$this->cm_db = $cm_db;
 		$this->cm_db->table_def('badge_artwork_files', (
 			'`file_name` VARCHAR(255) NOT NULL PRIMARY KEY,'.
@@ -65,7 +65,7 @@ class cm_badge_artwork_db {
 		if (!$name || !$type || !$file) return false;
 		$this->cm_db->connection->autocommit(false);
 		$stmt = $this->cm_db->connection->prepare(
-			'SELECT 1 FROM '.$this->cm_db->table_name('badge_artwork_files').
+			'SELECT 1 FROM `badge_artwork_files`' .
 			' WHERE `file_name` = ? LIMIT 1'
 		);
 		$stmt->bind_param('s', $name);
@@ -76,14 +76,14 @@ class cm_badge_artwork_db {
 		$null = null;
 		if ($exists) {
 			$stmt = $this->cm_db->connection->prepare(
-				'UPDATE '.$this->cm_db->table_name('badge_artwork_files').' SET '.
+				'UPDATE `badge_artwork_files` SET '.
 				'`file_name` = ?, `mime_type` = ?, `image_w` = ?, `image_h` = ?, `data` = ?'.
 				' WHERE `file_name` = ? LIMIT 1'
 			);
 			$stmt->bind_param('ssiibs', $name, $type, $image_w, $image_h, $null, $name);
 		} else {
 			$stmt = $this->cm_db->connection->prepare(
-				'INSERT INTO '.$this->cm_db->table_name('badge_artwork_files').' SET '.
+				'INSERT INTO `badge_artwork_files` SET '.
 				'`file_name` = ?, `mime_type` = ?, `image_w` = ?, `image_h` = ?, `data` = ?'
 			);
 			$stmt->bind_param('ssiib', $name, $type, $image_w, $image_h, $null);
@@ -105,7 +105,7 @@ class cm_badge_artwork_db {
 		if (!$name) return false;
 		$stmt = $this->cm_db->connection->prepare(
 			'SELECT `mime_type`, `data`'.
-			' FROM '.$this->cm_db->table_name('badge_artwork_files').
+			' FROM `badge_artwork_files`' .
 			' WHERE `file_name` = ? LIMIT 1'
 		);
 		$stmt->bind_param('s', $name);
@@ -138,13 +138,13 @@ class cm_badge_artwork_db {
 		if ($include_data) {
 			$stmt = $this->cm_db->connection->prepare(
 				'SELECT `file_name`, `mime_type`, `image_w`, `image_h`, `data`'.
-				' FROM '.$this->cm_db->table_name('badge_artwork_files').
+				' FROM `badge_artwork_files`' .
 				' WHERE `file_name` = ? LIMIT 1'
 			);
 		} else {
 			$stmt = $this->cm_db->connection->prepare(
 				'SELECT `file_name`, `mime_type`, `image_w`, `image_h`'.
-				' FROM '.$this->cm_db->table_name('badge_artwork_files').
+				' FROM `badge_artwork_files`' .
 				' WHERE `file_name` = ? LIMIT 1'
 			);
 		}
@@ -189,7 +189,7 @@ class cm_badge_artwork_db {
 		$names = array();
 		$stmt = $this->cm_db->connection->prepare(
 			'SELECT `file_name`'.
-			' FROM '.$this->cm_db->table_name('badge_artwork_files').
+			' FROM `badge_artwork_files`' .
 			' ORDER BY `file_name`'
 		);
 		$stmt->execute();
@@ -205,7 +205,7 @@ class cm_badge_artwork_db {
 		$badge_artwork = array();
 		$stmt = $this->cm_db->connection->prepare(
 			'SELECT `file_name`, `mime_type`, `image_w`, `image_h`'.
-			' FROM '.$this->cm_db->table_name('badge_artwork_files').
+			' FROM `badge_artwork_files`' .
 			' ORDER BY `file_name`'
 		);
 		$stmt->execute();
@@ -240,7 +240,7 @@ class cm_badge_artwork_db {
 			' `field_key`, `font_size`, `font_family`,'.
 			' `font_weight_bold`, `font_style_italic`, `color`,'.
 			' `background`, `color_minors`, `background_minors`'.
-			' FROM '.$this->cm_db->table_name('badge_artwork_fields').
+			' FROM `badge_artwork_fields`' .
 			' WHERE `file_name` = ? ORDER BY `id`'
 		);
 		$stmt->bind_param('s', $name);
@@ -276,22 +276,22 @@ class cm_badge_artwork_db {
 
 	public function create_badge_artwork_field($field) {
 		if (!$field) return false;
-		$file_name = (isset($field['file-name']) ? $field['file-name'] : null);
+		$file_name = ($field['file-name'] ?? null);
 		$x1 = (isset($field['x1']) ? (float)$field['x1'] : null);
 		$y1 = (isset($field['y1']) ? (float)$field['y1'] : null);
 		$x2 = (isset($field['x2']) ? (float)$field['x2'] : null);
 		$y2 = (isset($field['y2']) ? (float)$field['y2'] : null);
-		$field_key = (isset($field['field-key']) ? $field['field-key'] : null);
-		$font_size = (isset($field['font-size']) ? $field['font-size'] : null);
-		$font_family = (isset($field['font-family']) ? $field['font-family'] : null);
+		$field_key = ($field['field-key'] ?? null);
+		$font_size = ($field['font-size'] ?? null);
+		$font_family = ($field['font-family'] ?? null);
 		$font_weight_bold = (isset($field['font-weight-bold']) ? ($field['font-weight-bold'] ? 1 : 0) : null);
 		$font_style_italic = (isset($field['font-style-italic']) ? ($field['font-style-italic'] ? 1 : 0) : null);
-		$color = (isset($field['color']) ? $field['color'] : null);
-		$background = (isset($field['background']) ? $field['background'] : null);
-		$color_minors = (isset($field['color-minors']) ? $field['color-minors'] : null);
-		$background_minors = (isset($field['background-minors']) ? $field['background-minors'] : null);
+		$color = ($field['color'] ?? null);
+		$background = ($field['background'] ?? null);
+		$color_minors = ($field['color-minors'] ?? null);
+		$background_minors = ($field['background-minors'] ?? null);
 		$stmt = $this->cm_db->connection->prepare(
-			'INSERT INTO '.$this->cm_db->table_name('badge_artwork_fields').' SET '.
+			'INSERT INTO `badge_artwork_fields` SET '.
 			'`file_name` = ?, `x1` = ?, `y1` = ?, `x2` = ?, `y2` = ?, '.
 			'`field_key` = ?, `font_size` = ?, `font_family` = ?, '.
 			'`font_weight_bold` = ?, `font_style_italic` = ?, `color` = ?, '.
@@ -311,22 +311,22 @@ class cm_badge_artwork_db {
 
 	public function update_badge_artwork_field($field) {
 		if (!$field || !isset($field['id']) || !$field['id']) return false;
-		$file_name = (isset($field['file-name']) ? $field['file-name'] : null);
+		$file_name = ($field['file-name'] ?? null);
 		$x1 = (isset($field['x1']) ? (float)$field['x1'] : null);
 		$y1 = (isset($field['y1']) ? (float)$field['y1'] : null);
 		$x2 = (isset($field['x2']) ? (float)$field['x2'] : null);
 		$y2 = (isset($field['y2']) ? (float)$field['y2'] : null);
-		$field_key = (isset($field['field-key']) ? $field['field-key'] : null);
-		$font_size = (isset($field['font-size']) ? $field['font-size'] : null);
-		$font_family = (isset($field['font-family']) ? $field['font-family'] : null);
+		$field_key = ($field['field-key'] ?? null);
+		$font_size = ($field['font-size'] ?? null);
+		$font_family = ($field['font-family'] ?? null);
 		$font_weight_bold = (isset($field['font-weight-bold']) ? ($field['font-weight-bold'] ? 1 : 0) : null);
 		$font_style_italic = (isset($field['font-style-italic']) ? ($field['font-style-italic'] ? 1 : 0) : null);
-		$color = (isset($field['color']) ? $field['color'] : null);
-		$background = (isset($field['background']) ? $field['background'] : null);
-		$color_minors = (isset($field['color-minors']) ? $field['color-minors'] : null);
-		$background_minors = (isset($field['background-minors']) ? $field['background-minors'] : null);
+		$color = ($field['color'] ?? null);
+		$background = ($field['background'] ?? null);
+		$color_minors = ($field['color-minors'] ?? null);
+		$background_minors = ($field['background-minors'] ?? null);
 		$stmt = $this->cm_db->connection->prepare(
-			'UPDATE '.$this->cm_db->table_name('badge_artwork_fields').' SET '.
+			'UPDATE `badge_artwork_fields` SET '.
 			'`file_name` = ?, `x1` = ?, `y1` = ?, `x2` = ?, `y2` = ?, '.
 			'`field_key` = ?, `font_size` = ?, `font_family` = ?, '.
 			'`font_weight_bold` = ?, `font_style_italic` = ?, `color` = ?, '.
@@ -349,7 +349,7 @@ class cm_badge_artwork_db {
 	public function delete_badge_artwork_field($id) {
 		if (!$id) return false;
 		$stmt = $this->cm_db->connection->prepare(
-			'DELETE FROM '.$this->cm_db->table_name('badge_artwork_fields').
+			'DELETE FROM `badge_artwork_fields`' .
 			' WHERE `id` = ? LIMIT 1'
 		);
 		$stmt->bind_param('i', $id);
@@ -423,7 +423,7 @@ class cm_badge_artwork_db {
 	public function delete_badge_artwork_fields($name) {
 		if (!$name) return false;
 		$stmt = $this->cm_db->connection->prepare(
-			'DELETE FROM '.$this->cm_db->table_name('badge_artwork_fields').
+			'DELETE FROM `badge_artwork_fields`' .
 			' WHERE `file_name` = ?'
 		);
 		$stmt->bind_param('s', $name);
@@ -435,7 +435,7 @@ class cm_badge_artwork_db {
 	public function get_badge_artwork_map($context, $context_id, $file_name) {
 		$query = (
 			'SELECT `context`, `context_id`, `file_name`'.
-			' FROM '.$this->cm_db->table_name('badge_artwork_map')
+			' FROM `badge_artwork_map`'
 		);
 		$first = true;
 		$bind = array('');
@@ -478,14 +478,14 @@ class cm_badge_artwork_db {
 		if (!$context || !$context_id || !$file_name) return false;
 		$this->cm_db->connection->autocommit(false);
 		$stmt = $this->cm_db->connection->prepare(
-			'DELETE FROM '.$this->cm_db->table_name('badge_artwork_map').
+			'DELETE FROM `badge_artwork_map`' .
 			' WHERE `context` = ? AND `context_id` = ? AND `file_name` = ?'
 		);
 		$stmt->bind_param('sis', $context, $context_id, $file_name);
 		$stmt->execute();
 		$stmt->close();
 		$stmt = $this->cm_db->connection->prepare(
-			'INSERT INTO '.$this->cm_db->table_name('badge_artwork_map').
+			'INSERT INTO `badge_artwork_map`' .
 			' SET `context` = ?, `context_id` = ?, `file_name` = ?'
 		);
 		$stmt->bind_param('sis', $context, $context_id, $file_name);
@@ -497,7 +497,7 @@ class cm_badge_artwork_db {
 
 	public function clear_badge_artwork_map($context, $context_id, $file_name) {
 		if (!$context && !$context_id && !$file_name) return false;
-		$query = 'DELETE FROM '.$this->cm_db->table_name('badge_artwork_map');
+		$query = 'DELETE FROM `badge_artwork_map`';
 		$first = true;
 		$bind = array('');
 		if ($context) {
@@ -528,7 +528,7 @@ class cm_badge_artwork_db {
 	public function delete_badge_artwork($name) {
 		if (!$name) return false;
 		$stmt = $this->cm_db->connection->prepare(
-			'DELETE FROM '.$this->cm_db->table_name('badge_artwork_files').
+			'DELETE FROM `badge_artwork_files`' .
 			' WHERE `file_name` = ? LIMIT 1'
 		);
 		$stmt->bind_param('s', $name);
@@ -536,14 +536,14 @@ class cm_badge_artwork_db {
 		$stmt->close();
 		if ($success) {
 			$stmt = $this->cm_db->connection->prepare(
-				'DELETE FROM '.$this->cm_db->table_name('badge_artwork_fields').
+				'DELETE FROM `badge_artwork_fields`' .
 				' WHERE `file_name` = ?'
 			);
 			$stmt->bind_param('s', $name);
 			$stmt->execute();
 			$stmt->close();
 			$stmt = $this->cm_db->connection->prepare(
-				'DELETE FROM '.$this->cm_db->table_name('badge_artwork_map').
+				'DELETE FROM `badge_artwork_map`' .
 				' WHERE `file_name` = ?'
 			);
 			$stmt->bind_param('s', $name);

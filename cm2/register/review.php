@@ -1,20 +1,13 @@
 <?php
 
 
-require_once dirname(__FILE__).'/../lib/util/util.php';
-require_once dirname(__FILE__).'/register.php';
+require_once __DIR__ .'/../lib/util/util.php';
+require_once __DIR__ .'/register.php';
 
 $gid = isset($_GET['gid']) ? trim($_GET['gid']) : null;
 $tid = isset($_GET['tid']) ? trim($_GET['tid']) : null;
 if (!$gid || !$tid) {
 	header('Location: index.php');
-	exit(0);
-}
-
-if(!isLegacy())
-{
-	//Redirect back to the webapp, myBadges route
-	header('Location: ' . get_site_url(true) . '/#redirect?route=myBadges&gid=' . $gid . '&tid=' . $tid);
 	exit(0);
 }
 
@@ -113,7 +106,7 @@ echo '<div class="card">';
 						if (isset($item['addons']) && $item['addons']) {
 							foreach ($item['addons'] as $addon) {
 								echo '<tr>';
-									$addon_name = htmlspecialchars(isset($addon['name']) ? $addon['name'] : $addon['addon-id']);
+									$addon_name = htmlspecialchars($addon['name'] ?? $addon['addon-id']);
 									$addon_price = htmlspecialchars(price_string($addon['payment-price']));
 									$addon_status = cm_status_label($addon['payment-status']);
 									echo '<td><div class="cm-cart-addon-name">' . $addon_name . '</div></td>';

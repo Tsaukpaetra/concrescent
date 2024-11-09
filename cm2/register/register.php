@@ -1,20 +1,22 @@
 <?php
 
+use JetBrains\PhpStorm\NoReturn;
+
 session_name('PHPSESSID_CMREG');
 session_start();
 
-require_once dirname(__FILE__).'/../config/config.php';
-require_once dirname(__FILE__).'/../lib/database/database.php';
-require_once dirname(__FILE__).'/../lib/database/attendee.php';
-require_once dirname(__FILE__).'/../lib/database/forms.php';
-require_once dirname(__FILE__).'/../lib/database/mail.php';
-require_once dirname(__FILE__).'/../lib/util/res.php';
-require_once dirname(__FILE__).'/../lib/util/util.php';
+require_once __DIR__ .'/../config/config.php';
+require_once __DIR__ .'/../lib/database/database.php';
+require_once __DIR__ .'/../lib/database/attendee.php';
+require_once __DIR__ .'/../lib/database/forms.php';
+require_once __DIR__ .'/../lib/database/mail.php';
+require_once __DIR__ .'/../lib/util/res.php';
+require_once __DIR__ .'/../lib/util/util.php';
 
 $event_name = $cm_config['event']['name'];
 
 $onsite_only = isset($_COOKIE['onsite_only']) && $_COOKIE['onsite_only'];
-$override_code = isset($_GET['override_code']) ? $_GET['override_code'] : (isset($_POST['override_code']) ? $_POST['override_code'] :'') ;
+$override_code = $_GET['override_code'] ?? ($_POST['override_code'] ?? '');
 
 $db = new cm_db();
 
@@ -117,8 +119,8 @@ function cm_reg_item_update_from_post(&$item, $post)
 	}
 
 	//If they're editing their badge...
-	$item['editing-badge'] = (int)$post['editing-badge'];
-	$item['uuid'] = trim($post['uuid']);
+	$item['editing-badge'] = (int)($post['editing-badge'] ?? 0);
+	$item['uuid'] = trim($post['uuid'] ?? '');
 	if($item['editing-badge'] > 0 )
 	{
 		//First, find them in the attendees table
@@ -213,8 +215,8 @@ function cm_reg_apply_promo_code($code) {
 	for ($i = 0, $n = cm_reg_cart_count(); $i < $n; $i++) {
 		$item = cm_reg_cart_get($i);
 		$item['index'] = $i;
-		$item['payment-promo-code'] = isset($item['payment-promo-code']) ? $item['payment-promo-code'] : null;
-		$item['payment-promo-price'] = isset($item['payment-promo-price']) ? $item['payment-promo-price'] : $item['payment-badge-price'];
+		$item['payment-promo-code'] = $item['payment-promo-code'] ?? null;
+		$item['payment-promo-price'] = $item['payment-promo-price'] ?? $item['payment-badge-price'];
 		$items[] = $item;
 	}
 	usort($items, function($a, $b) {
@@ -333,11 +335,7 @@ function cm_reg_cart_destroy($close_session = true) {
 }
 
 function cm_reg_post_edit_get() {
-	if (isset($_SESSION['post_edit'])) {
-		return $_SESSION['post_edit'];
-	} else {
-		return null;
-	}
+	return $_SESSION['post_edit'] ?? null;
 }
 
 function cm_reg_post_edit_set($item) {
@@ -423,7 +421,9 @@ function cm_reg_tail() {
 	echo '</html>';
 }
 
-function cm_reg_closed() {
+#[NoReturn]
+function cm_reg_closed(?DateTimeImmutable $datetime = null): void
+{
 	global $event_name, $contact_address;
 	cm_reg_head('Registration Closed');
 	cm_reg_body('Registration Closed', false);
@@ -431,9 +431,14 @@ function cm_reg_closed() {
 	echo '<div class="card">';
 	echo '<div class="card-content">';
 	echo '<p>';
-	echo 'Registration for <b>';
+	echo 'Registrations for <b>';
 	echo htmlspecialchars($event_name);
-	echo '</b> is currently closed.';
+	echo '</b>';
+	if ($datetime) {
+		echo " will open on {$datetime->format('F d, Y')}.";
+	} else {
+		echo ' are currently closed.';
+	}
 	if ($contact_address) {
 		echo ' Please <b><a href="mailto:';
 		echo htmlspecialchars($contact_address);
@@ -447,6 +452,7 @@ function cm_reg_closed() {
 	exit(0);
 }
 
+#[NoReturn]
 function cm_reg_message($title, $custom_text_name, $default_text, $fields = null) {
 	global $event_name, $fdb, $contact_address;
 	cm_reg_head($title);

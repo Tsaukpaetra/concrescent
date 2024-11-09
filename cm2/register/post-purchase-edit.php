@@ -1,7 +1,7 @@
 <?php
 
-require_once dirname(__FILE__).'/../lib/util/util.php';
-require_once dirname(__FILE__).'/register.php';
+require_once __DIR__ .'/../lib/util/util.php';
+require_once __DIR__ .'/register.php';
 
 $onsite_only = isset($_COOKIE['onsite_only']) && $_COOKIE['onsite_only'];
 $sellable_badge_types = $atdb->list_badge_types(true, true, $onsite_only);
@@ -105,7 +105,7 @@ if (isset($_POST['submit']) && isset($_POST['action']) && $_POST['action'] == 'c
 	}
 
 	if (!$errors) {
-		$_SESSION['payment_method'] = trim($_POST['payment-method']);
+		$_SESSION['payment_method'] = trim($_POST['payment-method'] ?? 'paypal');
 		cm_reg_post_edit_set($item);
 		cm_reg_post_edit_set_state('ready');
 		header('Location: post-purchase-checkout.php');

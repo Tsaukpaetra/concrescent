@@ -1,12 +1,22 @@
 <?php
 
-require_once dirname(__FILE__).'/../lib/util/util.php';
-require_once dirname(__FILE__).'/register.php';
+require_once __DIR__ .'/../lib/util/util.php';
+require_once __DIR__ .'/register.php';
 
 
 $all_badge_types = $atdb->list_badge_types();
 $sellable_badge_types = $atdb->list_badge_types(true, true, $onsite_only, $override_code);
-if (!$sellable_badge_types) cm_reg_closed();
+if (!$sellable_badge_types) {
+	$futureBadges = $atdb->list_badge_types(true, true, $onsite_only, $override_code, true);
+	$startDates = array_map(static fn(array $badge): string => ($badge['start-date'] ?? ''), $futureBadges);
+	sort($startDates, SORT_STRING);
+
+	$datetime = null;
+	if ($startDates[0] ?? false) {
+		$datetime = new DateTimeImmutable($startDates[0]);
+	}
+	cm_reg_closed($datetime);
+}
 
 $all_addons = $atdb->list_addons(false, false, false, $name_map);
 
@@ -41,7 +51,7 @@ if (isset($_POST['action'])) {
 
 			break;
 		case 'checkout':
-			checkout_registration(trim($_POST['payment-method']), $errors);
+			checkout_registration(trim($_POST['payment-method'] ?? 'paypal'), $errors);
 			break;
 	}
 }
@@ -130,7 +140,7 @@ echo '<div class="card">';
 							echo '</td>';
 							echo '<td>';
 								$badge_type_id = (int)$item['badge-type-id'];
-								$badge_type_name = isset($name_map[$badge_type_id]) ? $name_map[$badge_type_id] : $badge_type_id;
+								$badge_type_name = $name_map[$badge_type_id] ?? $badge_type_id;
 								echo '<div>' . htmlspecialchars($badge_type_name) . '</div>';
 								if (isset($errors[$i])) {
 									echo '<div class="error">' . htmlspecialchars($errors[$i]) . '</div>';

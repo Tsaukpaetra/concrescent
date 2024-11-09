@@ -1,12 +1,15 @@
 <?php
 
-require_once dirname(__FILE__).'/../../config/config.php';
-require_once dirname(__FILE__).'/../../lib/database/application.php';
-require_once dirname(__FILE__).'/../../lib/database/misc.php';
-require_once dirname(__FILE__).'/../../lib/database/forms.php';
-require_once dirname(__FILE__).'/../../lib/util/util.php';
-require_once dirname(__FILE__).'/../../lib/util/cmlists.php';
-require_once dirname(__FILE__).'/../admin.php';
+require_once __DIR__ .'/../../config/config.php';
+require_once __DIR__ .'/../../lib/database/application.php';
+require_once __DIR__ .'/../../lib/database/misc.php';
+require_once __DIR__ .'/../../lib/database/forms.php';
+require_once __DIR__ .'/../../lib/util/util.php';
+require_once __DIR__ .'/../../lib/util/cmlists.php';
+require_once __DIR__ .'/../admin.php';
+require_once __DIR__ .'/../../../vendor/autoload.php';
+
+global $log;
 
 $context = (isset($_GET['c']) ? trim($_GET['c']) : null);
 if (!$context) {
@@ -16,8 +19,7 @@ if (!$context) {
 $ctx_lc = strtolower($context);
 $ctx_uc = strtoupper($context);
 $ctx_info = (
-	isset($cm_config['application_types'][$ctx_uc]) ?
-	$cm_config['application_types'][$ctx_uc] : null
+	$cm_config['application_types'][$ctx_uc] ?? null
 );
 if (!$ctx_info) {
 	header('Location: ../');
@@ -30,6 +32,12 @@ cm_admin_check_permission('application-assignments-'.$ctx_lc, 'application-assig
 
 $apdb = new cm_application_db($db, $context);
 $midb = new cm_misc_db($db);
+
+$taskSchedulePublishable = new \App\Task\SchedulePublishableTask(
+    new \App\Hook\CloudflareApi(
+        $log,
+    ),
+);
 
 $list_def = array(
 	'loader' => 'server-side',
@@ -171,6 +179,7 @@ if (isset($_POST['action'])) {
 				}
 			}
 			echo json_encode($response);
+			if ($response['ok']) $taskSchedulePublishable->onScheduleManualUpdate();
 			break;
 	}
 	exit(0);

@@ -1,19 +1,19 @@
 <?php
 
-require_once dirname(__FILE__).'/../../config/config.php';
-require_once dirname(__FILE__).'/database.php';
-require_once dirname(__FILE__).'/attendee.php';
-require_once dirname(__FILE__).'/application.php';
-require_once dirname(__FILE__).'/staff.php';
+require_once __DIR__ .'/../../config/config.php';
+require_once __DIR__ .'/database.php';
+require_once __DIR__ .'/attendee.php';
+require_once __DIR__ .'/application.php';
+require_once __DIR__ .'/staff.php';
 
 class cm_badge_holder_db {
 
-	public $cm_db;
-	public $cm_atdb;
-	public $cm_apdb;
-	public $cm_sdb;
+	public cm_db $cm_db;
+	public cm_attendee_db $cm_atdb;
+	public array $cm_apdb;
+	public cm_staff_db $cm_sdb;
 
-	public function __construct($cm_db) {
+	public function __construct(cm_db $cm_db) {
 		$this->cm_db = $cm_db;
 		$this->cm_atdb = new cm_attendee_db($cm_db);
 		$this->cm_apdb = array();

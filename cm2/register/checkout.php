@@ -1,9 +1,9 @@
 <?php
 
-require_once dirname(__FILE__).'/../lib/util/util.php';
-require_once dirname(__FILE__).'/../lib/util/slack.php';
-require_once dirname(__FILE__).'/../lib/util/paypal.php';
-require_once dirname(__FILE__).'/register.php';
+require_once __DIR__ .'/../lib/util/util.php';
+require_once __DIR__ .'/../lib/util/slack.php';
+require_once __DIR__ .'/../lib/util/paypal.php';
+require_once __DIR__ .'/register.php';
 
 $site_url = get_site_url(true);
 
@@ -69,14 +69,14 @@ if (!$_GET) {
 						$shouldAddToTransaction = true;
 
 					//Merge in the existing payment details
-					$item['payment-type']     = (isset($existingBadge['payment-type'])    ? $existingBadge['payment-type']    : null);
-					$item['payment-details']  = (isset($existingBadge['payment-details']) ? $existingBadge['payment-details'] : null);
+					$item['payment-type']     = ($existingBadge['payment-type'] ?? null);
+					$item['payment-details']  = ($existingBadge['payment-details'] ?? null);
 					if(!$shouldAddToTransaction)
 					{
-						$item['payment-promo-price']  = (isset($existingBadge['payment-promo-price'])  ? $existingBadge['payment-promo-price']    : null);
-						$item['payment-txn-id']  = (isset($existingBadge['payment-txn-id'])  ? $existingBadge['payment-txn-id']    : null);
-						$item['payment-status']  = (isset($existingBadge['payment-status'])  ? $existingBadge['payment-status']    : null);
-						$item['payment-txn-amt'] = (isset($existingBadge['payment-txn-amt']) ? $existingBadge['payment-txn-amt']    : null);
+						$item['payment-promo-price']  = ($existingBadge['payment-promo-price'] ?? null);
+						$item['payment-txn-id']  = ($existingBadge['payment-txn-id'] ?? null);
+						$item['payment-status']  = ($existingBadge['payment-status'] ?? null);
+						$item['payment-txn-amt'] = ($existingBadge['payment-txn-amt'] ?? null);
 					}
 
 					if (isset($item['addons']) && $item['addons']) {
@@ -191,20 +191,13 @@ if (!$_GET) {
 		}
 		cm_reg_cart_destroy();
 
-		if(!isLegacy())
-		{
-			//Redirect back to the webapp, myBadges route
-			header('Location: ' . $site_url . '/#redirect?route=myBadges&result=success&gid=' . $group_uuid . "&tid=" . $transaction_id);
-		} else {
-			cm_reg_message(
-				'Payment Complete',
-				'payment-complete',
-				'Your payment has been accepted.<br><br>'.
-				'You can <b><a href="[[review-link]]">review your order</a></b> at any time.',
-				$attendee
-			);
-		}
-		exit(0);
+		cm_reg_message(
+			'Payment Complete',
+			'payment-complete',
+			'Your payment has been accepted.<br><br>'.
+			'You can <b><a href="[[review-link]]">review your order</a></b> at any time.',
+			$attendee
+		);
 	}
 
 	if ($_SESSION['payment_method'] == 'cash') {
@@ -216,20 +209,13 @@ if (!$_GET) {
 		}
 		cm_reg_cart_destroy();
 
-		if(!isLegacy())
-		{
-			//Redirect back to the webapp, myBadges route
-			header('Location: ' . $site_url . '/#redirect?route=myBadges&result=success&gid=' . $group_uuid . "&tid=" . $transaction_id);
-		} else {
-			cm_reg_message(
-				'Registration Complete',
-				'registration-complete',
-				'Your registration has been submitted. You will need to pay at the door.<br><br>'.
-				'You can <b><a href="[[review-link]]">review your order</a></b> at any time.',
-				$attendee
-			);
-		}
-		exit(0);
+		cm_reg_message(
+			'Registration Complete',
+			'registration-complete',
+			'Your registration has been submitted. You will need to pay at the door.<br><br>'.
+			'You can <b><a href="[[review-link]]">review your order</a></b> at any time.',
+			$attendee
+		);
 	}
 
 	if ($_SESSION['payment_method'] == 'paypal') {
@@ -240,7 +226,7 @@ if (!$_GET) {
 		for ($i = 0, $n = cm_reg_cart_count(); $i < $n; $i++) {
 			$item = cm_reg_cart_get($i);
 			$badge_type_id = (int)$item['badge-type-id'];
-			$badge_type_name = isset($name_map[$badge_type_id]) ? $name_map[$badge_type_id] : $badge_type_id;
+			$badge_type_name = $name_map[$badge_type_id] ?? $badge_type_id;
 			if(!(isset($item['editing-badge']) && $item['editing-badge'] > 0 && $item['badge-type-id'] == $item['editing-prior-id']) && $item['payment-promo-price'] > 0 )
 				$items[] = $paypal->create_item($badge_type_name, $item['payment-promo-price']);
 			if (isset($item['addons']) && $item['addons']) {
@@ -324,36 +310,48 @@ if (isset($_GET['return'])) {
 	//	exit(0);
 	//}
 
-	$group_uuid = isset($_GET['gid']) ? $_GET['gid'] : (isset($_SESSION['group_uuid']) ? $_SESSION['group_uuid'] : null);
-	$transaction_id = isset($_GET['tid']) ? $_GET['tid'] : (isset($_SESSION['transaction_id']) ? $_SESSION['transaction_id'] : null);
-	$_SESSION['payment_id'] = isset($_SESSION['payment_id']) ? $_SESSION['payment_id'] : null;
+	$group_uuid = $_GET['gid'] ?? ($_SESSION['group_uuid'] ?? null);
+	$transaction_id = $_GET['tid'] ?? ($_SESSION['transaction_id'] ?? null);
+	$_SESSION['payment_id'] = $_SESSION['payment_id'] ?? null;
 
-	$token = isset($_SESSION['paypal_token']) ? $_SESSION['paypal_token'] : null;
+	$token = $_SESSION['paypal_token'] ?? null;
 	$paypal = new cm_paypal($token);
 	//Ensure we have a token
 	$paypal->get_token();
 
 	//check that the payment ID is the same
-	$payment_id = isset($_GET['paymentId']) ? $_GET['paymentId'] : null;
+	$payment_id = $_GET['paymentId'] ?? null;
 
 	//retrieve the badges associated
 	$attendee_list = $atdb->list_attendees($group_uuid, NULL);
-	$attendee_ids = array();
+	$attendee_ids = [];
+	$attendeeWithPaymentCompleted = null;
 	foreach ($attendee_list as $attendee) {
 		//Check that this attendee is the one we're actively targeting
-		if($attendee['payment-status'] == 'Incomplete'
-		&& (strpos($attendee['payment-details'], $payment_id) > -1 || $attendee['payment-txn-id'] == $transaction_id)
-		){
-			$attendee_ids[] = $attendee['id'];
+		if(str_contains($attendee['payment-details'], $payment_id) || $attendee['payment-txn-id'] == $transaction_id)
+		{
+			if($attendee['payment-status'] === 'Incomplete') {
+				$attendee_ids[] = $attendee['id'];
+			} elseif($attendee['payment-status'] === 'Completed') {
+				$attendeeWithPaymentCompleted = new class(
+					$attendee['payment-group-uuid'],
+					$attendee['payment-txn-id']
+				) {
+					public function __construct(public string $gid, public string $tid) {}
+				};
+			}
 		}
 	}
 
-	if(count($attendee_ids) <= 0)
+	if(empty($attendee_ids))
 	{
+		if ($attendeeWithPaymentCompleted) {
+			header("Location: /register/review.php?gid=$attendeeWithPaymentCompleted->gid&tid=$attendeeWithPaymentCompleted->tid");
+		}
 		die("Error: Unexpectedly retrieved no badges");
 	}
 
-	$payer_id = isset($_GET['PayerID']) ? $_GET['PayerID'] : null;
+	$payer_id = $_GET['PayerID'] ?? null;
 
 	//TODO: Maybe we should verify we got the attendees before executing payment????
 	$sale = $paypal->execute_payment($payment_id, $payer_id);
@@ -379,21 +377,13 @@ if (isset($_GET['return'])) {
 		}
 		cm_reg_cart_destroy();
 
-		if(!isLegacy())
-		{
-		 //Redirect back to the webapp, myBadges route
-		 header('Location: ' . $site_url . '/#redirect?route=myBadges&result=success&gid=' . $group_uuid . "&tid=" . $transaction_id);
-
-		} else {
-				cm_reg_message(
-					'Payment Complete',
-					'payment-complete',
-					'Your payment has been accepted.<br><br>'.
-					'You can <b><a href="[[review-link]]">review your order</a></b> at any time.',
-					$attendee
-				);
-		}
-		exit(0);
+		cm_reg_message(
+			'Payment Complete',
+			'payment-complete',
+			'Your payment has been accepted.<br><br>'.
+			'You can <b><a href="[[review-link]]">review your order</a></b> at any time.',
+			$attendee
+		);
 	} else {
 		foreach ($attendee_ids as $id) {
 			$pay_status = ''; $pay_type = ''; $pay_txn = ''; $pay_details = '';
@@ -405,21 +395,14 @@ if (isset($_GET['return'])) {
 		}
 		cm_reg_cart_destroy();
 
-		if(isLegacy())
-		{
-			cm_reg_message(
-				'Payment Refused',
-				'payment-refused',
-				'PayPal has refused this transaction.<br><br>'.
-				'PayPal says: [[payment-txn-msg]]<br><br>'.
-				'Unfortunately, that is all we know. Please try again later.',
-				array_merge($attendee, array('payment-txn-msg' => $sale['message']))
-			);
-		} else {
-			//Redirect back to the webapp, myBadges route
-			header('Location: ' . $site_url . '/#redirect?route=myBadges&result=refused&gid=' . $group_uuid . "&tid=" . $transaction_id);
-		}
-		exit(0);
+		cm_reg_message(
+			'Payment Refused',
+			'payment-refused',
+			'PayPal has refused this transaction.<br><br>'.
+			'PayPal says: [[payment-txn-msg]]<br><br>'.
+			'Unfortunately, that is all we know. Please try again later.',
+			array_merge($attendee, array('payment-txn-msg' => $sale['message']))
+		);
 	}
 }
 
@@ -429,7 +412,7 @@ if (isset($_GET['cancel'])) {
 		exit(0);
 	}
 
-	$group_uuid = isset($_GET['gid']) ? $_GET['gid'] : $_SESSION['group_uuid'];
+	$group_uuid = $_GET['gid'] ?? $_SESSION['group_uuid'];
 	$attendee_ids = $_SESSION['attendee_ids'];
 
 	foreach ($attendee_ids as $id) {
@@ -444,7 +427,6 @@ if (isset($_GET['cancel'])) {
 		'You have cancelled your payment.',
 		$attendee
 	);
-	exit(0);
 }
 
 header('Location: index.php');

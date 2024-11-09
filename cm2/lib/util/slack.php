@@ -1,10 +1,10 @@
 <?php
 
-require_once dirname(__FILE__).'/../../config/config.php';
+require_once __DIR__ .'/../../config/config.php';
 
 class cm_slack {
 
-	public $hook_urls;
+	public mixed $hook_urls;
 
 	public function __construct() {
 		$config = $GLOBALS['cm_config']['slack'];

@@ -1,10 +1,10 @@
 <?php
 
-require_once dirname(__FILE__).'/../../config/config.php';
+require_once __DIR__ .'/../../config/config.php';
 
 function get_domain_url() {
 	global $cm_config;
-	if (isset($cm_config) && isset($cm_config['site-override']) && $cm_config['site-override'] != '') return $cm_config['site-override'];
+	if (isset($cm_config['site-override']) && $cm_config['site-override'] != '') return $cm_config['site-override'];
 	$https = (isset($_SERVER['HTTPS']) && ($_SERVER['HTTPS'] == 'on'));
 	$url = ($https ? 'https' : 'http') . '://' . $_SERVER['SERVER_NAME'];
 	if ($_SERVER['SERVER_PORT'] != ($https ? '443' : '80')) {
@@ -13,7 +13,7 @@ function get_domain_url() {
 	return $url;
 }
 
-function get_site_url($full) {
+function get_site_url(bool $full = true) {
 	$uriroot = realpath(__FILE__);
 	$o = strpos($uriroot, '/lib/util/util.php');
 	if ($o !== FALSE) $uriroot = substr($uriroot, 0, $o);
@@ -24,12 +24,15 @@ function get_site_url($full) {
 	return get_domain_url() . $uriroot;
 }
 
-function ua($x) {
-	return (strpos($_SERVER['HTTP_USER_AGENT'], $x) !== FALSE);
+function ua(string $x): bool
+{
+	return (str_contains($_SERVER['HTTP_USER_AGENT'] ?? '', $x));
 }
 
-function float_or_null($s) {
-	return (strlen($s) ? (float)$s : null);
+function float_or_null(?string $s): ?float
+{
+    $s ??= '';
+	return ($s !== '' ? (float)$s : null);
 }
 
 function paragraph_string($s) {
@@ -155,13 +158,13 @@ function age_range_string($min_age, $max_age) {
 }
 
 function cm_array_string($a) {
-	if (!$a) return 'none';
+	if (!$a) return '';
 	if (in_array('*', $a)) return 'all';
 	return implode(', ', $a);
 }
 
 function cm_array_string_short($a) {
-	if (!$a) return 'none';
+	if (!$a) return '';
 	if (in_array('*', $a)) return 'all';
 	if (count($a) > 1) return 'many';
 	return $a[0];
@@ -179,13 +182,13 @@ function cm_email_subbed($subbed, $email) {
 	return $subbed_span;
 }
 
-function cm_status_label($status) {
+function cm_status_label(string $status) {
 	$label_class = strtolower(preg_replace('/[^A-Za-z0-9]+/', '', $status));
 	$label = '<span class="cm-status-label cm-status-' . $label_class . '">';
 	return $label . htmlspecialchars($status) . '</span>';
 }
 
-function calculate_age($today, $birthdate) {
+function calculate_age(string $today, string $birthdate) {
 	if (!$today || !$birthdate) return null;
 	$date1 = new DateTime($today);
 	$date2 = new DateTime($birthdate);
@@ -313,7 +316,7 @@ function transaction_details_listTransactions($TxnDetailsString)
 					$payment_payID = $v['id'];
 					$payment_saleID = $v['transactions'][0]['related_resources'][0]['sale']['id'];
 					$payment_txn_amt =  $v['transactions'][0]['amount']['total'];
-					$invoice_number =  isset($v['transactions'][0]['invoice_number']) ? $v['transactions'][0]['invoice_number'] : '';
+					$invoice_number = $v['transactions'][0]['invoice_number'] ?? '';
 
 					//Stuff it into the result
 					$result[$k] = array('payment-txn-id' => $k,
@@ -330,31 +333,17 @@ function transaction_details_listTransactions($TxnDetailsString)
 		return $result;
 }
 
+function dieWithErrorLog(string $message, int $statusCode = 400, bool $printError = true): never
+{
+	error_log($message);
+	if ($printError) echo $message;
+	die($statusCode);
+}
+
+
 //Are we an AJAX call?
 $_SERVER['IS_AJAX'] = false;
 if(!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
 	$_SERVER['IS_AJAX'] = true;
 }
 
-//Are we in Legacy mode?
-function isLegacy() {
-	return isset($_COOKIE['L']);
-}
-function setLegacyMode($newmode) {
-	if(isLegacy() && !$newmode){
-			setcookie("L","F",time()-1,"/");
-			//Immediately apply
-			unset($_COOKIE['L']);
-	}
-	elseif(!isLegacy() && $newmode){
-		setcookie("L","T",time()+2*60*60,"/"); //Two hours
-		$_COOKIE['L'] = 1;
-	}
-
-}
-
-//Are we setting legacy
-if(isset($_GET['legacy']))
-{
-	setLegacyMode($_GET['legacy'] == 'true');
-}

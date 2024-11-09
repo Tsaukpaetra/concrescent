@@ -1,13 +1,13 @@
 <?php
 
-require_once dirname(__FILE__).'/database.php';
+require_once __DIR__ .'/database.php';
 
 class cm_lists_db {
 
-	public $index_table_name;
-	public $cm_db;
+	public string $index_table_name;
+	public cm_db $cm_db;
 
-	public function __construct($cm_db, $index_table_name) {
+	public function __construct(cm_db $cm_db, string $index_table_name) {
 		$this->index_table_name = $index_table_name;
 		$this->cm_db = $cm_db;
 		$this->cm_db->table_def($this->index_table_name, (
@@ -57,7 +57,7 @@ class cm_lists_db {
 			$value = $this->normalize_value($value);
 			$stmt = $this->cm_db->connection->prepare(
 				'INSERT INTO '.
-				$this->cm_db->table_name($this->index_table_name).
+				"`$this->index_table_name`" .
 				' SET `id` = ?, `key` = ?, `value` = ?'
 			);
 			$stmt->bind_param('iss', $id, $key, $value);
@@ -74,7 +74,7 @@ class cm_lists_db {
 		if (!$id) return;
 		$stmt = $this->cm_db->connection->prepare(
 			'DELETE FROM '.
-			$this->cm_db->table_name($this->index_table_name).
+			"`$this->index_table_name`" .
 			' WHERE `id` = ?'
 		);
 		$stmt->bind_param('i', $id);
@@ -85,11 +85,11 @@ class cm_lists_db {
 	public function drop_index() {
 		$this->cm_db->connection->query(
 			'TRUNCATE TABLE '.
-			$this->cm_db->table_name($this->index_table_name)
+			"`$this->index_table_name`"
 		);
 	}
 
-	private $sql_expr_id = 0;
+	private int $sql_expr_id = 0;
 
 	public function list_query_op_to_sql($key, $op, $value) {
 		$exid = 'e' . $this->sql_expr_id++;
@@ -103,10 +103,10 @@ class cm_lists_db {
 				$value = '%' . $value . '%';
 				$sqlquery = (
 					'(EXISTS (SELECT 1 FROM '.
-					$this->cm_db->table_name($this->index_table_name).' '.$exid.
-					' WHERE '.$exid.'.`id` = i.`id`'.
-					' AND '.$exid.'.`key` = ?'.
-					' AND '.$exid.'.`value` LIKE ?'.
+					"`$this->index_table_name` $exid".
+					" WHERE $exid.`id` = i.`id`".
+					" AND $exid.`key` = ?".
+					" AND $exid.`value` LIKE ?".
 					' LIMIT 1))'
 				);
 				$bindtype = 'ss';
@@ -115,10 +115,10 @@ class cm_lists_db {
 			case '<': case '>': case '<=': case '>=': case '=':
 				$sqlquery = (
 					'(EXISTS (SELECT 1 FROM '.
-					$this->cm_db->table_name($this->index_table_name).' '.$exid.
-					' WHERE '.$exid.'.`id` = i.`id`'.
-					' AND '.$exid.'.`key` = ?'.
-					' AND '.$exid.'.`value` '.$op.' ?'.
+					"`$this->index_table_name` $exid".
+					" WHERE $exid.`id` = i.`id`".
+					" AND $exid.`key` = ?".
+					" AND $exid.`value` $op ?".
 					' LIMIT 1))'
 				);
 				$bindtype = 'ss';
@@ -196,7 +196,7 @@ class cm_lists_db {
 				$key = $column['key'];
 				$select[] = (
 					'(SELECT i'.$i.'.`value`'.
-					' FROM '.$this->cm_db->table_name($this->index_table_name).' i'.$i.
+					" FROM `$this->index_table_name` i$i".
 					' WHERE i'.$i.'.`id` = i.`id`'.
 					' AND i'.$i.'.`key` = ?) o'.$i
 				);
@@ -220,7 +220,7 @@ class cm_lists_db {
 			$bindtype .= $order_bindtype;
 			$bindvalue = array_merge($bindvalue, $order_bindvalue);
 		}
-		$sqlquery .= ' FROM ' . $this->cm_db->table_name($this->index_table_name) . ' i';
+		$sqlquery .= " FROM `$this->index_table_name` i";
 		if ($query_sqlquery) {
 			$sqlquery .= ' WHERE i.`key` = \'\' AND ' . $query_sqlquery;
 			$bindtype .= $query_bindtype;

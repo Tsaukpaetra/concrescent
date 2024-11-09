@@ -1,0 +1,59 @@
+services:
+  concrescent:
+    build:
+      dockerfile: Dockerfile
+      target: dev
+    restart: unless-stopped
+    ports:
+      - "80:8080"
+    user: nobody
+    volumes:
+      - ./cm2:/var/www/html:ro
+      - ./var/log/concrescent:/var/www/log
+      - ./vendor:/var/www/vendor:ro
+      - ./templates:/var/www/templates:ro
+      - ./msmtprc:/etc/msmtprc:ro
+      - ./concrescent.php:/srv/host/config.php:ro
+    env_file:
+      - .env.dev
+      - .env
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    ports:
+    - "3306:3306"
+    command:
+      - '--general-log=ON'
+      - '--general-log-file=/var/log/mysql/query.log'
+      - '--log-output=FILE'
+    volumes:
+      - ./init:/docker-entrypoint-initdb.d:ro
+      - ./var/mysql-data:/var/lib/mysql:delegated
+      - ./var/log/mysql:/var/log/mysql:delegated
+    env_file:
+    - .env.dev
+    - .env
+  mail:
+    image: axllent/mailpit:v1.20
+    restart: unless-stopped
+    ports:
+    - "8025:8025"
+    environment:
+      TZ: ${TZ}
+      MP_MAX_MESSAGES: 5000
+      MP_DATA_FILE: /data/mailpit.db
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_TLS_CERT: /srv/cert/mailpit.crt
+      MP_SMTP_TLS_KEY: /srv/cert/mailpit.key
+    volumes:
+    - ./var/mailpit:/data:delegated
+    - ./config/mailpit-certs:/srv/cert:ro
+  phpmyadmin:
+    image: phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      - PMA_HOST=mysql
+      - PMA_USER=root
+      - PMA_PASSWORD=rootpasswd
