@@ -758,6 +758,10 @@ final class PaymentBuilder
     public function prepPayment()
     {
         //First do some pre-checks
+        if($this->cart['payment_status'] == 'InProgress')
+        {
+            return [];
+        }
         $banlisted = false;
         $errors = array();
         $this->refreshCartMeta();
@@ -902,6 +906,7 @@ final class PaymentBuilder
                 if ($this->pp->ConfirmOrder()) {
                     $payment_details = $this->pp->GetDetails();
                     $this->cart['payment_status'] = 'Incomplete';
+                    $this->saveCart();
                     return true;
                 } else {
                     throw new \Exception('Failed to confirm order with provider.');
@@ -938,42 +943,7 @@ final class PaymentBuilder
                 //Create/update the application submission
                 $this->completeGroupApplication($cartitem);
 
-                //Send the application status
-                $template = $cartitem['context_code'] . '-application-' .$cartitem['application_status'];
-
-                try {
-                    //Attempt to send mail
-                    $to = $this->CurrentUserInfo->GetContactEmail($cartitem['contact_id']);
-                    if (!$this->Mail->SendTemplate($to, $template, $cartitem, $cartitem['notify_email'])) {
-                        $errors['sentUpdate'] =  false;
-                    }
-                } catch (\Exception $e) {
-                    //Oops, couldn't send. Oh well?
-                    $errors['sentUpdate'] = false;
-                }
                 $badgeItems = [];
-            }
-
-            //Attempt to send mail(s)
-            $anyFail = false;
-            foreach ($badgeItems as $key => &$item)
-            {
-                $template = $item['context_code'] . '-payment-' .$item['payment_status'];
-                $to = $this->CurrentUserInfo->GetContactEmail($item['contact_id']);
-                $this->completeBadge($item);
-                try
-                {
-                    $anyFail |= !$this->Mail->SendTemplate($to, $template, $item, $item['notify_email']);
-                } catch (\Exception $e)
-                {
-                    //Oops, couldn't send. Oh well?
-                    $anyFail = true;
-                }
-            }
-
-            if ($anyFail)
-            {
-                $errors['sentUpdate'] = false;
             }
 
             //Check for addons
@@ -1109,7 +1079,7 @@ final class PaymentBuilder
                 //Attempt to send mail(s)
                 $anyFail = false;
                 foreach ($badgeItems as $badge) {
-                    $anyFail |= !$this->Mail->SendTemplate($to, $template, $badge, $badge['notify_email']);
+                    $anyFail |= !$this->Mail->SendTemplate($to, $template, $badge, $badge['notify_email'] ?? null);
                 }
                 return !$anyFail;
             } catch (\Exception $e) {
