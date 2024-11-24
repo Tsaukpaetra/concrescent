@@ -424,13 +424,28 @@ abstract class Table
         if (!is_null($initialTableAlias)) {
             $sqlBody .= 'as `' . $initialTableAlias . '` ';
         }
+
+        //Simplifying the future calls for what the initial table alias is
+        $initialTablePart = (!empty($initialTableAlias) ? '`' . $initialTableAlias . '`' : $this->dbTableName());
+
         $whereCodes = '';
         $whereData = array();
+        $havingCodes = '';
+        $havingData = array();
+        $havingPart = '';
 
         //Check if we're doing joins because we're a view
         if (isset($viewName) && isset($viewJoins)) {
             foreach ($viewJoins as $join) {
                 $joinSubQueryExposed = array();
+                $joinSubQueryColumns = [];
+                $joinSubQueryHavingPart = "";
+                $joinSubQueryHavingCodes = "";
+                $joinSubQueryHavingData = [];
+                array_walk($join->Table->ColumnDefs,function ($col, $name, $table) use (&$joinSubQueryColumns)  {
+                    //$joinSubQueryColumns[] =  $table. '.`' . $name .'`, ';
+                    $joinSubQueryColumns[] =  $name ;
+                },(isset($join->JoinedTableAlias) ? '`' . $join->JoinedTableAlias .'`' : $join->Table->dbTableName()));
                 if (!isset($join->subQSelectColumns) && !isset($join->subQSearchTerms)) {
                     //Normal flat join
                     $sqlBody .= $join->Direction . ' JOIN ' . $join->Table->dbTableName();
@@ -482,7 +497,12 @@ abstract class Table
 
                     //Do we have any terms?
                     if ($join->subQSearchTerms != null && count($join->subQSearchTerms)) {
-                        $sqlBody .= 'WHERE ' . $join->Table->_WhereBuilder($join->subQSearchTerms, $whereCodes, $whereData);
+                        
+                        $sqlJoinWhere =  $join->Table->_WhereBuilder($join->subQSearchTerms, $whereCodes, $whereData, isset($value->JoinedTableAlias) ? '`' . $value->JoinedTableAlias .'`.' : $join->Table->dbTableName(), $joinSubQueryColumns, $joinSubQuerygroupNames,  $joinSubQueryHavingCodes, $joinSubQueryHavingData, $joinSubQueryHavingPart);
+                        if(strlen($sqlJoinWhere)){
+                            $sqlBody .= ' WHERE ' . $sqlJoinWhere;
+                        }
+                        //throw new \Exception($sqlBody . '[[' . $havingPart . ']]' .print_r($join->subQSearchTerms,true));
                     }
 
                     //Are we grouping?
@@ -495,6 +515,19 @@ abstract class Table
                         //Snip the trailing comma
                         $sqlBody = substr($sqlBody, 0, -2);
                     }
+
+                    //Are we Having?
+                    if(strlen($joinSubQueryHavingPart)){
+                        $sqlBody.= ' HAVING ' . $joinSubQueryHavingPart;
+                        
+                        //Add the codes and data to the end of the current where codes
+                        $whereCodes .= $joinSubQueryHavingCodes;
+                        //$whereData = array_merge($whereData, $havingData);
+                        array_walk($joinSubQueryHavingData, function(&$data) use(&$whereData){
+                            $whereData[] = &$data;
+                        });
+                    }
+
 
                     //End the subquery
                     $sqlBody .= ') ';
@@ -635,7 +668,10 @@ abstract class Table
 
         //Do we have any terms?
         if ($terms != null && count($terms)) {
-            $sqlBody .= 'WHERE ' . $this->_WhereBuilder($terms, $whereCodes, $whereData, $initialTableAlias);
+            $sqlWhere = $this->_WhereBuilder($terms, $whereCodes, $whereData, $initialTablePart, $columns, $groupNames,  $havingCodes, $havingData, $havingPart);
+            if(strlen($sqlWhere)){
+                $sqlBody .= 'WHERE ' . $sqlWhere;
+            }
         }
 
         //Are we grouping?
@@ -650,6 +686,22 @@ abstract class Table
             $sqlGrouping = substr($sqlGrouping, 0, -2);
         }
 
+        //Are we Having?
+        $sqlHaving = '';
+        if(strlen($havingPart))
+        {
+            $sqlHaving .=  ' HAVING ' . $havingPart;
+            //Add the codes and data to the end
+            $whereCodes .= $havingCodes;
+            //$whereData = array_merge($whereData, $havingData);
+            array_walk($havingData, function(&$data) use(&$whereData){
+                $whereData[] = &$data;
+            });
+
+            //Snip the trailing comma
+            //$sqlHaving = substr($sqlHaving, 0, -2);
+        }
+
         //Are we ordering?
         $sqlOrdering = '';
         if ($order != null && count($order)) {
@@ -661,7 +713,7 @@ abstract class Table
                 if (gettype($value) == 'string')
                 {
                     //Check all the aliases
-                    $orderingTable = (!empty($initialTableAlias) ? '`' . $initialTableAlias . '`' : $this->dbTableName()) . '.';
+                    $orderingTable = $initialTablePart . '.';
                     $orderingValue = $value;
                     foreach ($columns as $checkvalue)
                     {
@@ -678,7 +730,7 @@ abstract class Table
                             } elseif ($checkvalue->ColumnName == $value) {
                                 $orderingTable = isset($checkvalue->JoinedTableAlias)
                                     ? "`$checkvalue->JoinedTableAlias`."
-                                    : (!is_null($initialTableAlias) ? "`$initialTableAlias`." : $this->dbTableName() . '.');
+                                    : ($initialTablePart . '.');
                                 break;
                             }
                         }
@@ -689,13 +741,13 @@ abstract class Table
                     $sqlOrdering .= str_replace(
                         '?',
                         (isset($value->JoinedTableAlias) ? '`' . $value->JoinedTableAlias .'`.' 
-                            : (!empty($initialTableAlias) ? '`' . $initialTableAlias .'`' : $this->dbTableName()) .'.'). '`' . $value->ColumnName .'`',
+                            : $initialTablePart .'.'). '`' . $value->ColumnName .'`',
                         $value->EncapsulationFunction != null ? $value->EncapsulationFunction : '?'
                     );
                     $sqlOrdering .= ', ';
                 } elseif (gettype($key) == 'string') {
                     //Check all the aliases
-                    $orderingTable = (!empty($initialTableAlias) ? '`' . $initialTableAlias . '`' : $this->dbTableName()) . '.';
+                    $orderingTable = $initialTablePart . '.';
                     $orderingValue = $key;
                     foreach ($columns as $checkvalue)
                     {
@@ -712,7 +764,7 @@ abstract class Table
                             } elseif ($checkvalue->ColumnName == $key) {
                                 $orderingTable = isset($checkvalue->JoinedTableAlias)
                                     ? "`$checkvalue->JoinedTableAlias`."
-                                    : (!is_null($initialTableAlias) ? "`$initialTableAlias`." : $this->dbTableName() . '.');
+                                    : ($initialTablePart . '.');
                                 break;
                             }
                         }
@@ -730,16 +782,17 @@ abstract class Table
         }
 
         //Are we limiting?
+        $sqlWindowing = '';
         if ($limit > -1) {
-            $sqlOrdering .= ' LIMIT ' . $limit . ' ';
+            $sqlWindowing .= ' LIMIT ' . $limit . ' ';
         }
 
         //Skipping?
         if ($offset > 0) {
-            $sqlOrdering .= ' OFFSET ' . $offset . ' ';
+            $sqlWindowing .= ' OFFSET ' . $offset . ' ';
         }
 
-        $sqlText = $selectParts . $sqlBody .$sqlGrouping . $sqlOrdering;
+        $sqlText = $selectParts . $sqlBody .$sqlGrouping . $sqlHaving . $sqlOrdering . $sqlWindowing ;
 
         if ($this->debugThrowBeforeSelect) {
             $errors[] = 'Throwing intentionally due to debugThrowBeforeSelect';
@@ -764,13 +817,26 @@ abstract class Table
         //NOTE: Based off of https://www.php.net/manual/en/mysqli-stmt.bind-param.php#107154
         array_unshift($whereData, $whereCodes);
         if (strlen($whereCodes) > 0) {
+            //Prepare a handler in case something goes sideways
+            $GLOBALS['whereData'] = &$whereData;
+            $warning_handler = function($errno, $errstr) 
+            { 
+                ob_start();
+                var_dump($GLOBALS['whereData']);
+                $whereDataString = ob_get_clean();
+                throw new \Exception($errstr . "\r\n" . serialize($whereDataString), $errno);
+            };
+            set_error_handler($warning_handler, E_WARNING);
+            
             ( new \ReflectionMethod('mysqli_stmt', 'bind_param'))->invokeArgs($stmt, $whereData);
+            restore_error_handler(); //Back to normal
+            unset($GLOBALS['whereData']);
         }
 
         $resultCountStmt = false;
         if ($resultTotal !== null) {
             //Prepare the resultCountStmt since we asked for a count
-            $resultCountSql = 'Select count(*) from ( select 1 ' . $sqlBody . $sqlGrouping . ' ) a';
+            $resultCountSql = 'Select count(*) from ( select 1 ' . $sqlBody . $sqlGrouping . $sqlHaving . ' ) a';
             $resultCountStmt = $this->cm_db->connection->prepare($resultCountSql);
             if ($resultCountStmt !== false) {
                 if (strlen($whereCodes) > 0) {
@@ -838,25 +904,55 @@ abstract class Table
         return $result;
     }
 
-    protected function _WhereBuilder(array $terms, string &$whereCodes, array &$whereData, $initialTableAlias= null)
+    protected function _WhereBuilder(array $terms, string &$whereCodes, array &$whereData, $initialTablePart = null, array $selectColumns, array $groupNames, string &$havingCodes, array &$havingData, string &$havingPart)
     {
+        //throw new \Exception('huh?');
+        $initialTablePart = $initialTablePart  ?? $this->dbTableName();
         $result = '(';
+        
         $firstInGroup = true;
 
         foreach ($terms as $termkey =>$term) {
-            if (is_null($term)) {
+            $currentComponent = '';
+            $currentTypeCodes = '';
+            $currentData = [];  
+            $currentShouldBeHaving = false;
+            if (is_null($term) || empty($term)) {
                 continue;
             }
             if (!($term instanceof SearchTerm))
             {
                 //Create it from wholecloth
-                $term = new SearchTerm($termkey, $term);
+                if(is_string($termkey)){
+                    //Assume an equality comparison on a value
+                    $term = new SearchTerm($termkey, $term);
+                } else {
+                    //Assume searchTerm encoded, infer the column from given data
+                    //First, split out the column from the data
+                    list($termkey,$term) = array_merge(explode(chr(29),$term,2),['Should not happen']);
+                    //Next, search the assumed column
+                    $col = $this->getColumnFromAlias($selectColumns,$termkey,$initialTablePart);
+                    //Decode the search term parameters
+                    $term = (SearchDefinition::fromSelectColumn($col))->toSearchTerm($term);
+                    //die(print_r($term,true));
+                }
             }
-            if ($firstInGroup) {
-                $firstInGroup = false;
-            } else {
-                $result .= ' ' . $term->TermType . ' ';
+
+            //Determine if this term should be in the Having clause
+            //Note: This is a terrible test as we could have aggregate columns that aren't grouped...
+            if(count($groupNames) && is_null($term->subSearch))
+            {
+                $col = $this->getColumnFromAlias($selectColumns,$term->ColumnName,$initialTablePart);
+                $currentShouldBeHaving = !is_null($term->EncapsulationFunction) 
+                || (in_array($initialTablePart . '.`' .  $col->ColumnName, $selectColumns) 
+                && !(in_array( $initialTablePart . '.`' .  $col->ColumnName . '`', $groupNames)))
+                
+                ;
+                //  echo print_r($groupNames,true);
+                //  echo print_r($selectColumns,true);
+                //  throw new \Exception('Having for ' . $initialTablePart  . '.`' .  $col->ColumnName . '`' . ' : ' . $currentShouldBeHaving);
             }
+
 
             //Are we a sub-clause?
             if (is_null($term->subSearch)) {
@@ -872,67 +968,98 @@ abstract class Table
                 //Do we have a Raw clause?
                 if ($term->Raw != null) {
                     //Append it to the result
-                    $result .= $term->Raw;
+                    $currentComponent .= $term->Raw;
                     // Was there a ?
                     if (strpos($term->Raw, '?') !== false) {
-                        //Add it to the parameters
-                        $whereCodes .= $typeCode;
-                        $whereData[] = &$term->CompareValue;
+                        //Add it to the parameters. Hack! We can't detect if there's a ? inside a string like this
+                        $currentTypeCodes .= $typeCode;
+                        $currentData[] = &$term->CompareValue;
                     }
                 } else {
                     //Normal term, add it in
-                    $result .= str_replace(
+                    $currentComponent .= str_replace(
                         '?',
-                        (isset($term->JoinedTableAlias) ? '`' . $term->JoinedTableAlias . '`' : (
-                            !is_null($initialTableAlias)
-                            ? '`' .$initialTableAlias.'`'
-                            : $this->dbTableName()
-                        )) . '.' .
+                        (isset($term->JoinedTableAlias) ? '`' . $term->JoinedTableAlias . '`' : $initialTablePart) . '.' .
                             '`' . $term->ColumnName .'` ',
                         $term->EncapsulationFunction != null && $term->EncapsulationColumnOnly !== false ? $term->EncapsulationFunction : '?'
-                    ) . $term->Operation . ' ';
+                    ) . ' ' . $term->Operation . ' ';
                     //Is our operation an IN ?
                     if (strpos(strtolower($term->Operation), 'in') !== false) {
-                        $result .= '(';
+                        $currentComponent .= '(';
                         $firstNeedle = true;
                         foreach ($term->CompareValue as $key => $needle) {
                             if ($firstNeedle) {
                                 $firstNeedle = false;
                             } else {
-                                $result .= ', ';
+                                $currentComponent .= ', ';
                             }
                             $typeCode = 's'; //String by default
                             switch (gettype($needle)) {
                                 case 'integer': $typeCode = 'i'; break;
                                 case 'double': $typeCode = 'd'; break;
                             }
-                            $result .= "?";
-                            $whereCodes .= $typeCode;
-                            $whereData[] = &$term->CompareValue[$key];
+                            $currentComponent .= "?";
+                            $currentTypeCodes .= $typeCode;
+                            $currentData[] = &$term->CompareValue[$key];
                         }
                         //If there are no values, add in a null
                         if($firstNeedle == true){
-                            $result .= "null";
+                            $currentComponent .= "null";
                         }
-                        $result .= ')';
+                        $currentComponent .= ')';
                     }
                     //Is our operation an is (not)
                     elseif (strpos(strtolower($term->Operation), 'is') !== false) {
                         //We totally ignore whatever the value is and assume it's null anyways
-                        $result .= ' NULL ';
+                        $currentComponent .= ' NULL ';
                     } else {
                         //Just a normal value
-                        $result .=($term->EncapsulationFunction != null && $term->EncapsulationColumnOnly !== true) ? $term->EncapsulationFunction : '?';
-                        $whereCodes .= $typeCode;
-                        $whereData[] = &$term->CompareValue;
+                        $currentComponent .=($term->EncapsulationFunction != null && $term->EncapsulationColumnOnly !== true) ? $term->EncapsulationFunction : '?';
+                        $currentTypeCodes .= $typeCode;
+                        $currentData[] = &$term->CompareValue;
                     }
                 }
             } else {
                 //Sub-search. Ignore everything and recurse.
-                $result .= $this->_WhereBuilder($term->subSearch, $whereCodes, $whereData, $initialTableAlias);
+                $currentComponent .= $this->_WhereBuilder($term->subSearch, $whereCodes, $whereData, $initialTablePart, $selectColumns, $groupNames,  $havingCodes, $havingData, $havingPart);
+            }
+
+
+            //If we're normal, add it to the the Where
+            if(!$currentShouldBeHaving)
+            {                    
+                //Only continue if there was something of substance to add
+                if(strlen($currentComponent) > 0)
+                {
+                    if ($firstInGroup) {
+                        $firstInGroup = false;
+                    } else {
+                        $currentComponent = ' ' . $term->TermType . ' ' . $currentComponent;
+                    }
+                    $result.=$currentComponent;
+                    $whereCodes .= $currentTypeCodes;
+                    //Merge in data
+                    foreach ($currentData as &$value) {
+                        $whereData[] = &$value;
+                    }
+                }
+            } else {
+                //Otherwise, add it to Having
+                if(strlen($havingPart) > 5){
+                    $currentComponent = ' ' . $term->TermType . ' ' . $currentComponent;
+                }
+                
+                $havingPart.=$currentComponent;
+                $havingCodes .= $currentTypeCodes;
+                //Merge in data
+                foreach ($currentData as &$value) {
+                    $havingData[] = &$value;
+                }
             }
         }
         //And we're done!
+        //Don't give anything if we didn't end up with any terms
+        if($firstInGroup) return '';
         return $result .')';
     }
 
@@ -1016,5 +1143,31 @@ abstract class Table
         if ($forceThrow || (!empty($currentErrors))) {
             throw new DbException($Description, $currentErrors, $sql);
         }
+    }
+
+    public function getColumnFromAlias(array $columns, $alias, $defaultTableAlias): SelectColumn
+    {
+        //To start off with, set the defaults
+        $table = $defaultTableAlias;
+        $column = $alias;
+        foreach ($columns as $checkvalue)
+        {
+            if (gettype($checkvalue) == 'string')
+            {
+                //We've already discovered what the value should be in the base table
+                if ($checkvalue == $alias)
+                    return new SelectColumn($checkvalue);
+            } elseif ($checkvalue instanceof SelectColumn)
+            {
+                if (!is_null($checkvalue->Alias) && $checkvalue->Alias == $alias) {
+                    return $checkvalue;
+                } elseif ($checkvalue->ColumnName == $alias) {
+                    return $checkvalue;
+                }
+            }
+        }
+        throw new \Exception("Failed to find column from alias `$alias` with provided columns: \r" . print_r($columns,true));
+        // //Remove the backticks in case it was provided us
+        // $table = trim($table,'`');
     }
 }

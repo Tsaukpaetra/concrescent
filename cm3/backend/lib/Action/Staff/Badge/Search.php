@@ -50,7 +50,7 @@ final class Search
             return !empty($v);
         });
         // Invoke the Domain with inputs and retain the result
-        $data = $this->badgeinfo->SearchBadgesText('S', $find, $pg['order'], $pg['limit'], $pg['offset'], $totalRows, $questionIds);
+        $data = $this->badgeinfo->SearchBadgesText('S', $find, $pg['order'], $pg['limit'], $pg['offset'], $totalRows, $questionIds, $qp['filter'] ??'');
 
 
         $response = $response->withHeader('X-Total-Rows', (string)$totalRows);

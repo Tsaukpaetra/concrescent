@@ -2,6 +2,7 @@
 
 namespace CM3_Lib\util;
 
+use CM3_Lib\database\SearchDefinition;
 use CM3_Lib\database\SelectColumn;
 use CM3_Lib\database\View;
 use CM3_Lib\database\Join;
@@ -717,7 +718,7 @@ final class badgeinfo
 
     }
 
-    public function SearchBadgesText($context, string $searchText, $order, $limit, $offset, &$totalRows, $includeFormQuestions = null)
+    public function SearchBadgesText($context, string $searchText, $order, $limit, $offset, &$totalRows, $includeFormQuestions = null,  string|array $filter = [])
     {
         $whereParts =
         empty($searchText) ? null :
@@ -754,6 +755,14 @@ final class badgeinfo
                     //TODO: This isn't working for some reason
                     //new SearchTerm('payment_id', $exactSearch['id'])
                 ));
+        }
+        if(gettype($filter) == 'string')
+        {
+            $filter = array_filter(explode(chr(28),$filter ?? ''));
+        }
+        if(count($filter))
+        {
+            $whereParts[] = new SearchTerm('', '', subSearch: $filter);
         }
 
         $result = $this->SearchBadges($context, $whereParts, $order, $limit, $offset, $totalRows, false, $includeFormQuestions);
@@ -837,6 +846,13 @@ final class badgeinfo
         $orderNoFormResponses = is_array($order) ? array_filter($order, function ($colname) {
             return !str_starts_with($colname, 'form_responses');
         }, ARRAY_FILTER_USE_KEY) : null;
+        if(is_array($g_terms))  array_walk($g_terms, function (SearchTerm &$col) {
+            //Only the subSearch terms might contain column names, skip any that aren't
+            if(is_null($col->subSearch)) return;
+            $col->subSearch = array_filter($col->subSearch, function ($search) {
+                if(gettype($search) == 'string') return !str_starts_with($search, 'form_responses');
+            });
+        });
         $g_data = $this->g_badge->Search($g_bv, $g_terms, $orderNoFormResponses, $limit, $offset, $trG, 'b');
         $totalRows =  $trA + $trS + $trG;
 
@@ -1034,28 +1050,48 @@ final class badgeinfo
         $result = array();
         foreach ($terms as $sterm) {
             //Search the view
-            $term = clone $sterm;
-            foreach ($badgeView->Columns as $selCol) {
-                if ($selCol instanceof SelectColumn) {
-                    //Does this match a column with an alias?
-                    if (($selCol->ColumnName == $term->ColumnName || $selCol->Alias == $term->ColumnName)
-                    && $selCol->JoinedTableAlias != null) {
-                //if($term->ColumnName == 'payment_id') die($selCol->JoinedTableAlias);
-                        $term->JoinedTableAlias = $selCol->JoinedTableAlias;
+            if($sterm instanceof SearchTerm)
+            {
+                $term = clone $sterm;
+                $found = false;
+                foreach ($badgeView->Columns as $selCol) {
+                    if ($selCol instanceof SelectColumn) {
+                        //Does this match a column with an alias?
+                        if (($selCol->ColumnName == $term->ColumnName || $selCol->Alias == $term->ColumnName)) {
+                            if(is_null($selCol->EncapsulationFunction))
+                            {
+                                $term->JoinedTableAlias = $selCol->JoinedTableAlias ?? $term->JoinedTableAlias;
+                            } else {
+                                //Not a direct column, must use the whole thing
+                                $term->EncapsulationFunction = $selCol->EncapsulationFunction;
+                            }
+                            $found = true;
+                            break;
+                        }
+                    } elseif ($selCol == $term->ColumnName) {
+                        //Assume  it's the default table, which we don't actually have the alias for in this function
+                        $found = true;
                         break;
                     }
                 }
+                if(!$found)
+                {
+                    //Might be a generated column. Do a hack I suppose
+                    throw new \Exception("Could not find term->ColumnName " . var_export($term,true) ." In: \r\n"  . var_export($badgeView->Columns,true));
+                }
+                //Search the joins' columns
+                foreach ($badgeView->Joins as $join) {
+                    //TODO: Implement?
+                }
+                //If there is subSearch, iterate into that
+                if($sterm->subSearch != null) {                    
+                    $term->subSearch = $this->AdjustSearchTerms($sterm->subSearch, $badgeView);
+                }
+                $result[] = $term;
+            } else {
+                //Dunno, just save as-is
+                $result[] = $sterm;
             }
-            //Search the joins' columns
-            foreach ($badgeView->Joins as $join) {
-                //TODO: Implement?
-            }
-            //If there is subSearch, iterate into that
-            if($sterm->subSearch != null) {
-                
-                $this->AdjustSearchTerms($sterm->subSearch, $badgeView);
-            }
-            $result[] = $term;
         }
         return $result;
     }
@@ -1487,6 +1523,7 @@ final class badgeinfo
                 'fandom_name',
                 'name_on_badge',
                new SelectColumn('context_code', JoinedTableAlias:'grp'),
+               new SelectColumn('assignment_count'),
                new SelectColumn('application_status'),
                new SelectColumn('badge_type_id'),
                new SelectColumn('payment_status'),
@@ -1834,6 +1871,7 @@ final class badgeinfo
         } else {
             //$idAdded = true;
             $sortBy[] = $defaultSortColumn;
+            $qp['sortDesc'] .=','.$defaultSortDesc;
         }
         $sortDesc = array_map(function ($v) {
             return $v == 'true' ? 1 : 0;
@@ -1848,6 +1886,9 @@ final class badgeinfo
                 array_pop($sortDesc);
             }
         }
+
+        //ensure we do not have mismatched number of elements
+        $sortDesc = array_slice($sortDesc,0,count($sortBy));
 
         $order =array_combine(
             $sortBy,
