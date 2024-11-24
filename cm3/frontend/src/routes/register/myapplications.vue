@@ -36,17 +36,23 @@
                 <v-card-actions v-for="addon in badge.addons"
                                 :key="addon['addon_id']">
                     <v-icon>mdi-plus</v-icon>
-                    <div class="text-truncate">
+                    <div class="text-truncate pl-1">
                         {{addon['name']}}
                     </div>
                 </v-card-actions>
                 <v-card-actions v-for="(subbadge,ix) in badge.subbadges"
                                 :key="ix">
                     <v-icon>mdi-account</v-icon>
-                    <div class="text-truncate">
+                    <div class="text-truncate pl-1">
                         {{subbadge | badgeDisplayName(false)}}
                     </div>
 
+                </v-card-actions>
+                <v-card-actions v-if="badge.assignment_count">
+                    <v-icon>mdi-application</v-icon>
+                    <div class="text-truncate pl-1">
+                        {{ badge.assignment_count }} Assignment slots
+                    </div>
                 </v-card-actions>
             </v-card>
         </v-col>

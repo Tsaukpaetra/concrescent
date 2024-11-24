@@ -142,6 +142,7 @@
                             Not available with current permissions
                         </v-col>
                     </v-row>
+                    <div v-if="isGroupApp">
                     <h3>Notify email</h3>
                     <v-row>
                         <v-col cols="12"
@@ -197,6 +198,7 @@
                     <v-row v-else>
                         Not available with current permissions
                     </v-row>
+                </div>
                 </v-form>
             </v-tab-item>
 
@@ -244,6 +246,18 @@
                 <v-row v-if="model.context_code=='S'">
                     <v-col cols="12">
                         <editBadgeApplicationStaffPosition v-model="model.assigned_positions" />
+                    </v-col>
+                </v-row>
+                <v-row v-if="isGroupApp">
+                    <v-col cols="4">
+                        <v-text-field
+                            v-if="badgeTypeMaxAssignments > 0" 
+                            label="Assignment Slots approved for"
+                            v-model.number="model.assignment_count"
+                            min="0"
+                            :max="badgeTypeMaxAssignments"
+                            type="number"
+                            ></v-text-field>
                     </v-col>
                 </v-row>
             </v-card-text>
@@ -313,6 +327,7 @@ export default {
                 ice_phone_number: '',
 
                 form_responses: {},
+                assignment_count:0,
                 application_status: '',
 
                 assigned_positions: undefined,
@@ -409,6 +424,7 @@ export default {
                 ...this.model.badgeGenInfoData,
                 context_code: this.model.context_code,
                 badge_type_id: this.model.badge_type_id,
+                assignment_count: this.model.assignment_count,
                 application_status: this.model.application_status,
                 time_checked_in: this.model.time_checked_in,
                 time_printed: this.model.time_printed,
@@ -493,6 +509,13 @@ export default {
             // Sort it out
             result.sort((a, b) => a.order - b.order);
             return result;
+        },
+        badgeTypeMaxAssignments() {
+            const selectedBadge = this.badges[this.selectedbadge];
+            if(selectedBadge) {
+                return selectedBadge.max_assignment_count
+            }
+            return 0;
         },
         applicationStatusMap() {
             if (this.isGroupApp) {

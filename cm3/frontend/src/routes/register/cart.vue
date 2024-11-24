@@ -82,7 +82,7 @@
                                 <v-card-actions v-for="addonid in filterAddons(product)"
                                                 :key="addonid['addon_id']">
                                     <v-icon>mdi-plus</v-icon>
-                                    <div class="text-truncate">
+                                    <div class="text-truncate pl-1">
                                         {{getAddonByID(product.context_code, product.badge_type_id, addonid['addon_id']) ? getAddonByID(product.context_code, product.badge_type_id, addonid['addon_id']).name : "Loading..."}}
                                     </div>&nbsp;|&nbsp;
                                     <span>{{ (getAddonByID(product.context_code, product.badge_type_id, addonid['addon_id']) ? getAddonByID(product.context_code, product.badge_type_id, addonid['addon_id']).price : "Loading" ) | currency }}&nbsp;</span>
@@ -90,10 +90,19 @@
                                 <v-card-actions v-for="(subbadge,ix) in product.subbadges"
                                                 :key="ix">
                                     <v-icon>mdi-account</v-icon>
-                                    <div class="text-truncate">
+                                    <div class="text-truncate pl-1">
                                         {{subbadge | badgeDisplayName(false)}}
                                     </div>&nbsp;|&nbsp;
                                     <span>{{ (subbadge.payment_price ? subbadge.payment_price: "Loading" ) | currency }}&nbsp;</span>
+
+                                </v-card-actions>
+                                <v-card-actions v-for="(assignment,ix) in product.assignment_count_charging"
+                                                :key="ix">
+                                    <v-icon>mdi-application</v-icon>
+                                    <div class="text-truncate pl-1">
+                                        Fee for assignment slot {{  assignment.slot }}
+                                    </div>&nbsp;|&nbsp;
+                                    <span>{{ assignment.price ? assignment.price  : assignment.prepaid ? 'Paid' : 'Included' | currency }}&nbsp;</span>
 
                                 </v-card-actions>
                             </v-card>
@@ -736,6 +745,9 @@ export default {
             if (undefined == this.addons[context_code][badge_type_id])
                 return result;
             return this.addons[context_code][badge_type_id].find(addon => addon.id == id) || result;
+        },
+        getAppFee(context_code,badge_type_id, slotfeenum, assignment_count_charging) {
+            var badgeType = this.products[context_code]
         }
     },
     watch: {
