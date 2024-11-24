@@ -2,13 +2,14 @@ const axios = require('axios').default;
 
 export default {
 
-    getEventInfo(cb) {
+    getEventInfo(cb, errorCb) {
         axios.get(global.config.apiHostURL + "public")
             .then(function(response) {
                 cb(response.data);
             })
             .catch(function(error) {
-                error + "oops"
+                console.log(response)
+                errorCb(error);
             })
     },
     getBadgeContexts(event_id, cb) {
@@ -17,10 +18,11 @@ export default {
                 cb(response.data);
             })
             .catch(function(error) {
-                error + "oops"
+                console.log(response)
+                errorCb(response.response.data);
             })
     },
-    getBadges(event_id, context, override_code, cb) {
+    getBadges(event_id, context, override_code, cb, errorCb) {
         const override = (override_code ?? '').replace(/[^a-z0-9]/gi, '').toUpperCase();
         var query = override != '' ? '?override=' + override : '';
         axios.get(global.config.apiHostURL + "public/" + event_id + '/badges/' + context + query)
@@ -28,21 +30,23 @@ export default {
                 cb(response.data);
             })
             .catch(function(error) {
-                error + "oops"
+                console.log(error)
+                errorCb(error);          
             })
     },
 
-    getQuestions(event_id, context, cb) {
+    getQuestions(event_id, context, cb, errorCb) {
         axios.get(global.config.apiHostURL + "public/" + event_id + '/questions/' + context)
             .then(function(response) {
                 cb(response.data);
             })
             .catch(function(error) {
-                error + "oops"
+                console.log(error)
+                errorCb(error);
             })
     },
 
-    getAddons(event_id, context, override_code, cb) {
+    getAddons(event_id, context, override_code, cb, errorCb) {
         const override = (override_code ?? '').replace(/[^a-z0-9]/gi, '').toUpperCase();
         var query = override != '' ? '?override=' + override : '';
         axios.get(global.config.apiHostURL + "public/" + event_id + '/badges/' + context + '/addons' + query)
@@ -50,7 +54,8 @@ export default {
                 cb(response.data);
             })
             .catch(function(error) {
-                error + "oops"
+                console.log(error)
+                errorCb(error);
             })
     },
 
@@ -69,6 +74,21 @@ export default {
             });
     },
 
+    checkEmailAddress(token, email_address, cb, errorCb) {
+        headers = {};
+        if(token){
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        axios.post(global.config.apiHostURL + "public/checkemail",{email_address: email_address}, {
+            headers: headers
+        })
+        .then(function(response) {
+            cb(response.data);
+        })
+        .catch(function(er) {
+            errorCb(er.response.data);
+        });
+    },
     //Response should be a token
     createAccount(accountInfo, cb, errorCb) {
         axios.post(global.config.apiHostURL + "public/createaccount", accountInfo)
@@ -172,6 +192,7 @@ export default {
             });
     },
     deleteCart(token, cartId, cb, errorCb) {
+        console.log("yo delete dis", cartId)
         axios.delete(global.config.apiHostURL + "account/cart/" + cartId, {
                 headers: {
                     Authorization: `Bearer ${token}`
