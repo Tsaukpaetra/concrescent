@@ -3,6 +3,7 @@
 namespace CM3_Lib\models;
 
 use CM3_Lib\database\Column as cm_Column;
+use CM3_Lib\database\ColumnIndex;
 
 class payment extends \CM3_Lib\database\Table
 {
@@ -42,7 +43,8 @@ class payment extends \CM3_Lib\database\Table
             'notes'			=> new cm_Column('TEXT', null, true),
             //Generated columns
         );
-        $this->IndexDefs = array();
+        //Maybe adding an event_id index here might be premature optimization?
+        $this->IndexDefs = array('event_id_id'=>new ColumnIndex(['event_id','id']));
         $this->PrimaryKeys = array('id'=>false);
         $this->DefaultSearchColumns = array('id','contact_id', 'requested_by','mail_template','payment_system','payment_status');
     }
