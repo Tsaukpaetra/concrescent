@@ -81,7 +81,7 @@ final class badgevalidator
 
                 //Special: Also apply the current promo if specified
                 if (!empty($item['payment_promo_code'])) {
-                    $this->badgepromoapplicator->TryApplyCode($item, $item['payment_promo_code']);
+                    $this->badgepromoapplicator->TryApplyCode($item, $item['payment_promo_code'] ??'');
                 }
                 break;
             case 'S':
