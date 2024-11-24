@@ -167,6 +167,7 @@ export default {
             'sendRetrieveBadgeEmail',
             'loginToken',
             'loginPassword',
+            'setAdminMode'
         ]),
         SendMagicLink() {
             this.loading = true;
@@ -207,6 +208,9 @@ export default {
                 this.loginToken(query.token).then((success) => {
                     if (success === true) {
                         this.state = 3;
+                        if(this.returnTo == "/" && this.isAdmin)  {
+                            this.setAdminMode(true);
+                        }
                     } else {
                         this.loginFailReason = success;
                         this.state = 4;

@@ -138,7 +138,7 @@ const actions = {
                     commit('setPermissions', data.permissions);
                     commit('setUsername', data.username);
                     commit('setPreferences', data.preferences);
-                    commit('setAdminMode', data.permissions != undefined)
+                    commit('setAdminMode', false)
                     dispatch('products/selectEventId', data.event_id, {
                         root: true
                     });
