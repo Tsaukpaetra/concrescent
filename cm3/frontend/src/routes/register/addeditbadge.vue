@@ -53,12 +53,12 @@
                            @click.native="affirmBadgeType" />
         <v-sheet
                  color="grey lighten-4"
-                 tile>
+                 tile v-show="badges.length">
             <v-card>
                 <v-card-title class="title">Selected:
                     {{ selectedBadge ? selectedBadge.name : "Nothing yet!" }} {{isProbablyDowngrading ? "Warning: Possible downgrade!" : ""}}
                 </v-card-title>
-                <v-card-text class="text--primary">
+                <v-card-text class="text--primary" v-if="selectedBadge">
                     Availability: {{selectedBadge.dates_available}}<br>
                     Ages:  {{selectedBadge.age_range}}<br>
                     <badgePerksRender :description="selectedBadge ? selectedBadge.description : '' "
@@ -144,6 +144,9 @@
                         <b>Logged in as:</b>&nbsp;&nbsp; {{LoggedInName}} &nbsp;&nbsp;
                         <router-link to="/account/logout?returnTo=/addbadge"> Not you?</router-link>
                     </v-list-item>
+                    <v-list-item>
+                        <b>Notification email:</b> &nbsp;&nbsp; {{ ContactInfo.email_address }}
+                    </v-list-item>
                 </v-col>
 
 
@@ -188,7 +191,8 @@
                     </v-card>
                 </v-dialog>
             </v-row>
-            <h3>Notify email</h3>
+            <div v-if="!isGroupApp">
+            <h3>Extra Notify email</h3>
             <v-row>
                 <v-col cols="12"
                        sm="6"
@@ -240,16 +244,17 @@
                                   :rules="RulesPhone"></v-text-field>
                 </v-col>
             </v-row>
+            </div>
         </v-form>
         <v-btn color="primary"
                :disabled="!(validContactInfo || isLoggedIn)"
                :loading="creatingAccount"
                @click="checkCreateAccount">Continue</v-btn>
-        <v-btn text
+               <v-btn text
                @click="step = 2">Back</v-btn>
-    </v-stepper-content>
-
-    <v-stepper-step :editable="reachedStep >= 4"
+            </v-stepper-content>
+            
+            <v-stepper-step :editable="reachedStep >= 4"
                     :complete="step > 4"
                     step="4">Additional Information</v-stepper-step>
 
@@ -288,12 +293,22 @@
     </v-stepper-content>
 
 
+    <v-row>
+        <v-col>
+            <v-btn text
+                   x-large
+                   disabled
+                   block>
+                <!-- Hack allocating space for the footer -->
+            </v-btn>
+        </v-col>
+    </v-row>
 
     <v-footer fixed
               cols="12">
         <v-btn color="red"
                @click="resetBadge">
-            <v-icon>mdi-bomb</v-icon>
+            Reset form
         </v-btn>
         <v-spacer></v-spacer>
         <v-spacer></v-spacer>
@@ -325,6 +340,7 @@ import profileForm from '@/components/profileForm.vue';
 export default {
     data() {
         return {
+            loadBadgeInProgress: false,
             step: 0,
             reachedStep: 0,
             cartIx: -1,
@@ -400,6 +416,7 @@ export default {
         ...mapGetters('mydata', {
             'isLoggedIn': 'getIsLoggedIn',
             'LoggedInName': 'getLoggedInName',
+            'ContactInfo': 'getContactInfo',
         }),
         ...mapGetters('products', {
             badgeContexts: 'badgeContexts',
@@ -661,23 +678,13 @@ export default {
             console.log('Loading badge because selected event id changed')
             this.loadBadge();
         },
-        async context_code(newCode) {
+        context_code(newCode) {
             
             //refresh the current context data
             console.log('Selecting context ' + newCode);
-            try {
-                await this.$store.dispatch('products/getEventInfo');
-                await this.$store.dispatch('products/getBadgeContexts');
-                await this.$store.dispatch('products/selectContext', newCode);
-
-            } catch (e) {
-                console.log('Selecting context ' + newCode + ' failed, waiting for a moment');
-                await new Promise(resolve => setTimeout(resolve, 500));
-                await this.$store.dispatch('products/getEventInfo');
-                await this.$store.dispatch('products/getBadgeContexts');
-                await this.$store.dispatch('products/selectContext', newCode);
-            } finally {
-
+            if(!this.loadBadgeInProgress)
+            {
+                this.refreshContext(newCode)
             }
             // console.log('Loading badge because context code changed')
             // this.loadBadge(newCode);
@@ -694,6 +701,20 @@ export default {
         saveBDay(date) {
             this.$refs.menuBDay.save(date);
             this.date_of_birth = this.date_of_birth;
+        },
+        async refreshContext(newCode){
+            try {
+                await this.$store.dispatch('products/getEventInfo');
+                await this.$store.dispatch('products/selectContext', newCode);
+
+            } catch (e) {
+                console.log('Selecting context ' + newCode + ' failed, waiting for a moment');
+                await new Promise(resolve => setTimeout(resolve, 500));
+                await this.$store.dispatch('products/getEventInfo');
+                await this.$store.dispatch('products/selectContext', newCode);
+            } finally {
+
+            }
         },
         checkCreateAccount: function() {
             if (this.isLoggedIn) {
@@ -731,6 +752,11 @@ export default {
                 console.log('bailing from loadBadge, we have no idea what event we in yet',this.$store.state.products.selectedEventId)
                 return;
             }
+            if(this.loadBadgeInProgress) {
+                console.log('bailing from loadBadge because it is already in progress')
+                return;
+            }
+            this.loadBadgeInProgress = true;
             let cartItem;
             if (this.$route.query.override) {
                 const override = this.$route.query.override;
@@ -810,6 +836,11 @@ export default {
                 };
                 console.log('new data', cartItem);
                 Object.assign(this, cartItem);
+                var currentStep = this.step;
+                this.step = 0;
+                console.log("loadbadge setting context", context_code)
+                await this.refreshContext(context_code);
+                this.step = currentStep;
                 // Special props
                 const _this = this;
 
@@ -829,11 +860,13 @@ export default {
             this.context_code = context_code;
 
             // this.checkBadge();
-
+            console.log('loadBadge complete')
+            this.loadBadgeInProgress = false;
         },
         resetBadge() {
             Object.assign(this.$data, this.$options.data.apply(this));
             this.$store.commit('cart/setCurrentlyEditingItem', this.compiledBadge);
+            this.context_code = 'A';
             this.step = 0;
             this.reachedStep = 0;
         },
@@ -923,8 +956,15 @@ export default {
         profileForm,
     },
     created() {
-        console.log('Loading badge because this page was loaded for the first time')
-        this.loadBadge();
+        
+            //Early bail if we don't yet have a context
+            if(!this.$store.state.products.selectedEventId){
+                console.log('not attempting to loadBadge, we have no idea what event we in yet',this.$store.state.products.selectedEventId)
+                return;
+            } else {
+                console.log('Loading badge because this page was loaded for the first time')
+                this.loadBadge();
+            }
     },
 };
 </script>
