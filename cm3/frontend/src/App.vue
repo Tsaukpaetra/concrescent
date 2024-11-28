@@ -224,6 +224,14 @@ export default {
                 }, {
                     divider: true
                 }, {
+                    route: "/Admin/Contact",
+                    icon: "mdi-account-details",
+                    label: "Contacts",
+                    show: () => {
+                        return true;
+                    },
+                    flex: 4,
+                }, {
                     route: "/Admin/Attendee",
                     icon: "mdi-badge-account-horizontal",
                     label: "Attendees",

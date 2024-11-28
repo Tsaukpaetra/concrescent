@@ -4,6 +4,7 @@ namespace CM3_Lib\Action\Contact;
 
 use CM3_Lib\database\SearchTerm;
 use CM3_Lib\models\contact;
+use CM3_Lib\util\badgeinfo;
 use CM3_Lib\Responder\Responder;
 use Fig\Http\Message\StatusCodeInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -20,7 +21,8 @@ final class Search
      * @param Responder $responder The responder
      * @param eventinfo $eventinfo The service
      */
-    public function __construct(private Responder $responder, private contact $contact)
+    public function __construct(private Responder $responder, private contact $contact,
+    private badgeinfo $badgeinfo)
     {
     }
 
@@ -35,12 +37,13 @@ final class Search
     public function __invoke(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
         // Extract the form data from the request body
-        $data = (array)$request->getParsedBody();
+        $qp = $request->getQueryParams();
+        $find = $qp['find'] ?? '';
         //TODO: Actually do something with submitted data. Also, provide some sane defaults
 
         $whereParts = array(
-          new SearchTerm('real_name', '%' . $request->getQueryParams()['find'] .'%', 'LIKE'),
-          new SearchTerm('email_address', '%' . $request->getQueryParams()['find'] .'%', 'LIKE', 'OR'),
+          new SearchTerm('real_name', '%' . $find .'%', 'LIKE'),
+          new SearchTerm('email_address', '%' . $find .'%', 'LIKE', 'OR'),
         );
 
         $order = array('id' => false);
@@ -52,8 +55,12 @@ final class Search
             $offset = 0;
         }
 
-        // Invoke the Domain with inputs and retain the result
-        $data = $this->contact->Search(array(), $whereParts, $order, $limit, $offset);
+        //Interpret order parameters
+        $pg = $this->badgeinfo->parseQueryParamsPagination($qp, defaultSortDesc:true);
+        $totalRows = 0;
+        $data = $this->contact->Search(array(), $whereParts, $pg['order'], $pg['limit'], $pg['offset'], $totalRows);
+
+        $response = $response->withHeader('X-Total-Rows', (string)$totalRows);
 
         // Build the HTTP response
         return $this->responder

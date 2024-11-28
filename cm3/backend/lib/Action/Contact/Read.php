@@ -43,8 +43,8 @@ final class Read
         );
 
         // Invoke the Domain with inputs and retain the result
-        $data = $this->contact->Search(['id',
-            'uuid',
+        $data = $this->contact->GetByID($params['id'], ['id',
+            'id',
             'date_created',
             'date_modified',
             'allow_marketing',
@@ -57,7 +57,7 @@ final class Read
             'state',
             'zip_code',
             'country',
-            'notes'], $whereParts);
+            'notes']);
 
         // Build the HTTP response
         return $this->responder
