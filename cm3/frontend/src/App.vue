@@ -274,7 +274,7 @@ export default {
                         return true; //return this.hasEventPerm('Badge_Stats');
                     }
                 }, {
-                    route: "/Admin/Badge_Stats",
+                    route: "/Admin/BadgeStats",
                     icon: "mdi-chart-bell-curve-cumulative",
                     label: "Badge Stats",
                     show: () => {

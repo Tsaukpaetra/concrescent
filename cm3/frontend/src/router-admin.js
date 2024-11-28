@@ -27,6 +27,14 @@ const result = [{
         component: () => import( /* webpackChunkName: "admin_attendee" */ './routes/admin/attendee.vue'),
     },
     {
+        path: 'Contact',
+        name: 'Contact',
+        meta: {
+            title: 'Contact',
+        },
+        component: () => import( /* webpackChunkName: "admin_contact" */ './routes/admin/contact.vue'),
+    },
+    {
         path: 'Application/:context_code',
         name: 'Application',
         meta: {
@@ -51,6 +59,14 @@ const result = [{
         component: () => import( /* webpackChunkName: "admin_orgchart" */ './routes/admin/orgchart.vue'),
     },
     {
+        path: 'BadgeStats',
+        name: 'Badge Stats',
+        meta: {
+            title: 'Badge Stats',
+        },
+        component: () => import( /* webpackChunkName: "admin_badgestats" */ './routes/admin/badge_stats.vue'),
+    },
+    {
         path: 'Users',
         name: 'Users',
         meta: {
@@ -73,6 +89,14 @@ const result = [{
             title: 'Badge Printing',
         },
         component: () => import( /* webpackChunkName: "badgeprinting" */ './routes/admin/badgeprinting.vue'),
+    },
+    {
+        path: 'Payments',
+        name: 'Payments',
+        meta: {
+            title: 'Payments',
+        },
+        component: () => import( /* webpackChunkName: "admin_payments" */ './routes/admin/payment.vue'),
     },
 ];
 export default result;

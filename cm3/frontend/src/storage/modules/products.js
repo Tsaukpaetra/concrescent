@@ -132,17 +132,23 @@ const actions = {
         state
     }, context_code) {
         return new Promise(async (resolve, reject) => {
-            await dispatch('getBadgeContexts');
-            //Confirm we have a context to select that matches
-            commit('setBadgeContextSelected', context_code);
-            //Check that the desired context exists
-            if (state.badgecontextselected == undefined)
-                return reject('Context Code not found:' + context_code);
-            //Fetch all the things(if needed)!
-            await dispatch('getContextBadges', state.badgecontextselected.context_code);
-            await dispatch('getContextQuestions', state.badgecontextselected.context_code);
-            await dispatch('getContextAddons', state.badgecontextselected.context_code);
-            resolve()
+            try {
+                
+                await dispatch('getBadgeContexts');
+                //Confirm we have a context to select that matches
+                commit('setBadgeContextSelected', context_code);
+                //Check that the desired context exists
+                if (state.badgecontextselected == undefined)
+                    return reject('Context Code not found:' + context_code);
+                //Fetch all the things(if needed)!
+                await dispatch('getContextBadges', state.badgecontextselected.context_code);
+                await dispatch('getContextQuestions', state.badgecontextselected.context_code);
+                await dispatch('getContextAddons', state.badgecontextselected.context_code);
+                resolve()
+            } catch (error) {
+                console.log("products/selectContext error",error)
+                reject(error);
+            }
         })
     },
     getContextBadges({
@@ -163,24 +169,31 @@ const actions = {
                 context_code: context_code,
                 success: false
             });
-            shop.getBadges(state.selectedEventId,
-                context_code, state.override_code,
-                badges => {
-                    commit('setContextBadges', {
-                        badges: badges,
-                        context_code: context_code,
-                        success: true
-                    });
-                    resolve();
-                },
-                error => {
-                    commit('setContextBadges', {
-                        badges: [],
-                        context_code: context_code,
-                        success: false
-                    });
-                    resolve()
-                })
+            try {
+                shop.getBadges(state.selectedEventId,
+                    context_code, state.override_code,
+                    badges => {
+                        commit('setContextBadges', {
+                            badges: badges,
+                            context_code: context_code,
+                            success: true
+                        });
+                        resolve();
+                    },
+                    error => {
+                        commit('setContextBadges', {
+                            badges: [],
+                            context_code: context_code,
+                            success: false
+                        });
+                        resolve()
+                    })
+                
+            } catch (error) {
+                
+                console.log('products/getContextBadges error',error)
+                reject(error)
+            }
         })
     },
     getContextQuestions({
