@@ -8,6 +8,7 @@
               :item-key="internalKey"
               class="elevation-1 fill-height"
               :show-expand='showExpand'
+              @item-expanded="doEmit('item-expanded',$event)"
               :search="searchText">
 
     <template v-slot:top="">
@@ -18,11 +19,12 @@
                       @click:append-outer="doSearch"
                       class="mx-4"></v-text-field>
     </template>
-    <template v-slot:[`item.actions`]="{ item }">
-
-        <v-btn v-for="action in actions"
-               :key="action.name"
-               @click="doEmit(action.name, item)">{{action.text}}</v-btn>
+    <template v-slot:[`item.__actions`]="{ item }">
+        <v-btn-toggle dense v-model="actionToggles" multple>
+            <v-btn v-for="action in actions"
+                :key="action.name"
+                @click="doEmit(action.name, item)">{{action.text}}</v-btn>
+        </v-btn-toggle>
     </template>
     <template v-slot:[`footer.prepend`]>
         <v-btn v-for="action in footerActions"
@@ -182,6 +184,7 @@ export default {
             tableOptions: {},
             tableResults: [],
             totalResults: 0,
+            actionToggles:[],
             optionExportFormat:'csv',
             optionExportRawHeaders: false,
         };
@@ -193,14 +196,15 @@ export default {
         headers() {
             var result = [this.headerKey, {
                 text: 'Actions',
-                value: 'actions',
+                value: '__actions',
+                sortable: false
             }];
             var rmv = this.RemoveHeaders || [];
             var inc = this.AddHeaders || [];
             var that = this;
             result = result.filter(item => !rmv.includes(item.value)).concat(inc);
             //Ensure the "Actions" header is last
-            var actionsIx = result.findIndex(item => item.value == 'actions');
+            var actionsIx = result.findIndex(item => item.value == '__actions');
             if (actionsIx > -1)
                 result.push(result.splice(actionsIx, 1)[0]);
             return result;
@@ -307,6 +311,10 @@ export default {
         },
         apiPath() {
             this.doSearch();
+        },        
+        actionToggles(){
+            if(this.actionToggles.length >0)
+            this.actionToggles = [];
         }
     }
 };

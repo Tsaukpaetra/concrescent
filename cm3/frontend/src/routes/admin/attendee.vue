@@ -274,7 +274,8 @@ export default {
     data: () => ({
         listRemoveHeaders: [
             'application_status',
-            'time_checked_in'
+            'time_checked_in',
+            'time_printed'
         ],
         listAddHeaders: [{
             text: 'Secondary Email',

@@ -39,7 +39,7 @@ export default {
     computed: {
         cards: function() {
             var items = [];
-            if (this.adminMode === true) {
+            if (this.adminMode != undefined && this.adminMode === true) {
                 //Some general event permissions
 
                 items.push({
@@ -95,7 +95,7 @@ export default {
                     },
                     flex: 4,
                 }, {
-                    route: "/Admin/Badge_Stats",
+                    route: "/Admin/BadgeStats",
                     icon: "mdi-chart-bell-curve-cumulative",
                     label: "Badge Stats",
                     show: () => {

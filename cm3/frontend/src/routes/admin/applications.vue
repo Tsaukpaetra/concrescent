@@ -398,8 +398,8 @@ export default {
     ],
     data: () => ({
         listRemoveHeaders: [
+            'time_printed',
             'time_checked_in',
-            'time_printed'
         ],
         listAddHeaders: [],
         sSelected: {},
