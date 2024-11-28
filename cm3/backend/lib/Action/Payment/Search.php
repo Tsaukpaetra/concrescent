@@ -5,6 +5,8 @@ namespace CM3_Lib\Action\Payment;
 use CM3_Lib\database\SearchTerm;
 use CM3_Lib\models\payment;
 use CM3_Lib\Responder\Responder;
+use CM3_Lib\util\badgeinfo;
+use CM3_Lib\util\CurrentUserInfo;
 use Fig\Http\Message\StatusCodeInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -20,7 +22,9 @@ final class Search
      * @param Responder $responder The responder
      * @param eventinfo $eventinfo The service
      */
-    public function __construct(private Responder $responder, private payment $payment)
+    public function __construct(private Responder $responder, private payment $payment,
+    private badgeinfo $badgeinfo,
+    private CurrentUserInfo $CurrentUserInfo)
     {
     }
 
@@ -35,24 +39,21 @@ final class Search
     public function __invoke(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
         // Extract the form data from the request body
-        $data = (array)$request->getParsedBody();
+        $qp = $request->getQueryParams();
+        $find = $qp['find'] ?? '';
         //TODO: Actually do something with submitted data. Also, provide some sane defaults
 
         $whereParts = array(
-          //new SearchTerm('active', 1)
+          new SearchTerm('event_id', $this->CurrentUserInfo->GetEventId())
         );
 
-        $order = array('id' => false);
+        //Interpret order parameters
+        $pg = $this->badgeinfo->parseQueryParamsPagination($qp, defaultSortDesc:true);
+        $totalRows = 0;
+        $data = $this->payment->Search(array(), $whereParts, $pg['order'], $pg['limit'], $pg['offset'], $totalRows);
 
-        $page      = ($request->getQueryParams()['page']?? 0 > 0) ? $request->getQueryParams()['page'] : 1;
-        $limit     = $request->getQueryParams()['itemsPerPage']?? -1; // Number of posts on one page
-        $offset      = ($page - 1) * $limit;
-        if ($offset < 0) {
-            $offset = 0;
-        }
+        $response = $response->withHeader('X-Total-Rows', (string)$totalRows);
 
-        // Invoke the Domain with inputs and retain the result
-        $data = $this->payment->Search(array(), $whereParts, $order, $limit, $offset);
 
         // Build the HTTP response
         return $this->responder
