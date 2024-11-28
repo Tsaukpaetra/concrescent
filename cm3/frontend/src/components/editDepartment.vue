@@ -94,7 +94,9 @@
                                         hide-details
                                         v-model="item.is_exec">
                                 <template v-slot:label>
-                                    Is executive
+                                    <v-icon >
+                                        mdi-crown
+                                    </v-icon>
                                 </template>
                             </v-checkbox>
                         </v-col>
