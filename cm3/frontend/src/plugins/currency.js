@@ -1,6 +1,7 @@
 const digitsRE = /(\d{3})(?=\d)/g;
 
 export function currency(value, currency, decimals) {
+  if(isNaN(parseFloat(value))) return value;
   value = parseFloat(value);
   if (!isFinite(value) || (!value && value !== 0)) return '';
   currency = currency != null ? currency : '$';
