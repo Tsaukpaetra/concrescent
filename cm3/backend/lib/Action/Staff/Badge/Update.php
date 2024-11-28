@@ -53,7 +53,7 @@ final class Update
             $template = 'S' . '-application-' .$badge['application_status'];
             try {
                 //Attempt to send mail
-                $data['sentUpdate'] =  $this->Mail->SendTemplate($to, $template, $badge, $badge['notify_email']);
+                $data['sentUpdate'] =  $this->Mail->SendTemplate($to, $template, $badge, $badge['notify_email']??null);
             } catch (\Exception $e) {
                 //Oops, couldn't send. Oh well?
                 $data['sentUpdate'] = false;
