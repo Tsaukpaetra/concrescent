@@ -80,7 +80,7 @@
                                     </v-btn>
                                 </v-card-actions>
                                 <v-card-actions v-for="addonid in filterAddons(product)"
-                                                :key="addonid['addon_id']">
+                                                :key="'addn'+addonid['addon_id']">
                                     <v-icon>mdi-plus</v-icon>
                                     <div class="text-truncate pl-1">
                                         {{getAddonByID(product.context_code, product.badge_type_id, addonid['addon_id']) ? getAddonByID(product.context_code, product.badge_type_id, addonid['addon_id']).name : "Loading..."}}
@@ -88,7 +88,7 @@
                                     <span>{{ (getAddonByID(product.context_code, product.badge_type_id, addonid['addon_id']) ? getAddonByID(product.context_code, product.badge_type_id, addonid['addon_id']).price : "Loading" ) | currency }}&nbsp;</span>
                                 </v-card-actions>
                                 <v-card-actions v-for="(subbadge,ix) in product.subbadges"
-                                                :key="ix">
+                                                :key="'subb'+ix">
                                     <v-icon>mdi-account</v-icon>
                                     <div class="text-truncate pl-1">
                                         {{subbadge | badgeDisplayName(false)}}
@@ -97,7 +97,7 @@
 
                                 </v-card-actions>
                                 <v-card-actions v-for="(assignment,ix) in product.assignment_count_charging"
-                                                :key="ix">
+                                                :key="'assn'+ix">
                                     <v-icon>mdi-application</v-icon>
                                     <div class="text-truncate pl-1">
                                         Fee for assignment slot {{  assignment.slot }}
@@ -306,6 +306,26 @@
             </v-card-text>
         </v-card>
     </v-dialog>
+    <v-dialog v-model="askSubmit"
+              persistent
+              width="600">
+        <v-card>
+            <v-toolbar color="primary"
+                       dark>
+                <h1>Application Saved!</h1>
+            </v-toolbar>
+            <v-card-text>
+                <v-card-text>Application has been saved. Submit now?</v-card-text>
+            </v-card-text>
+            <v-card-actions>
+                <v-spacer />
+                <v-btn 
+                       @click="askSubmit = false">No</v-btn>
+                <v-btn color="primary"
+                       @click="checkout()">Submit</v-btn>
+            </v-card-actions>
+        </v-card>
+    </v-dialog>
     <v-dialog v-model="AwaitingApprovalDialog"
               max-width="600">
         <v-card>
@@ -482,6 +502,7 @@ export default {
         AwaitingApprovalDialog: false,
         removeBadge: -1,
         clearCartDialog: false,
+        askSubmit : false,
         //badgeErrorCount: [],
         orderSteps: {
             'undefined': 'Processing order, please wait...',
@@ -702,6 +723,7 @@ export default {
             this.processingCheckoutDialog = true;
             if (cartid != undefined)
                 await this.loadCart(cartid);
+            this.askSubmit = false;
             this.processingCheckoutDialog = true;
             //Fancy delays
             await new Promise(resolve => setTimeout(resolve, 3000));
@@ -883,6 +905,11 @@ export default {
                 var setId = await this.saveCart();
                 await this.$store.dispatch('mydata/fetchCarts', false);
                 this.cartIdSelected = setId;
+                //Pop the submit question if that's all they can do with this cart
+                if(this.selectedCart.RequiresApproval 
+                && this.selectedCart.canCheckout){
+                    this.askSubmit = true;
+                }
             }
             this.cartIdSelected = this.currentCartId;
         } else {
