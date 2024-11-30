@@ -155,7 +155,7 @@
             {{item.id}}
         </v-tooltip>
     </template>
-    <template v-slot:[`item.badgeName`]="{ item}">
+    <template v-slot:[`item.__badgeName`]="{ item}">
         <badgeName :badge="item"/>
     </template>
     <template v-slot:[`item.application_status`]="{ item }">
@@ -293,7 +293,6 @@
 <script>
 import admin from '../api/admin';
 import payment_status_pill from '@/components/datagridcell/payment_status_pill.vue';
-import columnFilterEdit from './columnFilterEdit.vue';
 
 import badgeName from '@/components/datagridcell/badgeName.vue';
 import {
@@ -442,7 +441,7 @@ export default {
                 this.headerKey,
                 {
                     text: this.headerFirst.text + ' / ' + this.headerSecond.text,
-                    value:'badgeName'
+                    value:'__badgeName'
                 },
                 {
                     text: 'Badge Type',
@@ -531,6 +530,8 @@ export default {
                 'page',
                 'itemsPerPage'
             ].reduce((a, e) => (a[e] = this.tableOptions[e], a),  {...this.apiAddParams});
+            //If attempting to sort by badge name, make it be sorted by real_name instead
+            pageOptions['sortBy'] = pageOptions['sortBy'].map((item) => item == '__badgeName' ? 'real_name' : item);
             if (this.displayedQuestions.length) pageOptions['questions'] = this.displayedQuestions.map(x => x.id).join(',');
             if (this.searchText) pageOptions['find'] = this.searchText;
             if (this.context_code) pageOptions['context_code'] = this.context_code;
