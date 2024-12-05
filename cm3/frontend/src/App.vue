@@ -116,6 +116,12 @@
                      @updateSubTabs="updateSubTabs"
                      @updateSubTitle="updateSubTitle" />
     </v-main>
+    <v-snackbar v-model="initLoadDone"
+     :timeout="5000" 
+      shaped
+               color="appbar"
+      transition="fab-transition"
+      ><v-col style="text-align: center;"><h1>{{ selectedEvent.display_name }}</h1></v-col></v-snackbar>
 </v-app>
 </template>
 
@@ -129,6 +135,7 @@ import {
 export default {
     data: () => ({
         drawer: false,
+        initLoadDone:false,
         subHead: null,
         subTabs: [],
         subTabIx: 0
@@ -400,6 +407,7 @@ export default {
         }),
         ...mapGetters('products', {
             'events': 'events',
+            'selectedEvent':'selectedEvent',
             'badgeContexts': 'badgeContexts',
             'productselectedEvent': 'selectedEvent'
         }),
@@ -454,6 +462,9 @@ export default {
         }
     },
     watch: {
+        'selectedEvent': function(newSelectedEvent){
+            this.initLoadDone = true;
+        },
         '$route.name': function(name) {
             console.log("Switching route to " + name);
             //Reset title
@@ -479,7 +490,7 @@ export default {
     async created() {
         document.title = this.appTitle;
 
-        console.log('getting event info');
+        console.log('initial load: getting event info');
         if (this.isLoggedIn) {
             console.log('refreshing token, event id ' + this.productselectedEventId)
             await this.$store.dispatch('mydata/RefreshToken');
