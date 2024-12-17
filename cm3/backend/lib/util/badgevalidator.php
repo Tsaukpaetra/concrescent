@@ -118,6 +118,15 @@ final class badgevalidator
                 //TODO: Add submission applicants
         }
 
+        //All badge types require a real_name
+        $v->addColumnValidator('real_name',v::length(1,500));
+        $v->addColumnValidator('fandom_name',v::length(0,255),true);
+        $v->addColumnValidator('name_on_badge',v::in([
+            'Fandom Name Large, Real Name Small',
+            'Real Name Large, Fandom Name Small',
+            'Fandom Name Only',
+            'Real Name Only'],false));
+
         //Validate that we're not modifying an existing badge that belongs to another payment
         if($this->payment_id && isset($item['existing'])){
             if($item['existing']['payment_status'] != 'Completed' && ($item['existing']['payment_id'] ??-1) != $this->payment_id){

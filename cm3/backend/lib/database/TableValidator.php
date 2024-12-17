@@ -7,7 +7,7 @@ use Respect\Validation\Exceptions\NestedValidationException;
 
 class TableValidator
 {
-    private \Respect\Validation\Validator $rules;
+    private \Respect\Validation\Validatable $rules;
     private array $lastValidationErrors;
     private $sourceTable;
     public function __construct(Table $sourceTable)
@@ -18,7 +18,7 @@ class TableValidator
         //Add all the columns
         foreach ($sourceTable->ColumnDefs as $columnName => $def) {
             //Set up our validator
-            $v = new \Respect\Validation\Validator();
+            $v = new v();
             //Are we a custom column?
             if ($def->customPostfix != null) {
                 if (
@@ -78,7 +78,7 @@ class TableValidator
         }
     }
 
-    public function addColumnValidator(string $columnName, v $v, bool $optional = false)
+    public function addColumnValidator(string $columnName, \Respect\Validation\Validatable $v, bool $optional = false)
     {
         $this->rules = $this->rules->key($columnName, $v, !$optional);
     }
