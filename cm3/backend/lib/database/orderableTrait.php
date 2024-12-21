@@ -15,7 +15,7 @@ trait orderableTrait
     public function _createOrUpdate_entry( array $entrydata, bool $isNew)
     {
         if($isNew 
-        || !($entrydata[$this->orderColumn] ?? 0)
+        || (isset($entrydata[$this->orderColumn]) && ($entrydata[$this->orderColumn] ?? 0) == 0)
         )
         {
             $entrydata[$this->orderColumn] = $this->GetNextOrder($entrydata);
@@ -106,8 +106,11 @@ trait orderableTrait
 
         //Shortcut: If there aren't any items to modify, fuggetaboutit
         $total = count($items) - 1;
-        if (count($items) < 2)
+        if (count($items) < 2){
+            //TODO: Remove this workaround when we have actual calls to the fix endpoing
+            $this->orderFix($id);
             return [];
+        }
 
         //Preserve last item, which is what will be swapped with the target
         $targetItem[$this->orderColumn]= $items[$total][$this->orderColumn];;
