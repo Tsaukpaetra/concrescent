@@ -129,13 +129,39 @@ class Mail
                 $templatefile = __DIR__ . '/../../../config/templates/Mail/' . $template . '.json';
                 if (file_exists($templatefile)) {
                     //Load it up!
-                    $template = json_decode(file_get_contents($templatefile), true);
+                    $template = json_decode(file_get_contents($templatefile), true, flags: JSON_INVALID_UTF8_SUBSTITUTE);
+
+                    if (json_last_error() != JSON_ERROR_NONE) {
+                        switch (json_last_error()) {
+                            case JSON_ERROR_DEPTH:
+                                $msg = 'Maximum stack depth exceeded';
+                                break;
+                            case JSON_ERROR_STATE_MISMATCH:
+                                $msg = 'Underflow or the modes mismatch';
+                                break;
+                            case JSON_ERROR_CTRL_CHAR:
+                                $msg = 'Unexpected control character found';
+                                break;
+                            case JSON_ERROR_UTF8:
+                                $msg = 'Malformed UTF-8 characters, possibly incorrectly encoded';
+                                break;
+                            default:
+                                $msg = 'Unknown error';
+                        }
+
+                        throw new \Exception('Unable to load mail template because JSON decoding failed: '.$msg);
+                    }
                     //Make sure it knows its name
                     $template['name'] = basename($templatefile, '.json');
                     $template['id'] = 0;
                 }
                 if (is_null($template) || is_string($template)) {
                     throw new \Exception('Unable to load mail template "' . $template .'"');
+                }
+                //Check template is minimally valid...
+                $missingKeys = array_flip(array_diff_key( array_flip(['subject','format','body']),$template));
+                if(count($missingKeys)){                    
+                    throw new \Exception('Missing keys from on-disk template "' . basename($templatefile) .'": ' . implode(',',$missingKeys));
                 }
             }
         }

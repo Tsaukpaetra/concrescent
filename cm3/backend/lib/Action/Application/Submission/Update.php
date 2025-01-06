@@ -29,7 +29,8 @@ final class Update
         private Responder $responder,
         private CurrentUserInfo $CurrentUserInfo,
         private badgeinfo $badgeinfo,
-        private Mail $Mail
+        private Mail $Mail,
+        private \Psr\Container\ContainerInterface $container
     ) {
     }
 
