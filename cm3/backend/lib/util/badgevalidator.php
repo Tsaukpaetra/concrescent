@@ -146,6 +146,7 @@ final class badgevalidator
             'min_age',
             'max_age',
             'price',
+            'quantity',
             new SelectColumn('quantity_sold', EncapsulationFunction: 'quantity - ifnull(?,0)', Alias: 'quantity_remaining', JoinedTableAlias: 'q')
         ), array(
         new Join(
@@ -202,7 +203,7 @@ final class badgevalidator
         //     }
         // ), 'id');
         if(!$this->ignoreBadgeTypeAvailability){
-            if ($badgetypeData['quantity_remaining'] < 1 && $item['badge_type_id'] != ($item['existing']['badge_type_id']??0)) {
+            if (($badgetypeData['quantity']??-1) > -1 && $badgetypeData['quantity_remaining'] < 1 && $item['badge_type_id'] != ($item['existing']['badge_type_id']??0)) {
                 $v->addColumnValidator('badge_type_id', v::alwaysInvalid()->setTemplate('badge_type_id available quantity exhausted'), true);
             }
         }
