@@ -71,7 +71,7 @@ final class Purchases
 
         $whereParts = array(
           new SearchTerm('payment_promo_code', $promo['code']),
-          new SearchTerm('payment_promo_code', $btids,'IN'),
+          new SearchTerm('badge_type_id', $btids,'IN'),
         );
 
         $qp = $request->getQueryParams();
