@@ -15,10 +15,19 @@ return function (App $app, $container) {
     $app->group(
         '/Contact',
         function (RouteCollectorProxy $app) use ($accessPerm) {
-            $app->get('', \CM3_Lib\Action\Contact\Search::class);
-            $app->post('', \CM3_Lib\Action\Contact\Create::class);
-            $app->get('/{id}', \CM3_Lib\Action\Contact\Read::class);
-            $app->post('/{id}', \CM3_Lib\Action\Contact\Update::class);
+            $fullContactPerm = $accessPerm->withAllowedPerm(PermEvent::Contact_Full());
+            $app->get('', \CM3_Lib\Action\Contact\Search::class)
+            ->add($accessPerm);
+            $app->post('/getbatch', \CM3_Lib\Action\Contact\GetBatch::class)
+            ->add($accessPerm);
+            $app->post('/getorcreatebatch', \CM3_Lib\Action\Contact\GetOrCreateBatch::class)
+            ->add($accessPerm);
+            $app->post('', \CM3_Lib\Action\Contact\Create::class)
+            ->add($fullContactPerm);
+            $app->get('/{id}', \CM3_Lib\Action\Contact\Read::class)
+            ->add($fullContactPerm);
+            $app->post('/{id}', \CM3_Lib\Action\Contact\Update::class)
+            ->add($fullContactPerm);
             $app->delete('/{id}', \CM3_Lib\Action\Contact\Delete::class)
             ->add($accessPerm); //Only global admins can delete
         }
