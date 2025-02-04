@@ -54,6 +54,16 @@
                         {{ badge.assignment_count }} Assignment slots
                     </div>
                 </v-card-actions>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn 
+                    v-if="badge.payment_status == 'Incomplete' && badge.application_status == 'PendingAcceptance'"
+                    color="primary"
+                    :to="{name:'cart', query: {id: badge.payment_id}}">Go to payment</v-btn>
+                    <v-btn 
+                    v-if="badge.payment_status == 'Incomplete' && badge.application_status != 'PendingAcceptance'"
+                    :to="{name:'cart', query: {id: badge.payment_id}}">Go to cart</v-btn>
+                </v-card-actions>
             </v-card>
         </v-col>
     </v-row>
