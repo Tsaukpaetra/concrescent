@@ -117,11 +117,10 @@
                      @updateSubTitle="updateSubTitle" />
     </v-main>
     <v-snackbar v-model="initLoadDone"
-     :timeout="5000" 
-      shaped
-               color="appbar"
+        :timeout="5000" 
+      shaped color="appbar"
       transition="fab-transition"
-      ><v-col style="text-align: center;"><h1>{{ selectedEvent.display_name }}</h1></v-col></v-snackbar>
+      ><v-col style="text-align: center;" @click="initLoadDone = false"><h1>{{ selectedEvent.display_name }}</h1></v-col></v-snackbar>
 </v-app>
 </template>
 
