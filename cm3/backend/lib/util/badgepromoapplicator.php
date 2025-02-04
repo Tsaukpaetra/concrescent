@@ -31,8 +31,9 @@ final class badgepromoapplicator
     ) {
     }
 
-    private array $loadedPromoCodes = array(false =>array(), true=>array());
+    private array $loadedPromoCode = array(false =>array(), true=>array());
     private array $applicableIDs = array(false =>array(), true=>array());
+    private array $applicableAddonIDs = array(false =>array(), true=>array());
     public function LoadCode(string $code, bool $group = false): bool
     {
         $code = strtoupper($code);
@@ -44,6 +45,7 @@ final class badgepromoapplicator
         $foundCode = ($group ? $this->g_promocode : $this->a_promocode)->Search(
             new View(array(
             'valid_badge_type_ids',
+            'valid_addon_ids',
             'is_percentage',
             'description',
             'discount',
@@ -62,6 +64,7 @@ final class badgepromoapplicator
         if ($foundCode !== false && count($foundCode) >0) {
             $foundCode = $foundCode[0];
             $this->applicableIDs[$group][$code] =array_diff(explode(',', $foundCode['valid_badge_type_ids']), array(""));
+            $this->applicableAddonIDs[$group][$code] =array_diff(explode(',', $foundCode['valid_addon_ids']), array(""));
             //Count up how many times this code has been used
             if (!empty($foundCode['quantity'])) {
                 $usedCounts = ($group ? $this->g_badge : $this->a_badge)->Search(
@@ -113,16 +116,30 @@ final class badgepromoapplicator
             }
 
             //Does this badge apply?
+            $appliedBadge = false;
             if (
                 !in_array($item['badge_type_id'], $this->applicableIDs[$group][$code])
                 && count($this->applicableIDs[$group][$code])>0) {
                 if (isset($item['payment_promo_code']) && $code != $item['payment_promo_code']) {
                     //Re-apply the one they theoretically have already
-                    return $this->TryApplyCode($item, $item['payment_promo_code'], true);
+                    $appliedBadge = $this->TryApplyCode($item, $item['payment_promo_code'], true);
                 } elseif (empty($item['payment_promo_code'])) {
                     $this->resetCode($item);
                 }
-                return !empty($item['payment_promo_code']);
+                $appliedBadge = !empty($item['payment_promo_code']);
+            }
+            //Does this addon apply?
+            $appliedAddon = false;
+            if (
+                !in_array($item['badge_type_id'], $this->applicableIDs[$group][$code])
+                && count($this->applicableIDs[$group][$code])>0) {
+                if (isset($item['payment_promo_code']) && $code != $item['payment_promo_code']) {
+                    //Re-apply the one they theoretically have already
+                    $appliedAddon = $this->TryApplyCode($item, $item['payment_promo_code'], true);
+                } elseif (empty($item['payment_promo_code'])) {
+                    $this->resetCode($item);
+                }
+                $appliedAddon = !empty($item['payment_promo_code']);
             }
 
             //Initial quote

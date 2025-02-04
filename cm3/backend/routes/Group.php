@@ -19,6 +19,7 @@ return function (App $app, $container) {
             $app->post('', \CM3_Lib\Action\Group\Create::class);
             $app->get('/{id}', \CM3_Lib\Action\Group\Read::class);
             $app->post('/{id}', \CM3_Lib\Action\Group\Update::class);
+            $app->post('/{id}/Move', \CM3_Lib\Action\Group\Move::class);
             $app->delete('/{id}', \CM3_Lib\Action\Group\Delete::class)
             ->add($accessPerm); //Only global admins can delete
         }
