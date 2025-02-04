@@ -68,6 +68,15 @@
                         <span>{{ (subbadge.payment_price ? subbadge.payment_price: "Loading" ) | currency }}&nbsp;</span>
 
                     </v-card-actions>
+                    <v-card-actions v-for="(assignment,ix) in product.assignment_count_charging"
+                                    :key="'assn'+ix">
+                        <v-icon>mdi-application</v-icon>
+                        <div class="text-truncate pl-1">
+                            Fee for assignment slot {{  assignment.slot }}
+                        </div>&nbsp;|&nbsp;
+                        <span>{{ assignment.price ? assignment.price  : assignment.prepaid ? 'Paid' : 'Included' | currency }}&nbsp;</span>
+
+                    </v-card-actions>
                 </v-card>
             </v-col>
             <v-col cols="12"
@@ -141,7 +150,6 @@ export default {
         ...mapState({
             checkoutStatus: state => state.cart.checkoutStatus,
             addons: state => state.products.addons,
-            activeCarts: state => state.mydata.activeCarts,
             currentCartId: state => state.cart.cartId,
             kioskMode: state => state.station.kioskMode,
         }),
