@@ -45,29 +45,39 @@ final class PaymentBuilder
     ) {
     }
 
-    public function createCart($contact_id = null, $requested_by = '[self]')
+    public function resetCart($contact_id = null, $requested_by = '[self]')
     {
-        $template = array(
+        $this->cart = array(
+            'uuid' => '00000000-0000-0000-0000-000000000000',
             'event_id' => $this->CurrentUserInfo->GetEventId(),
             'contact_id' => $contact_id ?? $this->CurrentUserInfo->GetContactId(),
             'requested_by' => $requested_by,
             'items' => '[]',
             'payment_status' => 'NotReady',
             'payment_system' => 'Cash',
+            'payment_details' => '',
             'payment_txn_amt' => -1,
+            'date_created' =>'',
+            'date_modified' =>'',
+            'notes' =>'',
         );
-        $createdcart = $this->payment->Create($template);
-        $this->cart = array_merge($template, $createdcart, $this->payment->GetByID($createdcart['id'], array(
-            'uuid','payment_details',
-            'date_created' ,'date_modified' ,'notes'
-        )));
         $this->cart_items = array();
-        $cart_payment_txn_amt = 0;
+        $this->cart_payment_txn_amt = 0;
         $this->AllowPay = true;
         $this->CanPay = true;
         $this->RequiresApproval = false;
         $this->pp = null;
         $this->stagedItems = array();
+    }
+
+    public function createCart($contact_id = null, $requested_by = '[self]')
+    {
+        $this->resetCart($contact_id,$requested_by );
+        $createdcart = $this->payment->Create(array_diff_key($this->cart, array_flip(['uuid','date_created','date_modified'])));
+        $this->cart = array_merge($this->cart, $createdcart, $this->payment->GetByID($createdcart['id'], array(
+            'uuid','payment_details',
+            'date_created' ,'date_modified' ,'notes'
+        )));
     }
 
     public function loadCartFromBadge($context_code, $id)
@@ -96,14 +106,7 @@ final class PaymentBuilder
         //TODO: Check that we have necessary columns
 
         if ($paymentData === false) {
-            $this->cart = array();
-            $this->cart_items = array();
-            $cart_payment_txn_amt = 0;
-            $this->AllowPay = true;
-            $this->CanPay = true;
-            $this->RequiresApproval = false;
-            $this->pp = null;
-            $this->stagedItems = array();
+            $this->resetCart();
             return false;
         }
 
@@ -112,15 +115,7 @@ final class PaymentBuilder
             (!is_null($expectedEventId) && $paymentData['event_id'] != $expectedEventId)
             ||(!is_null($expectedContactId) && $paymentData['contact_id'] != $expectedContactId)
         ) {
-            $this->cart = array();
-            $this->cart_items = array();
-            $this->cart_errors = array();
-            $cart_payment_txn_amt = 0;
-            $this->AllowPay = true;
-            $this->CanPay = true;
-            $this->RequiresApproval = false;
-            $this->pp = null;
-            $this->stagedItems = array();
+            $this->resetCart();
             return false;
         }
 
@@ -129,7 +124,7 @@ final class PaymentBuilder
         $this->cart_uuid = $paymentData['uuid'];
         unset($this->cart['uuid']);
         $this->cart_items = json_decode($paymentData['items'], true) ?? array();
-        $cart_payment_txn_amt = 0;
+        $this->cart_payment_txn_amt = 0;
         $this->AllowPay = true;
         $this->CanPay = true;
         $this->RequiresApproval = false;
@@ -613,7 +608,7 @@ final class PaymentBuilder
             }
         }
         $this->cart['payment_txn_amt'] = $this->cart_payment_txn_amt;
-        $this->saveCart();
+        //$this->saveCart();
     }
 
     private function applyInFlightChanges()
@@ -942,8 +937,6 @@ final class PaymentBuilder
                 //Grou applications are special
                 //Create/update the application submission
                 $this->completeGroupApplication($cartitem);
-
-                $badgeItems = [];
             }
 
             //Check for addons

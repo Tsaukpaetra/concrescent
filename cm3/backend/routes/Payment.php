@@ -19,6 +19,10 @@ return function (App $app, $container) {
             ->add($payPerm->withAllowedPerms(array(PermEvent::Payment_View())));
             $app->post('', \CM3_Lib\Action\Payment\Create::class)
             ->add($payPerm->withAllowedPerms(array(PermEvent::Payment_CreateCancel())));
+            $app->post('/simCreateBatch', callable: \CM3_Lib\Action\Payment\SimCreateBatch::class)
+            ->add($payPerm);
+            $app->post('/CreateBatch', callable: \CM3_Lib\Action\Payment\CreateBatch::class)
+            ->add($payPerm);
             $app->get('/{id}', \CM3_Lib\Action\Payment\Read::class)
             ->add($payPerm->withAllowedPerms(array(PermEvent::Payment_View())));
             $app->post('/{id}', \CM3_Lib\Action\Payment\Update::class)
