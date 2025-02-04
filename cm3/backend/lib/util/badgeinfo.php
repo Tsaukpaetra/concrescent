@@ -1812,17 +1812,17 @@ final class badgeinfo
                 $result['only_name'] = '';
                 $result['large_name'] = $result['fandom_name'];
                 $result['small_name'] = $result['real_name'];
-                $result['display_name'] = trim($result['fandom_name']) .' (' . $result['real_name'] . ')';
+                $result['display_name'] = trim(($result['fandom_name'] ??'') .' (' . $result['real_name'] . ')');
                 break;
             case 'Real Name Large, Fandom Name Small':
                 $result['only_name'] = '';
                 $result['large_name'] = $result['real_name'];
                 $result['small_name'] = $result['fandom_name'];
-                $result['display_name'] = trim($result['real_name']) .' (' . $result['fandom_name'] . ')';
+                $result['display_name'] = trim($result['real_name'] .' (' . ($result['fandom_name']??'') . ')');
                 break;
             case 'Fandom Name Only':
-                $result['only_name'] = $result['fandom_name'];
-                $result['display_name'] = $result['fandom_name'];
+                $result['only_name'] = $result['fandom_name']??'';
+                $result['display_name'] = $result['fandom_name']??'';
                 break;
             case 'Real Name Only':
                 $result['only_name'] = $result['real_name'];
@@ -1831,6 +1831,7 @@ final class badgeinfo
         }
         $result['badge_id_display'] = $result['context_code'] . $result['display_id'];
         $result['qr_data'] = 'CM*' . $result['context_code'] . $result['display_id'] . '*' . $result['uuid'];
+        $result['event_id'] = $this->CurrentUserInfo->GetEventId();
         //Add in the retrieve url
         $result['retrieve_url'] = $this->FrontendUrlTranslator->GetBadgeLoad($result);
         //Add in the cart url
