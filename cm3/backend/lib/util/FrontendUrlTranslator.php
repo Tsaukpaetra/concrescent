@@ -8,7 +8,8 @@ class FrontendUrlTranslator
 {
     public function __construct(
         private string $frontend_host,
-        private bool $isHashMode
+        private bool $isHashMode,
+        private TokenGenerator $TokenGenerator,
     ) {
     }
 
@@ -32,7 +33,10 @@ class FrontendUrlTranslator
     public function GetCartLoad(array $badge)
     {
         if (isset($badge['payment_id'])) {
-            return $this->routedURL('cart?id='. $badge['payment_id']);
+            return $this->GetLoginConfirm($this->TokenGenerator->forLoginOnly(
+                $badge["contact_id"],
+                $badge["event_id"]
+            ),'cart?id='. $badge['payment_id']);
         }
         //Dafuq we have a badge that has no payment_id?
         return '';
@@ -42,6 +46,7 @@ class FrontendUrlTranslator
         $result = $this->routedURL('login?token=' . $authString);
         if (!empty($returnTo)) {
             $result .= '&returnTo=' .urlencode($returnTo);
+            $result .= '&justgo=1';
         }
         return $result;
     }
