@@ -15,7 +15,7 @@ class filestore extends \CM3_Lib\database\Table
             'context'		=> new cm_Column('VARCHAR', 3, false),
             'name'           => new cm_Column('VARCHAR', '255', false),
             'meta'			=> new cm_Column('VARCHAR', 500, true),
-            'visible'		=> new cm_Column('TEXT', null, true),
+            'visible'		=> new cm_Column('BOOLEAN', null, false,defaultValue:'false'),
             'data'		=> new cm_Column('LONGBLOB', null, false), //Just in case you need 4Gb of storage
             'mimetype' => new cm_Column('VARCHAR', '100', true),
             'date_created'	=> new cm_Column('TIMESTAMP', null, false, false, false, false, 'CURRENT_TIMESTAMP'),
