@@ -518,32 +518,36 @@ final class PaymentBuilder
                 //Get the current badge info (for the assignment count)
                 $bi = $this->badgeinfo->getASpecificGroupApplication($cartitem['id'] ?? 0, $cartitem['context_code']);
                 $cartitem['assignment_count_charging'] = [];
-                if($bi){
-                    for ($assignSpace=0; $assignSpace < ($bi['assignment_count'] ?? 0); $assignSpace++) {
-                        //Assignment space price
-                        if (!isset($cartitem['existing']) || 0 < $assignSpace) {
-                            $this->stagedItems[] = array(
-                            $bt['name'] . ' Assignment fee' . ($bt['base_assignment_count']> $assignSpace ? ' (Included /w base)' : ''),
-                            $bt['base_assignment_count']> $assignSpace ? 0 : $bt['price_per_assignment'],
-                            1,
-                            'Assignment fee for ' . $bt['name'] . ', slot ' . ($assignSpace + 1) . ($bt['base_assignment_count']> $assignSpace ? ', (Included in base price)' : ''),
-                            $this->CurrentUserInfo->GetEventId() . ':' . $cartitem['context_code'] . ':T' . $cartitem['badge_type_id'],
-                            0, //Assignments can never be on promotion
-                            null
-                        );
-    
-                            //Add to the cart's amount...
-                            $this->cart_payment_txn_amt += max(0, $bt['base_assignment_count']> $assignSpace ? 0 : $bt['price_per_assignment']);
-                            $cartitem['assignment_count_charging'][] =['slot'=> $assignSpace + 1, 'price' => $bt['base_assignment_count']> $assignSpace ? 0 : $bt['price_per_assignment'], 'prepaid' => false ];
-                        } else {
-                            //Already paid for this slot, add the placeholder
-                            $cartitem['assignment_count_charging'][] =['slot'=> $assignSpace + 1, 'price' => 0, 'prepaid' => true ];
-    
-                        }
+                //TODO: Validate that assignment_count wouldn't normally be passed through a non-admin cart
+                $badge_assignment_count_current = $bi ? ($bi['assignment_count']?? 0 ) : $cartitem['assignment_count']?? 0 ;
+                $badge_assignment_count_prior = $cartitem['existing']['assignment_count'] ?? 0;
+                $cartitem['assignment_count_prior'] =$badge_assignment_count_prior ; 
+                //die($badge_assignment_count_prior);
+                
+                for ($assignSpace=0; $assignSpace < ($badge_assignment_count_current); $assignSpace++) {
+                    //Assignment space price
+                    if ($badge_assignment_count_prior < $assignSpace) {
+                        $this->stagedItems[] = array(
+                        $bt['name'] . ' Assignment fee' . ($bt['base_assignment_count']> $assignSpace ? ' (Included /w base)' : ''),
+                        $bt['base_assignment_count']> $assignSpace ? 0 : $bt['price_per_assignment'],
+                        1,
+                        'Assignment fee for ' . $bt['name'] . ', slot ' . ($assignSpace + 1) . ($bt['base_assignment_count']> $assignSpace ? ', (Included in base price)' : ''),
+                        $this->CurrentUserInfo->GetEventId() . ':' . $cartitem['context_code'] . ':T' . $cartitem['badge_type_id'],
+                        0, //Assignments can never be on promotion
+                        null
+                    );
+
+                        //Add to the cart's amount...
+                        $this->cart_payment_txn_amt += max(0, $bt['base_assignment_count']> $assignSpace ? 0 : $bt['price_per_assignment']);
+                        $cartitem['assignment_count_charging'][] =['slot'=> $assignSpace + 1, 'price' => $bt['base_assignment_count']> $assignSpace ? 0 : $bt['price_per_assignment'], 'prepaid' => false ];
+                    } else {
+                        //Already paid for this slot, add the placeholder
+                        $cartitem['assignment_count_charging'][] =['slot'=> $assignSpace + 1, 'price' => 0, 'prepaid' => true ];
+
                     }
-                    //Also set the approved assignment count for the UI
                 }
-                $cartitem['assignment_count'] = $bi['assignment_count'] ?? 0;
+                //Also set the approved assignment count for the UI
+                $cartitem['assignment_count'] = $badge_assignment_count_current;
 
                 //Sort the subbadges to have the Created ones last
                 usort($cartitem['subbadges'], function ($a, $b) {
@@ -932,9 +936,9 @@ final class PaymentBuilder
 
             //If it's not an application, wire up the processor normally
             if ($cartitem['context_code'] == 'A' || $cartitem['context_code'] == 'S') {
-                $badgeItems = [&$cartitem];
+                $this->completeBadge($cartitem);
             } else {
-                //Grou applications are special
+                //Group applications are special
                 //Create/update the application submission
                 $this->completeGroupApplication($cartitem);
             }
