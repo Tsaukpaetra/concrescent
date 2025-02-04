@@ -38,6 +38,8 @@ return function (App $app, $s_config) {
               ->withAttribute("perms", $CurrentUserInfo->GetPerms());
         }
     ]));
+    //Add the authorization-as-query parameter
+    $app->add(new CM3_Lib\Middleware\authInGet());
 
     $app->add(ErrorMiddleware::class);
 };
