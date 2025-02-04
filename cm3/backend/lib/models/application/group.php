@@ -31,10 +31,10 @@ class group extends \CM3_Lib\database\Table
         );
         $this->IndexDefs = array();
         $this->PrimaryKeys = array('id'=>false);
-        $this->DefaultSearchColumns = array('id','context_code','name','menu_icon');
+        $this->DefaultSearchColumns = array('id','context_code','name','menu_icon','active','display_order');
         
         //OrderableTrait defs
         $this->orderColumn = 'display_order';
-        $this->orderGroupColumns = ['event_id','context_code'];
+        $this->orderGroupColumns = ['event_id'];
     }
 }
