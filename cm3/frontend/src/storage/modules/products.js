@@ -100,6 +100,9 @@ const actions = {
                     console.log('event stored info id', state.selectedEventId);
                     if (state.selectedEventId == null)
                         commit('selectEvent', eventinfo[0].id);
+                    else {
+                        commit('selectEvent', state.selectedEventId);
+                    }
                     resolve();
                 })
             } else {
@@ -107,20 +110,38 @@ const actions = {
             }
         })
     },
+    resetBadgeContexts({commit,state}){
+        commit('selectEvent',state.selectedEventId);
+    },
     getBadgeContexts({
         commit,
-        state
+        state,
+        rootState
     }) {
-
         return new Promise((resolve, reject) => {
             if (state.selectedEventId == null)
                 return reject('Unable to get context if the event ID is not known');
             //Load only if necessary
             if (!state.gotBadgeContexts) {
-                shop.getBadgeContexts(state.selectedEventId, contexts => {
-                    commit('setBadgeContexts', contexts);
-                    resolve();
-                })
+                //Hack: Ask the mydata if we're an admin and use that to load contexts
+                console.log('root state',rootState.mydata.permissions != null, rootState.mydata.permissions != undefined,rootState.mydata.adminMode)
+                if(rootState.mydata.permissions != null 
+                    && rootState.mydata.permissions != undefined
+                    && rootState.mydata.adminMode == true){
+                    admin.getBadgeContexts(rootState.mydata.token)
+                    .then(contexts => {
+                        commit('setBadgeContexts', contexts);
+                        resolve();
+                    }).catch(err =>{
+                        reject(err)
+                    });
+                } else {
+
+                    shop.getBadgeContexts(state.selectedEventId, contexts => {
+                        commit('setBadgeContexts', contexts);
+                        resolve();
+                    })
+                }
             } else {
                 resolve();
             }
