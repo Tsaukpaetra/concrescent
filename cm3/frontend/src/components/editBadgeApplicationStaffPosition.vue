@@ -27,6 +27,11 @@
                       v-model="department_id_selected"
                       @data="cacheDepartment" />
 
+            <v-btn 
+                    v-show="assigned_positions.length"
+                   @click="staff_step = 3">
+                Cancel
+            </v-btn>
             <v-btn color="primary"
                    :disabled="department_id_selected == null"
                    @click="staff_step = 2">
@@ -43,8 +48,7 @@
                       v-model="position_id_selected"
                       item-value="id"
                       item-text="name"
-                      append-text="Add"
-                      @click:append-outer="addPosition" />
+                      />
             <v-row>
                 <v-col>
                     Description: {{positionSelected.description}}
@@ -160,9 +164,11 @@ export default {
             }, (results, total) => {
                 this.available_positions = results;
                 this.available_positions_loading = false;
+                this.position_id_selected = null;
             })
         },
         addPosition: function() {
+            //If it hasn't been added by the watcher for some reason...
             if (!this.assigned_positions.some(item => item.position_id == this.position_id_selected)) {
 
                 this.assigned_positions.push({
@@ -175,8 +181,11 @@ export default {
                     is_exec: this.positionSelected.is_exec
 
                 })
-                this.staff_step = 3;
+            } else {
+                var existing = this.assigned_positions.find(item => item.position_id == this.position_id_selected);
+                if(existing._unconfirmed) existing._unconfirmed = false;
             }
+            this.staff_step = 3;
         },
         removePosition: function(ix) {
             this.assigned_positions.splice(ix);
@@ -197,7 +206,7 @@ export default {
             //TODO: Retrieve position meta and add to the assigned_positions array if it doesn't exist
             console.log('got new value', newValue);
             //set the form state
-            this.staff_step = newValue.length > 0 ? 3 : 1;
+            this.staff_step = newValue.length > 0 ? (newValue.find(x=>x._unconfirmed==true)? 2 : 3) : 1;
 
             this.skipEmitOnce = true;
             this.assigned_positions = newValue;
@@ -205,6 +214,28 @@ export default {
         department_id_selected(department_id) {
             this.refresh_positions();
         },
+        position_id_selected(newPosition,oldPosition){
+            //Remove the in-progress one
+            if (this.assigned_positions.find(item => item.position_id == oldPosition && item._unconfirmed)) {
+                console.log('selcva removbe')
+                this.assigned_positions.splice(this.assigned_positions.findIndex(item => item.position_id == oldPosition));
+            }
+            console.log('selected position id', newPosition,oldPosition)
+            if (newPosition && !this.assigned_positions.some(item => item.position_id == newPosition)) {
+
+                this.assigned_positions.push({
+                    department_id: this.department_id_selected,
+                    department_text: this.department_selected.name,
+                    position_id: this.position_id_selected,
+                    position_text: this.positionSelected.name,
+                    onboard_completed: false,
+                    onboard_meta: "",
+                    is_exec: this.positionSelected.is_exec,
+                    _unconfirmed:this.staff_step == 2
+                })            
+            }
+
+        }
     },
 };
 </script>
