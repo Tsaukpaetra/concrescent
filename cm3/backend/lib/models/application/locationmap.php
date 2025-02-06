@@ -32,7 +32,7 @@ class locationmap extends \CM3_Lib\database\Table
         if ($bt === false) {
             return false;
         }
-        if ($bt['event_id'] != $group_id) {
+        if ($bt['event_id'] != $event_id) {
             return false;
         }
         return true;

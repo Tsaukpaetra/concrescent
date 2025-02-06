@@ -24,6 +24,6 @@ class location extends \CM3_Lib\database\Table
         );
         $this->IndexDefs = array();
         $this->PrimaryKeys = array('id'=>false);
-        $this->DefaultSearchColumns = array('id','short_code','name');
+        $this->DefaultSearchColumns = array('id','short_code','name','description','active');
     }
 }

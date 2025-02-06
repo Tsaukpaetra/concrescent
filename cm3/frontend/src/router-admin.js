@@ -10,14 +10,14 @@ const result = [{
         },
         component: () => import( /* webpackChunkName: "admin_badge_checkin" */ './routes/admin/badge_checkin.vue'),
     },
-    // {
-    //   path: '/Locations',
-    //   name: 'Locations',
-    //   meta: {
-    //     title: 'Venue Locations',
-    //   },
-    //   component: () => import(/* webpackChunkName: "login" */ './routes/admin/locations.vue'),
-    // },
+    {
+      path: 'Locations',
+      name: 'Locations',
+      meta: {
+        title: 'Venue Locations and assignments',
+      },
+      component: () => import(/* webpackChunkName: "login" */ './routes/admin/locations.vue'),
+    },
     {
         path: 'Attendee',
         name: 'Attendee',

@@ -3,7 +3,12 @@
 namespace CM3_Lib\Action\Location;
 
 use CM3_Lib\database\SearchTerm;
+use CM3_Lib\database\SelectColumn;
+use CM3_Lib\database\View;
+use CM3_Lib\database\Join;
 use CM3_Lib\models\application\location;
+use CM3_Lib\models\application\assignment;
+use CM3_Lib\util\badgeinfo;
 use CM3_Lib\Responder\Responder;
 use Fig\Http\Message\StatusCodeInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -20,8 +25,12 @@ final class Search
      * @param Responder $responder The responder
      * @param eventinfo $eventinfo The service
      */
-    public function __construct(private Responder $responder, private location $location)
-    {
+    public function __construct(
+        private Responder $responder,
+        private location $location,
+        private assignment $assignment,
+        private badgeinfo $badgeinfo
+    ) {
     }
 
     /**
@@ -34,27 +43,34 @@ final class Search
      */
     public function __invoke(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
-        // Extract the form data from the request body
-        $data = (array)$request->getParsedBody();
-        //TODO: Actually do something with submitted data. Also, provide some sane defaults
+        $qp = $request->getQueryParams();
+        $find = $qp['find'] ?? '';
+
+        $pg = $this->badgeinfo->parseQueryParamsPagination($qp, defaultSortColumn: 'id', defaultSortDesc: false);
+        $totalRows = 0;
 
         $whereParts = array(
-            new SearchTerm('event_id', $request->getAttribute('event_id'))
-          //new SearchTerm('active', 1)
+            new SearchTerm('event_id', $request->getAttribute('event_id')),
+            empty($find) ? null : new SearchTerm('', '', subSearch: [
+                new SearchTerm('name', '%' . $find . '%', 'LIKE'),
+                new SearchTerm('description', '%' . $find . '%', 'LIKE', 'OR'),
+                new SearchTerm('notes', '%' . $find . '%', 'LIKE', 'OR'),
+            ])
         );
 
-        $order = array('id' => false);
-
-        $page      = ($request->getQueryParams()['page']?? 0 > 0) ? $request->getQueryParams()['page'] : 1;
-        $limit     = $request->getQueryParams()['itemsPerPage']?? -1; // Number of posts on one page
-        $offset      = ($page - 1) * $limit;
-        if ($offset < 0) {
-            $offset = 0;
-        }
-
         // Invoke the Domain with inputs and retain the result
-        $data = $this->location->Search(array(), $whereParts, $order, $limit, $offset);
+        $data = $this->location->Search(new View([
+            'id','short_code','name','description','active',
+            new SelectColumn('AssignmentCount',EncapsulationFunction:'ifnull(?,0)',Alias:'AssignmentCount',JoinedTableAlias:'ac')
+        ],[
+            new Join($this->assignment,['location_id'=>'id'],'LEFT',
+            'ac',[
+                'location_id',
+                new SelectColumn('id',true,'count(?)','AssignmentCount')
+                ])
+        ]), $whereParts, $pg['order'], $pg['limit'], $pg['offset'], $totalRows);
 
+        $response = $response->withHeader('X-Total-Rows', (string)$totalRows);
         // Build the HTTP response
         return $this->responder
             ->withJson($response, $data);

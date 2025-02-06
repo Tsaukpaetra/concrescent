@@ -4176,6 +4176,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"csv-parse@npm:^5.6.0":
+  version: 5.6.0
+  resolution: "csv-parse@npm:5.6.0"
+  checksum: 173e176bdaf212bab37d0f6d39a06d039d24a1c0ee40b9f1023ebf8b36095934807deeb493c0fb58592b39b0682ccd0be5c9e8d2b137c08807e7031595ea7a51
+  languageName: node
+  linkType: hard
+
 "d3-array@npm:1, d3-array@npm:^1.1.1, d3-array@npm:^1.2.0":
   version: 1.2.4
   resolution: "d3-array@npm:1.2.4"
@@ -6077,6 +6084,7 @@ __metadata:
     "@vue/cli-service": ^5.0.3
     axios: ^0.26.1
     css-loader: ^6
+    csv-parse: ^5.6.0
     eslint: ^8.23.0
     eslint-config-airbnb-base: ^15.0.0
     eslint-plugin-import: ^2.26.0
@@ -6092,6 +6100,7 @@ __metadata:
     vue-qrcode-component: ^2.1.1
     vue-router: ^3.0.0
     vue-template-compiler: ^2.7.10
+    vuedraggable: ^2.24.3
     vuetify: ^2.6.9
     vuetify-google-autocomplete: ^2
     vuetify-loader: ^1.9.2
@@ -10489,6 +10498,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"sortablejs@npm:1.10.2":
+  version: 1.10.2
+  resolution: "sortablejs@npm:1.10.2"
+  checksum: 37f8d47a9702b93c38077c5e0af90174dcf8e95cf96fe61a722033003eb293bdf3832e4a943f281eaedc433e24cd7d5a48a408706a71a21e75bc11ced0b358da
+  languageName: node
+  linkType: hard
+
 "source-map-js@npm:>=0.6.2 <2.0.0, source-map-js@npm:^1.0.2":
   version: 1.0.2
   resolution: "source-map-js@npm:1.0.2"
@@ -11592,6 +11608,15 @@ vue-global-config@latest:
     "@vue/compiler-sfc": 2.7.14
     csstype: ^3.1.0
   checksum: 8b06da67cc40870c66a30b7a6bc2874950cd4383792c371eb30497dd14fc7b41cf308b1c4517368d8f0e7ac16198c08de19236f6a79fe43f4bdbc4a1d9d4ad07
+  languageName: node
+  linkType: hard
+
+"vuedraggable@npm:^2.24.3":
+  version: 2.24.3
+  resolution: "vuedraggable@npm:2.24.3"
+  dependencies:
+    sortablejs: 1.10.2
+  checksum: 5fbdf829c1d9fe1aa206a2e23e058524e8e5ee48aa7b682922b07cb59115891f56c681aa57d2952a43054f23af08504f381da84625d7409d699977790dc870c8
   languageName: node
   linkType: hard
 
