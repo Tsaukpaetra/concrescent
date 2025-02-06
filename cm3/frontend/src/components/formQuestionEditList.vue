@@ -1,232 +1,233 @@
 <template>
-<v-item-group active-class="light-grey"
-              v-model="openQuestions"
-              multiple>
-    <v-container>
+    <v-item-group active-class="light-grey" v-model="openQuestions" multiple>
+        <v-container>
+            <v-row>
+                <v-col cols="12">
+                    <h1>Badge Type</h1>
+                    <v-select :items="contextBadgeTypes" v-model="selectedBadgeType" item-text="name" item-value="id"
+                        clearable solo hide-details="true"></v-select>
+                </v-col>
+            </v-row>
+        </v-container>
         <v-row>
-            <v-col cols="12">
-                <h1>Badge Type</h1>
-                <v-select :items="contextBadgeTypes"
-                          v-model="selectedBadgeType"
-                          item-text="name"
-                          item-value="id"
-                          clearable
-                          solo
-                          hide-details="true"></v-select>
+            <v-col>
+                <v-item v-slot="{active, toggle}" v-for="(item,ix) in questions" :key="item.id">
+                    <v-card>
+                        <v-card @click="toggle" v-if="!active">
+
+                            <formQuestionRender v-if="bQuestionActive(item.id)"
+                                :question="{...item, required : bQuestionRequired(item.id) }" />
+                            <p v-else>Hidden: {{item.title}} </p>
+                            <v-divider></v-divider>
+                        </v-card>
+                        <v-card v-if="active">
+                            <formQuestionEdit v-model="eQuestion(item.id).question"
+                                :preview="eQuestion(item.id).preview" />
+                            <v-toolbar v-if="active" dense>
+                                <v-tooltip top>
+                                    <template v-slot:activator="{ on, attrs }">
+                                        <v-btn v-bind="attrs" v-on="on" icon @click="prepCancelEdit(ix)">
+                                            <v-icon>mdi-cancel</v-icon>
+                                        </v-btn>
+                                    </template>
+                                    Cancel Edit
+                                </v-tooltip>
+                                <v-tooltip top>
+                                    <template v-slot:activator="{ on, attrs }">
+                                        <v-btn v-bind="attrs" v-on="on" icon @click="prepDestroyQuestion(ix)">
+                                            <v-icon>mdi-delete</v-icon>
+                                        </v-btn>
+                                    </template>
+                                    Delete question (not yet functional)
+                                </v-tooltip>
+                                <v-tooltip top>
+                                    <template v-slot:activator="{ on, attrs }">
+                                        <v-btn v-bind="attrs" v-on="on" icon @click="toggleQuestionListed(item.id)">
+                                            <v-icon>mdi-table-eye{{bQuestionListed(item.id) ? '' : '-off'}}</v-icon>
+                                        </v-btn>
+                                    </template>
+                                    Add to badge list by default
+                                </v-tooltip>
+                                <v-spacer />
+                                <i v-if="selectedBadgeType > 0">
+                                    <v-tooltip top>
+                                        <template v-slot:activator="{ on, attrs }">
+                                            <v-btn v-bind="attrs" v-on="on" icon @click="toggleQuestionActive(item.id)">
+                                                <v-icon>mdi-eye{{bQuestionActive(item.id) ? '' : '-off'}}</v-icon>
+                                            </v-btn>
+                                        </template>
+                                        Visible for {{ contextBadgeTypes.find(it=> it.id == selectedBadgeType)?.name ||
+                                        'Badge Type' }}
+                                    </v-tooltip>
+                                    <v-tooltip top>
+                                        <template v-slot:activator="{ on, attrs }">
+                                            <v-btn v-bind="attrs" v-on="on" icon :disabled="!bQuestionActive(item.id)"
+                                                @click="toggleQuestionRequired(item.id)"
+                                                :color="bQuestionRequired(item.id) ? 'red' : undefined ">
+                                                <v-icon>mdi-asterisk</v-icon>
+                                            </v-btn>
+                                        </template>
+                                        Question is required
+                                    </v-tooltip>
+                                </i>
+                                <v-tooltip top>
+                                    <template v-slot:activator="{ on, attrs }">
+                                        <v-btn v-bind="attrs" v-on="on" icon @click="moveQuestion(item.id,true)"
+                                            color="primary">
+                                            <v-icon>mdi-arrow-up</v-icon>
+                                        </v-btn>
+                                    </template>
+                                    Move question up
+                                </v-tooltip>
+                                <v-tooltip top>
+                                    <template v-slot:activator="{ on, attrs }">
+                                        <v-btn v-bind="attrs" v-on="on" icon @click="moveQuestion(item.id,false)"
+                                            color="primary">
+                                            <v-icon>mdi-arrow-down</v-icon>
+                                        </v-btn>
+                                    </template>
+                                    Move question down
+                                </v-tooltip>
+                                <v-spacer />
+                                <v-tooltip top>
+                                    <template v-slot:activator="{ on, attrs }">
+                                        <v-btn v-bind="attrs" v-on="on" icon @click="exportQuestion(item.id)">
+                                            <v-icon>mdi-export</v-icon>
+                                        </v-btn>
+                                    </template>
+                                    Export question
+                                </v-tooltip>
+                                <v-tooltip top>
+                                    <template v-slot:activator="{ on, attrs }">
+                                        <v-btn v-bind="attrs" v-on="on" icon
+                                            @click="eQuestion(item.id).preview = !eQuestion(item.id).preview">
+                                            <v-icon>mdi-magnify{{eQuestion(item.id).preview ? '-close' :''}}</v-icon>
+                                        </v-btn>
+                                    </template>
+                                    Preview question
+                                </v-tooltip>
+                                <v-tooltip top>
+                                    <template v-slot:activator="{ on, attrs }">
+                                        <v-btn v-bind="attrs" v-on="on" icon :disabled="!bQuestionModified(item.id)"
+                                            :loading="eQuestion(item.id).saving" @click="saveEdit(item.id)"
+                                            color="primary">
+                                            <v-icon>mdi-content-save</v-icon>
+                                        </v-btn>
+                                    </template>
+                                    Save question
+                                </v-tooltip>
+                            </v-toolbar>
+                            <v-divider></v-divider>
+                        </v-card>
+                    </v-card>
+                </v-item>
+                <v-item>
+                    <v-card>
+                        <v-card v-if="!newQuestionShow">
+
+                            <v-container fluid class="text-center">
+                                <v-row class="flex">
+                                    <v-col cols="6">
+                                        <v-btn @click="prepNewQuestion">
+                                            Add new question
+                                        </v-btn>
+                                    </v-col>
+                                    <v-col cols="6">
+                                        <v-file-input prepend-icon="mdi-import" label="Import question(s)" placeholder="Import question(s)"
+                                         multiple accept=".ccq" show-size dense solo
+                                         v-model="importingQuestionsRawFiles"
+                                         ></v-file-input>
+                                    </v-col>
+                                </v-row>
+                            </v-container>
+                        </v-card>
+                        <v-card v-if="newQuestionShow">
+                            <formQuestionEdit v-model="newQuestion" :preview="newQuestionPreview" />
+                            <v-toolbar dense>
+                                <v-tooltip top>
+                                    <template v-slot:activator="{ on, attrs }">
+                                        <v-btn v-bind="attrs" v-on="on" icon @click="cancelNewQuestion()">
+                                            <v-icon>mdi-cancel</v-icon>
+                                        </v-btn>
+                                    </template>
+                                    Cancel adding question
+                                </v-tooltip>
+                                <v-spacer />
+                                <v-tooltip top>
+                                    <template v-slot:activator="{ on, attrs }">
+                                        <v-btn v-bind="attrs" v-on="on" icon
+                                            @click="newQuestionPreview = !newQuestionPreview">
+                                            <v-icon>mdi-magnify{{newQuestionPreview ? '-close' :''}}</v-icon>
+                                        </v-btn>
+                                    </template>
+                                    Preview question
+                                </v-tooltip>
+                                <v-tooltip top>
+                                    <template v-slot:activator="{ on, attrs }">
+                                        <v-btn v-bind="attrs" v-on="on" icon :disabled="newQuestion.title == ''"
+                                            :loading="newQuestionSaving" @click="saveNewQuestion" color="primary">
+                                            <v-icon>mdi-content-save</v-icon>
+                                        </v-btn>
+                                    </template>
+                                    Save question
+                                </v-tooltip>
+                            </v-toolbar>
+                            <v-divider></v-divider>
+                        </v-card>
+                    </v-card>
+                </v-item>
             </v-col>
+
         </v-row>
-    </v-container>
-    <v-row>
-        <v-col>
-            <v-item v-slot="{active, toggle}"
-                    v-for="(item,ix) in questions"
-                    :key="item.id">
-                <v-card>
-                    <v-card @click="toggle"
-                            v-if="!active">
-
-                        <formQuestionRender v-if="bQuestionActive(item.id)"
-                                            :question="{...item, required : bQuestionRequired(item.id) }" />
-                        <p v-else>Hidden: {{item.title}} </p>
-                        <v-divider></v-divider>
-                    </v-card>
-                    <v-card v-if="active">
-                        <formQuestionEdit v-model="eQuestion(item.id).question"
-                                          :preview="eQuestion(item.id).preview" />
-                        <v-toolbar v-if="active"
-                                   dense>
-                            <v-tooltip top>
-                                <template v-slot:activator="{ on, attrs }">
-                                    <v-btn v-bind="attrs" v-on="on" icon
-                                        @click="prepCancelEdit(ix)">
-                                     <v-icon>mdi-cancel</v-icon>
-                                    </v-btn>
-                                </template>
-                                Cancel Edit
-                            </v-tooltip>
-                            <v-tooltip top>
-                                <template v-slot:activator="{ on, attrs }">
-                                    <v-btn v-bind="attrs" v-on="on" icon
-                                        
-                                        @click="prepDestroyQuestion(ix)">
-                                     <v-icon>mdi-delete</v-icon>
-                                    </v-btn>
-                                </template>
-                                Delete question (not yet functional)
-                            </v-tooltip>
-                            <v-tooltip top>
-                                <template v-slot:activator="{ on, attrs }">
-                                    <v-btn v-bind="attrs" v-on="on" icon
-                                        
-                                        @click="toggleQuestionListed(item.id)">
-                                     <v-icon>mdi-table-eye{{bQuestionListed(item.id) ? '' : '-off'}}</v-icon>
-                                    </v-btn>
-                                </template>
-                                Add to badge list by default
-                            </v-tooltip>
-                            <v-spacer />
-                            <i v-if="selectedBadgeType > 0">
-                                <v-tooltip top>
-                                <template v-slot:activator="{ on, attrs }">
-                                    <v-btn v-bind="attrs" v-on="on" icon
-                                        
-                                        @click="toggleQuestionActive(item.id)">
-                                     <v-icon>mdi-eye{{bQuestionActive(item.id) ? '' : '-off'}}</v-icon>
-                                    </v-btn>
-                                </template>
-                                Visible for {{ contextBadgeTypes.find(it=> it.id == selectedBadgeType)?.name || 'Badge Type' }}
-                            </v-tooltip>
-                                <v-tooltip top>
-                                <template v-slot:activator="{ on, attrs }">
-                                    <v-btn v-bind="attrs" v-on="on" icon
-                                        
-                                        :disabled="!bQuestionActive(item.id)"
-                                        @click="toggleQuestionRequired(item.id)"
-                                        :color="bQuestionRequired(item.id) ? 'red' : undefined ">
-                                        <v-icon>mdi-asterisk</v-icon>
-                                    </v-btn>
-                                </template>
-                                Question is required
-                            </v-tooltip>
-                        </i>
-                        <v-tooltip top>
-                            <template v-slot:activator="{ on, attrs }">
-                                <v-btn v-bind="attrs" v-on="on" icon
-                                
-                                        @click="moveQuestion(item.id,true)"
-                                        color="primary">
-                                        <v-icon>mdi-arrow-up</v-icon>
-                                    </v-btn>
-                                </template>
-                                Move question up
-                            </v-tooltip>
-                            <v-tooltip top>
-                                <template v-slot:activator="{ on, attrs }">
-                                    <v-btn v-bind="attrs" v-on="on" icon
-                                        @click="moveQuestion(item.id,false)"
-                                        color="primary">
-                                     <v-icon>mdi-arrow-down</v-icon>
-                                    </v-btn>
-                                </template>
-                                Move question down
-                            </v-tooltip>
-                            <v-spacer />
-                            <v-tooltip top>
-                                <template v-slot:activator="{ on, attrs }">
-                                    <v-btn v-bind="attrs" v-on="on" icon
-                                        
-                                        @click="eQuestion(item.id).preview = !eQuestion(item.id).preview">
-                                     <v-icon>mdi-magnify{{eQuestion(item.id).preview ? '-close' :''}}</v-icon>
-                                    </v-btn>
-                                </template>
-                                Preview question
-                            </v-tooltip>
-                            <v-tooltip top>
-                                <template v-slot:activator="{ on, attrs }">
-                                    <v-btn v-bind="attrs" v-on="on" icon
-                                        :disabled="!bQuestionModified(item.id)"
-                                        :loading="eQuestion(item.id).saving"
-                                        @click="saveEdit(item.id)"
-                                        color="primary">
-                                     <v-icon>mdi-content-save</v-icon>
-                                    </v-btn>
-                                </template>
-                                Save question
-                            </v-tooltip>
-                        </v-toolbar>
-                        <v-divider></v-divider>
-                    </v-card>
-                </v-card>
-            </v-item>
-            <v-item>
-                <v-card>
-                    <v-card v-if="!newQuestionShow">
-
-                        <v-container fluid
-                                     class="text-center">
-                            <v-row class="flex">
-                                <v-col cols="12">
-                                    <v-btn @click="prepNewQuestion">
-                                        Add new question
-                                    </v-btn>
-                                </v-col>
-                            </v-row>
-                        </v-container>
-                    </v-card>
-                    <v-card v-if="newQuestionShow">
-                        <formQuestionEdit v-model="newQuestion"
-                                          :preview="newQuestionPreview" />
-                        <v-toolbar dense>
-                            <v-tooltip top>
-                                <template v-slot:activator="{ on, attrs }">
-                                    <v-btn v-bind="attrs" v-on="on" icon
-                                    @click="cancelNewQuestion()">
-                                 <v-icon>mdi-cancel</v-icon>
-                                    </v-btn>
-                                </template>
-                                Cancel adding question
-                            </v-tooltip>
-                            <v-spacer />
-                            <v-tooltip top>
-                                <template v-slot:activator="{ on, attrs }">
-                                    <v-btn v-bind="attrs" v-on="on" icon
-                                    @click="newQuestionPreview = !newQuestionPreview">
-                                        <v-icon>mdi-magnify{{newQuestionPreview ? '-close' :''}}</v-icon>
-                                    </v-btn>
-                                </template>
-                                Preview question
-                            </v-tooltip>
-                            <v-tooltip top>
-                                <template v-slot:activator="{ on, attrs }">
-                                    <v-btn v-bind="attrs" v-on="on" icon
-                                    :disabled="newQuestion.title == ''"
-                                    :loading="newQuestionSaving"
-                                    @click="saveNewQuestion"
-                                    color="primary">
-                                        <v-icon>mdi-content-save</v-icon>
-                                    </v-btn>
-                                </template>
-                                Save question
-                            </v-tooltip>
-                        </v-toolbar>
-                        <v-divider></v-divider>
-                    </v-card>
-                </v-card>
-            </v-item>
-        </v-col>
-
-    </v-row>
-    <v-dialog v-model="loading"
-              width="200"
-              height="200"
-              close-delay="1200"
-              content-class="elevation-0"
-              persistent>
-        <v-card-text class="text-center overflow-hidden">
-            <v-progress-circular :size="150"
-                                 class="mb-0"
-                                 indeterminate />
-        </v-card-text>
-    </v-dialog>
-    <v-dialog v-model="askCancelQuestionEdit"
-              max-width="390">
-
-        <v-card>
-            <v-card-title class="headline">Question modified!</v-card-title>
-            <v-card-text>You have unsaved changes, do you wish to save them?
+        <v-dialog v-model="loading" width="200" height="200" close-delay="1200" content-class="elevation-0" persistent>
+            <v-card-text class="text-center overflow-hidden">
+                <v-progress-circular :size="150" class="mb-0" indeterminate />
             </v-card-text>
-            <v-card-actions>
-                <v-btn color="default"
-                       @click="askCancelQuestionEdit = false">Cancel</v-btn>
-                <v-spacer></v-spacer>
-                <v-btn color="red darken-1"
-                       @click="cancelEdit(openQuestionToCancel)">Don't save</v-btn>
-                <v-btn color="primary"
-                       @click="cancelEdit(openQuestionToCancel)">Save</v-btn>
-            </v-card-actions>
-        </v-card>
-    </v-dialog>
-</v-item-group>
+        </v-dialog>
+        <v-dialog v-model="askCancelQuestionEdit" max-width="390">
+
+            <v-card>
+                <v-card-title class="headline">Question modified!</v-card-title>
+                <v-card-text>You have unsaved changes, do you wish to save them?
+                </v-card-text>
+                <v-card-actions>
+                    <v-btn color="default" @click="askCancelQuestionEdit = false">Cancel</v-btn>
+                    <v-spacer></v-spacer>
+                    <v-btn color="red darken-1" @click="cancelEdit(openQuestionToCancel)">Don't save</v-btn>
+                    <v-btn color="primary" @click="cancelEdit(openQuestionToCancel)">Save</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+        <v-dialog :value="importingQuestionsData.length > 0" @input="clearImportFiles" scrollable
+        >
+            <v-card>
+                <v-card-title class="headline">Importing questions</v-card-title>
+                <v-card-subtitle>Select the questions you want to import</v-card-subtitle>
+                <v-card-text>
+                    <v-data-table
+                    :items="importingQuestionsData"
+                    item-key="title"
+                    show-select v-model="importingQuestionsSelected"
+                    :headers="[{text:'Question',value:'question'}]"
+                    >
+                    <template v-slot:[`item.question`]="{ item}">                    
+                        <formQuestionRender
+                                :question="{...item, required : false }" />
+                    </template>
+
+                    </v-data-table>
+                </v-card-text>
+                <v-card-actions>
+                    <v-btn color="default" @click="clearImportFiles">Cancel</v-btn>
+                    <v-spacer></v-spacer>
+                    <v-btn color="primary" @click="doImport"
+                     :disabled="importingQuestionsSelected.length==0"
+                     :loading="importLoading"
+                     >Import {{ importingQuestionsSelected.length }} question{{ importingQuestionsSelected.length==1 ? '':'s' }}</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+    </v-item-group>
 </template>
 
 <script>
@@ -234,6 +235,7 @@ import admin from '../api/admin';
 import {
     debounce
 } from '@/plugins/debounce';
+import exportFromJSON from 'export-from-json';
 import formQuestionRender from '@/components/formQuestionRender.vue';
 import formQuestionEdit from '@/components/formQuestionEdit.vue';
 export default {
@@ -257,6 +259,10 @@ export default {
         openQuestions: [],
         openQuestionToCancel: 0,
         askCancelQuestionEdit: false,
+        importingQuestionsRawFiles:[],
+        importingQuestionsData:[],
+        importingQuestionsSelected:[],
+        importLoading:false,
     }),
     computed: {
         authToken: function() {
@@ -281,7 +287,7 @@ export default {
                 if (mapdata == undefined) return false;
                 return mapdata.required;
             }
-        }
+        },
     },
     methods: {
 
@@ -477,6 +483,41 @@ export default {
         },
         prepDestroyQuestion: function(ix) {
             //Begin the question destruction process
+        },
+        exportQuestion: function(id) {
+            var {id, order, required, ...question} = this.questions.find(item => item.id == id);
+            exportFromJSON({
+                data:question,
+                fileName:question.title,
+                exportType:'json',
+                extension:'ccq'
+            });
+        },
+        clearImportFiles: function(){
+            this.importingQuestionsRawFiles = [];
+        },
+        doImport: async function () {
+            this.importLoading = true;
+            await Promise.all(this.importingQuestionsSelected.map(question =>
+                new Promise((resolve, reject) => {
+                    admin.genericPost(this.authToken, 'Form/Question/' + this.context_code,
+                        question, (results) => {
+                            //Add the ID that we got to the question
+                            question = {
+                                ...question,
+                                ...results
+                            };
+                            this.questions.push(question);
+                            //If we're viewing a badge, immediately toggle the active state
+                            if (this.selectedBadgeType > 0) {
+                                this.toggleQuestionActive(results.id);
+                            }
+                            resolve()
+                        }, reject)
+                })
+            ));
+            this.importLoading = false;
+            this.clearImportFiles();
         }
     },
     watch: {
@@ -487,6 +528,18 @@ export default {
         selectedBadgeType: debounce(function(newSearch) {
             this.refreshBadgeTypeMap();
         }, 500),
+        importingQuestionsRawFiles: async function(){
+            this.importingQuestionsData = await Promise.all( this.importingQuestionsRawFiles.map(async (file) => 
+            new Promise((resolve,reject) =>
+                {
+                    var reader = new FileReader();
+                    reader.onload = () => {
+                        resolve(JSON.parse(reader.result));
+                    }
+                    reader.readAsText(file);
+                })
+            ));
+        }
     },
     created() {
         this.refresh();
