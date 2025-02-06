@@ -33,6 +33,11 @@
                @click="doEmit(action.name)"
                class="ma-2">{{action.text}}</v-btn>
         <v-spacer/>
+        <v-btn v-for="action in footerActionsRight"
+               :key="action.name"
+               :color="action.color"
+               @click="doEmit(action.name)"
+               class="ma-2">{{action.text}}</v-btn>
         <v-dialog
             v-model="isExporting"
             scrollable
@@ -163,6 +168,9 @@ export default {
             type: Array
         },
         'footerActions': {
+            type: Array
+        },
+        'footerActionsRight': {
             type: Array
         },
         'isEditingItem': {
@@ -313,7 +321,7 @@ export default {
             this.doSearch();
         },        
         actionToggles(){
-            if(this.actionToggles.length >0)
+            if(this.actionToggles && this.actionToggles.length >0)
             this.actionToggles = [];
         }
     }

@@ -42,7 +42,7 @@ export default {
             })
             .catch(function(error) {
                 if (typeof errorCb != "undefined")
-                    errorCb(response.response.data);
+                    errorCb(error);
             })
     },
     genericPut(token, path, data, cb, errorCb) {
@@ -180,5 +180,23 @@ export default {
                     errorCb(error.response.data);
             })
     },
+    //Breaking from the callback mold...
+    getBadgeContexts(token) {
+        return new Promise((resolve,reject) =>{
+            axios.get(global.config.apiHostURL + 'Group?includeDefault=true', {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            })
+            .then(function(response) {
+                resolve(response.data);
+            })
+            .catch(function(error) {
+                if (typeof errorCb != "undefined")
+                    reject(error.response.data);
+            })
+        })
+    },
+
 
 }

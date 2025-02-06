@@ -208,8 +208,15 @@ export default {
                 this.loginToken(query.token).then((success) => {
                     if (success === true) {
                         this.state = 3;
-                        if(this.returnTo == "/" && this.isAdmin)  {
+                        //TODO: Invent a better way to detect if the route path is admin or not...
+                        if(this.returnTo.startsWith("/Admin/") && this.isAdmin)  {
                             this.setAdminMode(true);
+                        }
+                        if(query.justgo != undefined){
+                            console.log("just going to",this.returnTo)
+                            setTimeout(()=>{
+                                this.$router.push(this.returnTo);
+                            },400)
                         }
                     } else {
                         this.loginFailReason = success;

@@ -1,4 +1,5 @@
 import shop from '../../api/shop'
+import admin from '../../api/admin'
 
 // initial state
 const state = {
@@ -102,9 +103,9 @@ const getters = {
     },
     getLoggedInName: (state) => {
         if (state.contactInfo != undefined) {
-            if (state.contactInfo.real_name.length > 0)
+            if (state.contactInfo.real_name?.length > 0)
                 return state.contactInfo.real_name;
-            if (state.contactInfo.email_address.length > 0)
+            if (state.contactInfo.email_address?.length > 0)
                 return state.contactInfo.email_address;
         }
         return "Guest";
@@ -138,7 +139,7 @@ const actions = {
                     commit('setPermissions', data.permissions);
                     commit('setUsername', data.username);
                     commit('setPreferences', data.preferences);
-                    commit('setAdminMode', false)
+                    commit('setAdminMode', state.permissions != null && state.permissions != undefined &&state.adminMode)
                     dispatch('products/selectEventId', data.event_id, {
                         root: true
                     });
@@ -223,10 +224,12 @@ const actions = {
         });
         commit('setToken', "");
     },
-    setAdminMode({
-        commit
+    async setAdminMode({
+        commit,state,dispatch
     }, newAdminMode) {
         commit('setAdminMode', newAdminMode);
+        dispatch('products/resetBadgeContexts',null,{root:true});
+        await dispatch('products/getBadgeContexts',null,{root:true});
     },
     refreshContactInfo({
         commit,
