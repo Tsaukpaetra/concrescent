@@ -3,6 +3,7 @@
 use CM3_Lib\Factory\LoggerFactory;
 use CM3_Lib\Factory\PaymentModuleFactory;
 use CM3_Lib\Middleware\DefaultErrorHandler;
+use CM3_Lib\util\TokenGenerator;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
@@ -98,10 +99,6 @@ return [
         ->addFileHandler('error.log');
     },
 
-    BasePathMiddleware::class => function (ContainerInterface $container) {
-        return new BasePathMiddleware($container->get(App::class));
-    },
-
     // Database connection
     DbConnection::class => function (ContainerInterface $container) {
         return new DbConnection($container->get('config')['database']);
@@ -114,7 +111,8 @@ return [
 
     FrontendUrlTranslator::class => function (ContainerInterface $container) {
         $env = $container->get('config')['environment'];
-        return new FrontendUrlTranslator($env['frontend_host'], $env['frontend_isHashMode']);
+        $TokenGenerator = $container->get(TokenGenerator::class);
+        return new FrontendUrlTranslator($env['frontend_host'], $env['frontend_isHashMode'],$TokenGenerator);
     },
 
     PaymentModuleFactory::class => function (ContainerInterface $container) {
