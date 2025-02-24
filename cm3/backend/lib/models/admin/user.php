@@ -3,6 +3,7 @@
 namespace CM3_Lib\models\admin;
 
 use CM3_Lib\database\Column as cm_Column;
+use CM3_Lib\database\ColumnIndex as cm_Index;
 
 class user extends \CM3_Lib\database\Table
 {
@@ -19,7 +20,9 @@ class user extends \CM3_Lib\database\Table
             'preferences'	=> new cm_Column('TEXT', null, true),
             'permissions'	=> new cm_Column('BLOB', null, true)
         );
-        $this->IndexDefs = array();
+        $this->IndexDefs = array(
+            new cm_Index(['username'],'unique')
+        );
         $this->PrimaryKeys = array('contact_id'=>false);
         $this->DefaultSearchColumns = array('contact_id','username','active');
     }
