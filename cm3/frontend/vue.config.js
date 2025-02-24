@@ -4,9 +4,10 @@ module.exports = {
 
   devServer: {
     proxy: {
-      '^/concrescent/': {
-        target: 'https://tsaukpaetra.com',
+      '^/api/': {
+        target: 'http://localhost:8081',
         changeOrigin: true, // so CORS doesn't bite us.
+        pathRewrite: { '^/api': '' },
       },
     },
   },

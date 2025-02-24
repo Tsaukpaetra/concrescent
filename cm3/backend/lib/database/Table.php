@@ -668,7 +668,7 @@ abstract class Table
 
         //Do we have any terms?
         if ($terms != null && count($terms)) {
-            $sqlWhere = $this->_WhereBuilder($terms, $whereCodes, $whereData, $initialTablePart, $columns, $groupNames,  $havingCodes, $havingData, $havingPart);
+            $sqlWhere = $this->_WhereBuilder($terms, $whereCodes, $whereData, $columns, $groupNames, $havingCodes, $havingData, $havingPart, $initialTablePart);
             if(strlen($sqlWhere)){
                 $sqlBody .= 'WHERE ' . $sqlWhere;
             }
@@ -904,8 +904,17 @@ abstract class Table
         return $result;
     }
 
-    protected function _WhereBuilder(array $terms, string &$whereCodes, array &$whereData, $initialTablePart = null, array $selectColumns, array $groupNames, string &$havingCodes, array &$havingData, string &$havingPart)
-    {
+    protected function _WhereBuilder(
+        array $terms,
+        string &$whereCodes,
+        array &$whereData,
+        array $selectColumns,
+        array $groupNames,
+        string &$havingCodes,
+        array &$havingData,
+        string &$havingPart,
+        $initialTablePart = null
+    ) {
         //throw new \Exception('huh?');
         $initialTablePart = $initialTablePart  ?? $this->dbTableName();
         $result = '(';
@@ -1021,7 +1030,7 @@ abstract class Table
                 }
             } else {
                 //Sub-search. Ignore everything and recurse.
-                $currentComponent .= $this->_WhereBuilder($term->subSearch, $whereCodes, $whereData, $initialTablePart, $selectColumns, $groupNames,  $havingCodes, $havingData, $havingPart);
+                $currentComponent .= $this->_WhereBuilder($term->subSearch, $whereCodes, $whereData, $selectColumns, $groupNames,  $havingCodes, $havingData, $havingPart, $initialTablePart);
             }
 
 

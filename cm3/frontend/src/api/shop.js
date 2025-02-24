@@ -18,7 +18,7 @@ export default {
                 cb(response.data);
             })
             .catch(function(error) {
-                console.log(response)
+                // console.log(response)
                 errorCb(response.response.data);
             })
     },
