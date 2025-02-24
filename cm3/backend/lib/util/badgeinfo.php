@@ -721,7 +721,7 @@ final class badgeinfo
     public function SearchBadgesText($context, string $searchText, $order, $limit, $offset, &$totalRows, $includeFormQuestions = null,  string|array $filter = [])
     {
         $whereParts =
-        empty($searchText) ? null :
+        empty($searchText) ? [] :
         array(
             new SearchTerm('real_name', $searchText, Raw: 'MATCH(`b`.`real_name`, `b`.`fandom_name`, `b`.`notify_email`, `ice_name`, `ice_email_address`) AGAINST (? IN NATURAL LANGUAGE MODE) ')
         );
@@ -775,7 +775,7 @@ final class badgeinfo
     public function SearchGroupApplicationsText($context, string $searchText, $order, $limit, $offset, &$totalRows, $includeFormQuestions = null)
     {
         $whereParts =
-        empty($searchText) ? null :
+        empty($searchText) ? [] :
         array(
             new SearchTerm('real_name', $searchText, Raw: 'MATCH('.$this->g_badge_submission->dbTableName().'.`real_name`,'.$this->g_badge_submission->dbTableName().'.`fandom_name`) AGAINST (? IN NATURAL LANGUAGE MODE) ')
         );
@@ -1042,7 +1042,7 @@ final class badgeinfo
         return $result;
     }
 
-    private function AdjustSearchTerms($terms, $badgeView)
+    public function AdjustSearchTerms($terms, $badgeView)
     {
         if (is_null($terms) || is_null($badgeView)) {
             return $terms;

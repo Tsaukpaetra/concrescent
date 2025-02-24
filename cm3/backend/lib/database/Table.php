@@ -498,7 +498,7 @@ abstract class Table
                     //Do we have any terms?
                     if ($join->subQSearchTerms != null && count($join->subQSearchTerms)) {
                         
-                        $sqlJoinWhere =  $join->Table->_WhereBuilder($join->subQSearchTerms, $whereCodes, $whereData, isset($value->JoinedTableAlias) ? '`' . $value->JoinedTableAlias .'`.' : $join->Table->dbTableName(), $joinSubQueryColumns, $joinSubQuerygroupNames,  $joinSubQueryHavingCodes, $joinSubQueryHavingData, $joinSubQueryHavingPart);
+                        $sqlJoinWhere =  $join->Table->_WhereBuilder($join->subQSearchTerms, $whereCodes, $whereData, $joinSubQueryColumns, $joinSubQuerygroupNames,  $joinSubQueryHavingCodes, $joinSubQueryHavingData, $joinSubQueryHavingPart, isset($value->JoinedTableAlias) ? '`' . $value->JoinedTableAlias .'`.' : $join->Table->dbTableName());
                         if(strlen($sqlJoinWhere)){
                             $sqlBody .= ' WHERE ' . $sqlJoinWhere;
                         }
@@ -888,7 +888,7 @@ abstract class Table
                     }
                 }
             } else {
-                $result = $resultTotal = $stmt->affected_rows();
+                $result = $resultTotal = $stmt->affected_rows;
             }
         } else {
             $this->checkAndThrowError(
@@ -996,7 +996,12 @@ abstract class Table
                     if (strpos(strtolower($term->Operation), 'in') !== false) {
                         $currentComponent .= '(';
                         $firstNeedle = true;
-                        foreach ($term->CompareValue as $key => $needle) {
+                        if(is_string($term->CompareValue))
+                        {
+                            //Handle as a CSV string
+                            $term->CompareValue = str_getcsv($term->CompareValue,',','"','\\');
+                        }
+                        foreach ($term->CompareValue as $key => &$needle) {
                             if ($firstNeedle) {
                                 $firstNeedle = false;
                             } else {

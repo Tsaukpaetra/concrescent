@@ -181,7 +181,7 @@ const actions = {
                 dispatch('refreshContactInfo');
                 resolve(true);
             }, (error) => {
-                resolve(error.error.message);
+                resolve(error.error?.message);
             });
         })
     },
