@@ -45,8 +45,11 @@ final class badgevalidator
         private f_question $f_question,
         private f_questionmap $f_questionmap,
         private badgepromoapplicator $badgepromoapplicator,
-        private CurrentUserInfo $CurrentUserInfo
+        private CurrentUserInfo $CurrentUserInfo,
+        \CM3_Lib\models\eventinfo $eventinfo,
+        private ?string $eventStartDate = null
     ) {
+        $this->eventStartDate = $eventinfo->GetByID($CurrentUserInfo->GetEventId(),['date_start'])['date_start'];
     }
 
     private ?int $payment_id = null;
@@ -183,10 +186,10 @@ final class badgevalidator
         //TODO: This isn't right, need to advance the year in accordance to the event date and today....
         $bday = new v();
         if (!empty($badgetypeData['min_age'])) {
-            $bday = $bday->MinAge($badgetypeData['min_age']);
+            $bday = $bday->MinAgeWithOffset($badgetypeData['min_age'],null,$this->eventStartDate);
         }
         if (!empty($badgetypeData['max_age'])) {
-            $bday = $bday->MaxAge(1+$badgetypeData['max_age']);
+            $bday = $bday->MaxAgeWithOffset(1+$badgetypeData['max_age'],null,$this->eventStartDate);
         }
         if (!$groupApp) {
             $v->addColumnValidator('date_of_birth', $bday);

@@ -17,6 +17,7 @@ use Slim\Middleware\ErrorMiddleware;
 use Slim\Exception\HttpNotFoundException;
 use PHPMailer\PHPMailer\PHPMailer;
 use League\CommonMark\MarkdownConverter;
+use Respect\Validation\Factory as RespectFactory;
 
 use Branca\Branca;
 use CM3_Lib\database\DbConnection;
@@ -31,6 +32,11 @@ return [
 
     App::class => function (ContainerInterface $container) {
         $app = AppFactory::createFromContainer($container);
+
+        //Set up custom validators
+        RespectFactory::setDefaultInstance ((new RespectFactory())
+            ->withRuleNamespace('CM3_Lib\\RespectValidation\\Rules')
+            ->withExceptionNamespace('CM3_Lib\\RespectValidation\\Exceptions'));
 
         // Register routes, up to three folders deep
         foreach (glob(__DIR__ . '/../routes/{,*/,*/*/,*/*/*/}*.php', GLOB_BRACE) as $route) {
