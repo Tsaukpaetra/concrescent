@@ -87,10 +87,10 @@ return function (App $app, $container) {
             ->add($attendeePerm->withAllowedPerms(array(
                 PermEvent::Attendee_View()
             )));
-            $app->post('/export', \CM3_Lib\Action\Attendee\AddonPurchase\Export::class)
-            ->add($attendeePerm->withAllowedPerms(array(
-                PermEvent::Attendee_Export()
-            )));
+            // $app->post('/export', \CM3_Lib\Action\Attendee\AddonPurchase\Export::class)
+            // ->add($attendeePerm->withAllowedPerms(array(
+            //     PermEvent::Attendee_Export()
+            // )));
             $app->post('', \CM3_Lib\Action\Attendee\AddonPurchase\Create::class)
             ->add($attendeePerm->withAllowedPerms(array(
                 PermEvent::Attendee_Edit()

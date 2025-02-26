@@ -15,7 +15,7 @@ use Slim\Exception\HttpNotFoundException;
 /**
  * Action.
  */
-final class Update
+final class Delete
 {
     /**
      * The constructor.
@@ -23,7 +23,7 @@ final class Update
      * @param Responder $responder The responder
      * @param eventinfo $eventinfo The service
      */
-    public function __construct(private Responder $responder, private locationcoord $locationcoord, private locationcoord $locationmap)
+    public function __construct(private Responder $responder, private locationcoord $locationcoord, private locationmap $locationmap)
     {
     }
 

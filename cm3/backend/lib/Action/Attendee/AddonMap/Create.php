@@ -10,6 +10,7 @@ use CM3_Lib\Responder\Responder;
 use Fig\Http\Message\StatusCodeInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Slim\Exception\HttpBadRequestException;
 
 /**
  * Action.
@@ -26,7 +27,7 @@ final class Create
         private Responder $responder,
         private addonmap $addonmap,
         private addon $addon,
-        private badge_type $badge_type,
+        private badgetype $badgetype,
     ) {
     }
 
@@ -53,7 +54,7 @@ final class Create
         }
 
         //Also confirm the specified badge_type_id belongs to the event id
-        if (!($this->badgetype->verifyBadgeTypeBelongsToEvent($data['badge_type_id'], $event_id)) {
+        if (!($this->badgetype->verifyBadgeTypeBelongsToEvent($data['badge_type_id'], $event_id))) {
             throw new HttpBadRequestException($request, 'Invalid badge id specified');
         }
 

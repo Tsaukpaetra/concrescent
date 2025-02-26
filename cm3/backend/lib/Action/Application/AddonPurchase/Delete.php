@@ -3,7 +3,7 @@
 namespace CM3_Lib\Action\Application\AddonPurchase;
 
 use CM3_Lib\models\application\addonpurchase;
-use CM3_Lib\models\application\badge;
+use CM3_Lib\models\application\submission;
 use CM3_Lib\models\application\badgetype;
 
 use CM3_Lib\database\SearchTerm;
@@ -20,7 +20,7 @@ use Slim\Exception\HttpBadRequestException;
 /**
  * Action.
  */
-final class Update
+final class Delete
 {
     /**
      * The constructor.
@@ -28,7 +28,7 @@ final class Update
      * @param Responder $responder The responder
      * @param eventinfo $eventinfo The service
      */
-    public function __construct(private Responder $responder, private addonpurchase $addonpurchase, private badge $badge, private badgetype $badgetype)
+    public function __construct(private Responder $responder, private addonpurchase $addonpurchase, private submission $submission, private badgetype $badgetype)
     {
     }
 
@@ -46,7 +46,7 @@ final class Update
         $data = (array)$request->getParsedBody();
 
         //Confirm permission to delete this badge applicant
-        $badgeinfo = $this->badge->GetByID($params['application_id'], new View(
+        $badgeinfo = $this->submission->GetByID($params['application_id'], new View(
             array('id'),
             array(
                 new Join($this->badgetype, array('id'=>'badge_type_id', new SearchTerm('event_id', $params['event_id'])))
@@ -54,13 +54,17 @@ final class Update
         ));
 
         if ($badgeinfo === false) {
-            throw new HttpBadRequestException($request, 'Invalid badge specified');
+            throw new HttpBadRequestException($request, 'Invalid submission specified');
         }
 
         //TODO: Maybe this should just cancel the addon instead?
+        $data = $this->addonpurchase->Update([
+            'id'=>$params['id'],
+            'payment_status' => 'Cancelled'
+        ]);
 
         // Invoke the Domain with inputs and retain the result
-        $data = $this->addonpurchase->Delete(array('id'=>$params['id']));
+        // $data = $this->addonpurchase->Delete(array('id'=>$params['id']));
 
         // Build the HTTP response
         return $this->responder

@@ -8,11 +8,12 @@ use CM3_Lib\Responder\Responder;
 use Fig\Http\Message\StatusCodeInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Slim\Exception\HttpBadRequestException;
 
 /**
  * Action.
  */
-final class Update
+final class Delete
 {
     /**
      * The constructor.

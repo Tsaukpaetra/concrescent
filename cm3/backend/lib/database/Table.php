@@ -72,16 +72,16 @@ abstract class Table
         return $this->cm_db->table_name($this->TableName);
     }
 
-    public function Create(array $entryData)
+    public function Create(array $entryData): array|bool
     {
         return $this->_createOrUpdate_entry($entryData, true);
     }
-    public function Update(array $entryData)
+    public function Update(array $entryData): array|bool
     {
         return $this->_createOrUpdate_entry($entryData, false);
     }
 
-    protected function _createOrUpdate_entry(array $entrydata, bool $isNew)
+    protected function _createOrUpdate_entry(array $entrydata, bool $isNew): array|bool
     {
         //Do some initial checking
         $failCheck = false;
@@ -999,7 +999,7 @@ abstract class Table
                         if(is_string($term->CompareValue))
                         {
                             //Handle as a CSV string
-                            $term->CompareValue = str_getcsv($term->CompareValue,',','"','\\');
+                            $term->CompareValue = str_getcsv((string)$term->CompareValue,',','"','\\');
                         }
                         foreach ($term->CompareValue as $key => &$needle) {
                             if ($firstNeedle) {
@@ -1145,7 +1145,7 @@ abstract class Table
         }
 
         $result = $this->Search($columns, $terms, limit: 1);
-        if ($result === false || is_null($result) || count($result) == 0) {
+        if ($result === false || is_null($result) || count((array)$result) == 0) {
             return false;
         } else {
             return $result[0];

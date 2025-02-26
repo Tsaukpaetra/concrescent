@@ -8,11 +8,12 @@ use CM3_Lib\Responder\Responder;
 use Fig\Http\Message\StatusCodeInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Slim\Exception\HttpBadRequestException;
 
 /**
  * Action.
  */
-final class Update
+final class Delete
 {
     /**
      * The constructor.
@@ -39,7 +40,7 @@ final class Update
 
         //Confirm the given badge_type_id belongs to the given group_id
         if (!$this->badgetype->verifyBadgeTypeBelongsToGroup($data['badge_type_id'], $params['group_id'])) {
-            throw new HttpBadRequestException('Invalid badge_type_id specified');
+            throw new HttpBadRequestException($request,'Invalid badge_type_id specified');
         }
 
 

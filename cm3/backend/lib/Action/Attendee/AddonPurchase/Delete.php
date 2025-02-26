@@ -20,7 +20,7 @@ use Slim\Exception\HttpBadRequestException;
 /**
  * Action.
  */
-final class Update
+final class Delete
 {
     /**
      * The constructor.
@@ -58,9 +58,13 @@ final class Update
         }
 
         //TODO: Maybe this should just cancel the addon instead?
+        $data = $this->addonpurchase->Update([
+            'id'=>$params['id'],
+            'payment_status' => 'Cancelled'
+        ]);
 
         // Invoke the Domain with inputs and retain the result
-        $data = $this->addonpurchase->Delete(array('id'=>$params['id']));
+        // $data = $this->addonpurchase->Delete(array('id'=>$params['id']));
 
         // Build the HTTP response
         return $this->responder

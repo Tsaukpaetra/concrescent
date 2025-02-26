@@ -8,6 +8,7 @@ use CM3_Lib\Responder\Responder;
 use Fig\Http\Message\StatusCodeInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Slim\Exception\HttpBadRequestException;
 
 /**
  * Action.
@@ -42,7 +43,7 @@ final class Create
         }
         //Ensure we're only attempting to create a location for the current Event
         $data['event_id'] = $request->getAttribute('event_id');
-        $data['map_id'] = $request->params['map_id');
+        $data['map_id'] = $params['map_id'];
 
         // Invoke the Domain with inputs and retain the result
         $data = $this->locationcoord->Create($data);

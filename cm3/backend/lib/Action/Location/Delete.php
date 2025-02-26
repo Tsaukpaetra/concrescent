@@ -14,7 +14,7 @@ use Slim\Exception\HttpNotFoundException;
 /**
  * Action.
  */
-final class Update
+final class Delete
 {
     /**
      * The constructor.

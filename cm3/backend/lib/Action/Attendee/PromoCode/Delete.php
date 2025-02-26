@@ -11,7 +11,7 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * Action.
  */
-final class Update
+final class Delete
 {
     /**
      * The constructor.
@@ -35,7 +35,7 @@ final class Update
     {
         // Only soft deletes
         $data =array(
-            'id' => $params['id']
+            'id' => $params['id'],
             'active' => 0
         );
 

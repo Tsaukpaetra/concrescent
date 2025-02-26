@@ -12,7 +12,7 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * Action.
  */
-final class Update
+final class Delete
 {
     /**
      * The constructor.

@@ -20,7 +20,7 @@ use Slim\Exception\HttpBadRequestException;
 /**
  * Action.
  */
-final class Update
+final class Delete
 {
     /**
      * The constructor.

@@ -7,11 +7,12 @@ use CM3_Lib\Responder\Responder;
 use Fig\Http\Message\StatusCodeInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Slim\Exception\HttpBadRequestException;
 
 /**
  * Action.
  */
-final class Update
+final class Delete
 {
     /**
      * The constructor.
@@ -35,7 +36,8 @@ final class Update
     {
         // Extract the form data from the request body
         $data =array(
-            'id' => $params['id']
+            'id' => $params['id'],
+            'active' => 0
         );
 
         if (!$this->badgetype->verifyBadgeTypeBelongsToEvent($params['id'], $request->getAttribute('event_id'))) {
@@ -43,7 +45,7 @@ final class Update
         }
 
         // Invoke the Domain with inputs and retain the result
-        $data = $this->badgetype->Delete($data);
+        $data = $this->badgetype->Update($data);
 
         // Build the HTTP response
         return $this->responder

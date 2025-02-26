@@ -7,17 +7,17 @@ use CM3_Lib\Responder\Responder;
 use Fig\Http\Message\StatusCodeInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Slim\Exception\HttpBadRequestException;
 
 /**
  * Action.
  */
-final class Update
+final class Delete
 {
     /**
      * The constructor.
      *
      * @param Responder $responder The responder
-     * @param eventinfo $eventinfo The service
      */
     public function __construct(private Responder $responder, private promocode $promocode)
     {
@@ -35,7 +35,7 @@ final class Update
     {
         // Only soft deletes
         $data =array(
-            'id' => $params['id']
+            'id' => $params['id'],
             'active' => 0
         );
 

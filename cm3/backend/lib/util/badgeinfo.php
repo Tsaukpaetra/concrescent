@@ -1882,7 +1882,7 @@ final class badgeinfo
         }
     }
 
-    public function addComputedColumns($result, $includeImageData = false)
+    public function addComputedColumns(array $result, $includeImageData = false): array
     {
         //Add some computed helper columns
         switch ($result['name_on_badge']) {

@@ -126,10 +126,10 @@ return function (App $app, $container) {
             ->add($groupPerm->withAllowedPerms(array(
                 PermGroup::Submission_View()
             )));
-            $app->post('/export', \CM3_Lib\Action\Application\AddonPurchase\Export::class)
-            ->add($groupPerm->withAllowedPerms(array(
-                PermGroup::Submission_Export()
-            )));
+            // $app->post('/export', \CM3_Lib\Action\Application\AddonPurchase\Export::class)
+            // ->add($groupPerm->withAllowedPerms(array(
+            //     PermGroup::Submission_Export()
+            // )));
             $app->post('', \CM3_Lib\Action\Application\AddonPurchase\Create::class)
             ->add($groupPerm->withAllowedPerms(array(
                 PermGroup::Submission_Edit()

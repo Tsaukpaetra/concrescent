@@ -3,15 +3,18 @@
 namespace CM3_Lib\Action\Attendee\Badge;
 
 use CM3_Lib\models\attendee\badge;
+use CM3_Lib\models\attendee\badgetype;
 use CM3_Lib\Responder\Responder;
 use Fig\Http\Message\StatusCodeInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Slim\Exception\HttpBadRequestException;
+use Slim\Exception\HttpNotFoundException;
 
 /**
  * Action.
  */
-final class Update
+final class Delete
 {
     /**
      * The constructor.
@@ -37,7 +40,7 @@ final class Update
     public function __invoke(ServerRequestInterface $request, ResponseInterface $response, $params): ResponseInterface
     {
         //Confirm badge belongs to a badgetype in this event
-        $current = $this->badge->GetByID($params['id'], array('badge_type_id'));
+        $current = $this->badge->GetByID($params['id'], array('id','badge_type_id'));
         if ($current === false) {
             throw new HttpNotFoundException($request);
         }
@@ -47,7 +50,8 @@ final class Update
         }
 
         // Invoke the Domain with inputs and retain the result
-        $data = $this->attendee->Delete($data);
+        $current['payment_status'] = 'Cancelled';
+        $data = $this->badge->Update($current);
 
         // Build the HTTP response
         return $this->responder
