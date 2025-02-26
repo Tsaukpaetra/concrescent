@@ -422,7 +422,7 @@ final class badgeinfo
         $result =  $this->g_badge->Update($data);
         return $data['display_id'];
     }
-    public function GetFormResponses($id, $context_code, $question_ids = null)
+    public function GetFormResponses($id, $context_code, $question_ids = null): array
     {
         $data = $this->f_response->Search(
             array('question_id','response',is_array($id) ? 'context_id' : null),
