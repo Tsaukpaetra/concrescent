@@ -1,0 +1,9 @@
+{
+  "name": "application-waitlist",
+  "reply_to": "vendors@example.com",
+  "from": "vendors@example.com",
+  "cc": "vendors@example.com",
+  "subject": "Your [[badge_type_name]] registration for [[event.display_name]]",
+  "format": "Markdown",
+  "body": "Good evening!\n\nGood evening!\nThank you so much for your patience. We want to thank you for applying for **[[event.display_name]]**. At this time, we cannot extend you an offer for a booth space for your [[badge_type_name]] application for **[[display_name]]**, however we have placed you on our waitlist should there be an opening in the future. Please be sure to check our social media for any updates.\n\nThanks,\n[[event-name]] Registration"
+}

@@ -1,0 +1,9 @@
+{
+  "name": "attendee-payment-Incomplete",
+  "reply_to": "registration@example.com",
+  "from": "registration@example.com",
+  "cc": "registration@example.com",
+  "subject": "Your registration for [[event.display_name]]",
+  "format": "Markdown",
+  "body": "Greetings,\r\n\r\nIt looks like you may have forgotten your badge for **[[event.display_name]]**. Your [[badge_type_name]] registration for **[[display_name]]** is waiting for you.\r\n\r\n\r\nYou can resume your shopping here: [My Cart]([[cart_url]])\r\n\r\nThanks again,\r\n[[event-name]] Registration"
+}

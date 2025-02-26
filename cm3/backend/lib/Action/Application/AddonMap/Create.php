@@ -54,7 +54,7 @@ final class Create
         }
 
         //Also confirm the specified badge_type_id belongs to the event id
-        if (!($this->badgetype->verifyBadgeTypeBelongsToEvent($data['badge_type_id'], $event_id)) {
+        if (!($this->badgetype->verifyBadgeTypeBelongsToEvent($data['badge_type_id'], $event_id))) {
             throw new HttpBadRequestException($request, 'Invalid badge id specified');
         }
 

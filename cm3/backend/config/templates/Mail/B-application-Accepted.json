@@ -1,0 +1,9 @@
+{
+  "name": "application-Accepted",
+  "reply_to": "vendors@example.com",
+  "from": "vendors@example.com",
+  "cc": "vendors@example.com",
+  "subject": "Your registration for [[event.display_name]]",
+  "format": "Markdown",
+  "body": "Greetings,\n\nThank you for registering for **[[event.display_name]]**. Your [[badge_type_name]] registration for **[[display_name]]** has been completed.\n\n\n\n\nYou can review your order at any time at the following link:\n\n[My Badges]([[retrieve_url]])\n\nThanks again,\n[[event-name]] Registration"
+}
