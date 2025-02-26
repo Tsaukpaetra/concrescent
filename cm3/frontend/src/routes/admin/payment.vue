@@ -138,13 +138,19 @@ export default {
         ],
         listAddHeaders: [{
             text: 'Contact',
-            value: 'contact_id'
+            value: 'contact_email_address'
         }, {
             text: 'Status',
             value: 'payment_status'
         }, {
             text: 'System',
             value: 'payment_system'
+        }, {
+            text: 'Date',
+            value: 'payment_date'
+        }, {
+            text: 'Amount',
+            value: 'payment_txn_amt'
         }, {
             text: 'Requested by',
             value: 'requested_by'
