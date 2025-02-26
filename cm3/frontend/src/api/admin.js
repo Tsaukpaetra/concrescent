@@ -192,8 +192,38 @@ export default {
                 resolve(response.data);
             })
             .catch(function(error) {
-                if (typeof errorCb != "undefined")
+                if (typeof errorCb == "function")
                     reject(error.response.data);
+            })
+        })
+    },
+    getLocations(token) {
+        return new Promise((resolve,reject) =>{
+            axios.get(global.config.apiHostURL + 'Location', {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            })
+            .then(function(response) {
+                resolve(response.data);
+            })
+            .catch(function(error) {
+                reject(error.response.data);
+            })
+        })
+    },
+    getLocationCategories(token) {
+        return new Promise((resolve,reject) =>{
+            axios.get(global.config.apiHostURL + 'LocationCategory', {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            })
+            .then(function(response) {
+                resolve(response.data);
+            })
+            .catch(function(error) {
+                reject(error.response.data);
             })
         })
     },

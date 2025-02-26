@@ -15,11 +15,15 @@ const state = {
     badges: {},
     questions: {},
     addons: {},
+    locations:[],
+    locationCategories:[],
     gotEventInfo: false,
     gotBadgeContexts: false,
     gotBadges: {},
     gotQuestions: {},
-    gotAddons: {}
+    gotAddons: {},
+    gotLocations: false,
+    gotLocationCategories: false,
 }
 
 // getters
@@ -64,6 +68,12 @@ const getters = {
     contextAddons: (state) => {
         if (state.badgecontextselected == undefined) return [];
         return state.addons[state.badgecontextselected.context_code] || [];
+    },
+    locations: (state) => {
+        return state.locations || [];
+    },
+    locationCategories: (state) => {
+        return state.locationCategories || [];
     },
 }
 
@@ -124,7 +134,7 @@ const actions = {
             //Load only if necessary
             if (!state.gotBadgeContexts) {
                 //Hack: Ask the mydata if we're an admin and use that to load contexts
-                console.log('root state',rootState.mydata.permissions != null, rootState.mydata.permissions != undefined,rootState.mydata.adminMode)
+                // console.log('root state',rootState.mydata.permissions != null, rootState.mydata.permissions != undefined,rootState.mydata.adminMode)
                 if(rootState.mydata.permissions != null 
                     && rootState.mydata.permissions != undefined
                     && rootState.mydata.adminMode == true){
@@ -281,6 +291,74 @@ const actions = {
                 })
         })
     },
+    getLocations({
+        commit,
+        state,
+        rootState
+    }) {
+        return new Promise((resolve, reject) => {
+            if (state.selectedEventId == null)
+                return reject('Unable to get locations if the event ID is not known');
+            //Load only if necessary
+            if (!state.gotLocations) {
+                commit('setLocations', []);
+                //Hack: Ask the mydata if we're an admin and use that to load contexts
+                if(rootState.mydata.permissions != null 
+                    && rootState.mydata.permissions != undefined
+                    && rootState.mydata.adminMode == true){
+                    admin.getLocations(rootState.mydata.token)
+                    .then(contexts => {
+                        commit('setLocations', contexts);
+                        resolve();
+                    }).catch(err =>{
+                        reject(err)
+                    });
+                } else {
+
+                    shop.getLocations(state.selectedEventId, contexts => {
+                        commit('setLocations', contexts);
+                        resolve();
+                    })
+                }
+            } else {
+                resolve();
+            }
+        })
+    },
+    getLocationCategories({
+        commit,
+        state,
+        rootState
+    }) {
+        return new Promise((resolve, reject) => {
+            if (state.selectedEventId == null)
+                return reject('Unable to get location categories if the event ID is not known');            
+            //Load only if necessary
+            if (!state.gotLocationCategories) {
+                commit('setLocationCategories', []);
+                //Hack: Ask the mydata if we're an admin and use that to load contexts
+                if(rootState.mydata.permissions != null 
+                    && rootState.mydata.permissions != undefined
+                    && rootState.mydata.adminMode == true){
+                    admin.getLocationCategories(rootState.mydata.token)
+                    .then(contexts => {
+                        commit('setLocationCategories', contexts);
+                        resolve();
+                    }).catch(err =>{
+                        reject(err)
+                    });
+                } else {
+
+                    shop.getLocations(state.selectedEventId, contexts => {
+                        commit('setLocationCategories', contexts);
+                        resolve();
+                    })
+                }
+            } else {
+                resolve();
+            }
+        })
+    },
 }
 
 // mutations
@@ -293,6 +371,8 @@ const mutations = {
         state.gotBadges = {};
         state.gotQuestions = {};
         state.gotAddons = {};
+        state.gotLocations = false;
+        state.gotLocationCategories = false;
     },
     selectEvent(state, eventid) {
         state.selectedEventId = eventid;
@@ -302,6 +382,8 @@ const mutations = {
         state.gotBadges = {};
         state.gotQuestions = {};
         state.gotAddons = {};
+        state.gotLocations = false;
+        state.gotLocationCategories = false;
     },
     setBadgeContexts(state, contexts) {
         state.badgecontexts = contexts;
@@ -343,6 +425,30 @@ const mutations = {
             product.quantity_remaining--
         }
 
+    },
+    setLocations(state, locations) {
+        state.locations = locations;
+        state.gotLocations = true;
+    },
+    updateLocation(state,location) {
+        var existing = state.location.findIndex(x=>x.id == location.id);
+        if(existing > -1) {
+            state.location[existing] = location;
+        } else {
+            state.location.push(location);
+        }
+    },
+    setLocationCategories(state, categories) {
+        state.locationCategories = categories;
+        state.gotLocationCategories = true;
+    },
+    updateLocationCategory(state,category) {
+        var existing = state.locationCategories.findIndex(x=>x.id == category.id);
+        if(existing > -1) {
+            state.locationCategories[existing] = category;
+        } else {
+            state.locationCategories.push(category);
+        }
     }
 }
 

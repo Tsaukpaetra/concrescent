@@ -2,7 +2,9 @@
 
 namespace CM3_Lib\Action\Location;
 
+use CM3_Lib\database\SearchTerm;
 use CM3_Lib\models\application\location;
+use CM3_Lib\models\application\assignment;
 use CM3_Lib\Responder\Responder;
 use Fig\Http\Message\StatusCodeInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -23,7 +25,8 @@ final class Update
      * @param Responder $responder The responder
      * @param eventinfo $eventinfo The service
      */
-    public function __construct(private Responder $responder, private location $location)
+    public function __construct(private Responder $responder, 
+    private location $location, private assignment $assignment)
     {
     }
 
@@ -50,10 +53,49 @@ final class Update
         }
 
         // Invoke the Domain with inputs and retain the result
-        $data = $this->location->Update($data);
+        $result = $this->location->Update($data);
+
+        
+        if (isset($data['Assignments'])) {
+            $result['AssnResults'] = [];
+            $setAssignments = $data['Assignments'];
+            $currentAssignments = $this->assignment->Search(
+                array(
+                    'id'
+                ),
+                array(
+                    new SearchTerm('location_id', $result['id'])
+                )
+            );
+            //Process adds
+            foreach (array_udiff($setAssignments, $currentAssignments, array($this,'compareAssignmentID')) as $newAssignment) {
+                $newAssignment['location_id'] = $result['id'];
+                unset($newAssignment['id']);
+                $result['AssnResults']['Added'] = 
+                $this->assignment->Create($newAssignment);
+            }
+            //Process removes
+            foreach (array_udiff($currentAssignments, $setAssignments, array($this,'compareAssignmentID')) as $deletedAssignment) {
+                $deletedAssignment['location_id'] = $result['id'];
+                $result['AssnResults']['Deleted'] = 
+                $this->assignment->Delete($deletedAssignment);
+            }
+            //Process modifications
+            foreach (array_uintersect($setAssignments, $currentAssignments, array($this,'compareAssignmentID')) as $modifiedAssignment) {
+                $modifiedAssignment['location_id'] = $result['id'];
+                $result['AssnResults']['Updated'] = 
+                $this->assignment->Update($modifiedAssignment);
+            }
+        }
 
         // Build the HTTP response
         return $this->responder
-            ->withJson($response, $data);
+            ->withJson($response, $result);
+    }
+    
+    public function compareAssignmentID($left, $right)
+    {
+        //Spaceship!
+        return $left['id'] <=> $right['id'];
     }
 }

@@ -25,6 +25,12 @@
                         {{item.id}}
                     </v-tooltip>
                 </template>
+                <template v-slot:[`item.assignments`]="{ item }">
+                    <cellAssignments :assignment_id="item.id" 
+                    :location_ids="item.assignments_locations.split(',').filter(x => x)"
+                    :category_ids="item.assignments_categories.split(',').filter(x => x)"
+                    >{{ item.assignments }}</cellAssignments>
+                </template>
             </badgeSearchList>
             <v-dialog v-model="importSubmissionDialog" fullscreen scrollable hide-overlay>
                 <v-card>
@@ -321,6 +327,7 @@ import addonTypeForm from '@/components/addonTypeForm.vue';
 import formQuestionEditList from '@/components/formQuestionEditList.vue';
 import editBadgeAdmin from '@/components/editBadgeAdmin.vue';
 import importWizard from '@/components/importWizard.vue';
+import cellAssignments from '@/components/datagridcell/cellAssignments.vue';
 
 export default {
     components: {
@@ -333,6 +340,7 @@ export default {
         formQuestionEditList,
         editBadgeAdmin,
         importWizard,
+        cellAssignments,
     },
     props: [
         'subTabIx'
@@ -342,7 +350,15 @@ export default {
             'time_printed',
             'time_checked_in',
         ],
-        listAddHeaders: [],
+        listAddHeaders: [
+            {
+                text:'Approved Assn',
+                value:'assignment_count'
+            },{
+                text:'Assignments',
+                value:'assignments'
+            },
+        ],
         importSubmissionDialog: false,
         sSelected: {},
         sEdit: false,

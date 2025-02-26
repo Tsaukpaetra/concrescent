@@ -1,13 +1,14 @@
 <?php
 
-namespace CM3_Lib\Action\Location;
+namespace CM3_Lib\Action\LocationCategory;
 
 use CM3_Lib\database\SearchTerm;
 use CM3_Lib\database\SelectColumn;
 use CM3_Lib\database\View;
 use CM3_Lib\database\Join;
 use CM3_Lib\models\application\location;
-use CM3_Lib\models\application\assignment;
+use CM3_Lib\models\application\locationcoord;
+use CM3_Lib\models\application\locationcategory;
 use CM3_Lib\util\badgeinfo;
 use CM3_Lib\Responder\Responder;
 use Fig\Http\Message\StatusCodeInterface;
@@ -27,8 +28,7 @@ final class Search
      */
     public function __construct(
         private Responder $responder,
-        private location $location,
-        private assignment $assignment,
+        private locationcategory $locationcategory,
         private badgeinfo $badgeinfo
     ) {
     }
@@ -59,19 +59,15 @@ final class Search
         );
 
         // Invoke the Domain with inputs and retain the result
-        // $this->location->debugThrowBeforeSelect = true;
-        $data = $this->location->Search(new View([
-            'id','short_code','name','description','active',
-            new SelectColumn('AssignmentCount',EncapsulationFunction:'ifnull(?,0)',Alias:'AssignmentCount',JoinedTableAlias:'ac')
-        ],[
-            new Join($this->assignment,['location_id'=>'id'],'LEFT',
-            'ac',[
-                new SelectColumn('location_id',true),
-                new SelectColumn('id',false,'count(?)','AssignmentCount')
-                ])
+        $data = $this->locationcategory->Search(new View([
+            'id',
+            'name',
+            'color',
+            'active',
+            
         ]), $whereParts, $pg['order'], $pg['limit'], $pg['offset'], $totalRows);
 
-        $response = $response->withHeader('X-Total-Rows', (string)$totalRows);
+        $response = $response->withHeader('X-Total-Rows', (string) $totalRows);
         // Build the HTTP response
         return $this->responder
             ->withJson($response, $data);

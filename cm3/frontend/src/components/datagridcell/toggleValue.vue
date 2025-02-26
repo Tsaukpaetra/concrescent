@@ -16,7 +16,7 @@ export default {
         return {
             skipEmitOnce: false,
             currentValue: this.value,
-            loading:null,
+            loading:false,
         };
     },
     computed: {
@@ -27,21 +27,15 @@ export default {
     },
     watch: {
         currentValue: function(newValue){
-            if (this.skipEmitOnce == true) {
-                this.skipEmitOnce = false;
-                return;
-            }
-            //this.loading = true;
+            this.loading = true;
             this.$emit('input',newValue);
         },
         value: {
             handler: function(newValue) {
-                //Splat the input into the form
-                this.skipEmitOnce = true;
-                // console.log('new value received', newValue)
+                console.log('new value received', newValue)
                 // this.payment_id = newValue.payment_id;
                 this.currentValue = newValue;
-                //this.loading= null;
+                this.loading= false;
             },
         }
     },

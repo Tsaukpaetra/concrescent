@@ -123,14 +123,6 @@ export default {
                 value: 'Fandom Name Only'
             }];
         },
-        result() {
-            return {
-                real_name: this.model.real_name,
-                fandom_name: this.model.fandom_name,
-                name_on_badge: (!!this.model.fandom_name) ? this.model.name_on_badge : 'Real Name Only',
-                date_of_birth: this.model.date_of_birth,
-            }
-        },
     },
     methods: {
 
@@ -142,20 +134,21 @@ export default {
     watch: {
         validGenInfo(isValid) {
             this.$emit('valid', isValid);
+        },        
+        model: {
+            handler(newData) {
+                newData.name_on_badge = (!!this.model.fandom_name) ? this.model.name_on_badge : 'Real Name Only';
+                this.$emit('input', newData);
+            },
+            deep: true,
+            immediate: true
         },
-        result(newData) {
-            if (this.skipEmitOnce == true) {
-                this.skipEmitOnce = false;
-                return;
-            }
-            this.$emit('input', newData);
-        },
-        value(newValue) {
-            //Splat the input into the form
-            this.skipEmitOnce = true;
-            this.model = {
-                ...newValue
-            };
+        value: {
+            handler(newValue) {
+                this.model = newValue;
+            },
+            deep: true,
+            immediate: true
         },
         menuBDay(val) {
             // Whenever opening the picker, always reset it back to start with the Year

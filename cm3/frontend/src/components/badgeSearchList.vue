@@ -474,7 +474,11 @@ export default {
                 {
                     text: 'Checked-In',
                     value: 'time_checked_in',
-                }
+                },
+                {
+                    text: 'Notes',
+                    value: 'notes',
+                },
             ];
             var inc = this.AddHeaders || [];
             

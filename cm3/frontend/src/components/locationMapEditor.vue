@@ -327,26 +327,13 @@ export default Vue.extend({
     },
     watch: {
         model(newData) {
-            // if (this.skipEmitOnce == true) {
-            //     this.skipEmitOnce = false;
-            //     return;
-            // }
             this.$emit('input', newData);
         },
         value(newValue) {
             console.log('a new value',newValue)
             //Splat the input into the form
-            // this.skipEmitOnce = true;
             if (!newValue)
                 this.fieldSelectedIx = -1;
-            // this.model = {
-            //     name: 'New Badge Format',
-            //     customSize: '5in*3in',
-            //     bgImageID: null,
-            //     layoutPosition: null,
-            //     layout: [],
-            //     ...newValue,
-            // };
             this.model = newValue;
         },
     },

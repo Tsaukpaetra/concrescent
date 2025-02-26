@@ -21,6 +21,8 @@ use CM3_Lib\models\application\group as g_group;
 use CM3_Lib\models\application\addon as g_addon;
 use CM3_Lib\models\application\addonmap as g_addonmap;
 use CM3_Lib\models\application\addonpurchase as g_addonpurchase;
+use CM3_Lib\models\application\assignment as g_assignment;
+use CM3_Lib\models\application\location as g_location;
 use CM3_Lib\models\staff\badge as s_badge;
 use CM3_Lib\models\forms\question as f_question;
 use CM3_Lib\models\forms\response as f_response;
@@ -55,6 +57,8 @@ final class badgeinfo
         private g_addon $g_addon,
         private g_addonmap $g_addonmap,
         private g_addonpurchase $g_addonpurchase,
+        private g_assignment $g_assignment,
+        private g_location $g_location,
         private f_question $f_question,
         private f_response $f_response,
         private CurrentUserInfo $CurrentUserInfo,
@@ -837,6 +841,9 @@ final class badgeinfo
         //Add to the group search if context specified
         if ($context !== false) {
             $g_terms[] = new SearchTerm('context_code', $context, is_null($context) ? 'IS' : '=', JoinedTableAlias:'grp');
+            //At present the only time the $context is specified is if they're admin and can read applications
+            //So, add in the notes for use in the table
+            $g_bv->Columns[] = 'notes';
         }
 
         $a_data = ($context === false || ($context ?? 'A') == 'A') ? $this->a_badge->Search($a_bv, $a_terms, $order, $limit, $offset, $trA, 'b') : array();
@@ -951,6 +958,9 @@ final class badgeinfo
         //Add to the group search if context specified
         if (!empty($context)) {
             $g_terms[] = new SearchTerm('context_code', $context, is_null($context) ? 'IS' : '=', JoinedTableAlias:'grp');
+            //At present the only time the $context is specified is if they're admin and can read applications
+            //So, add in the notes for use in the table
+            $g_bv->Columns[] = 'notes';
         }
 
         //$this->g_badge->debugThrowBeforeSelect = true;
@@ -1166,6 +1176,16 @@ final class badgeinfo
             ), array(
                 new SearchTerm('application_id', $id)
             ));
+
+            $result['assignments'] = $this->g_assignment->Search(new View([
+                'id','application_id','location_id','category_id','start_time','end_time',
+                new SelectColumn('short_code', JoinedTableAlias:'l'),
+                new SelectColumn('name', JoinedTableAlias:'l'),
+            ],[
+                new Join($this->g_location,['id'=>'location_id'],alias:'l')
+            ]),[
+                new SearchTerm('application_id',$result['id'])
+            ]);
         }
 
 
@@ -1277,6 +1297,7 @@ final class badgeinfo
                new SelectColumn('name', Alias:'badge_type_name', JoinedTableAlias:'typ'),
                new SelectColumn('payable_onsite', Alias:'badge_type_payable_onsite', JoinedTableAlias:'typ'),
                new SelectColumn('email_address', Alias:'contact_email_address', JoinedTableAlias:'con'),
+               'notes',
              )
             ),
             array(
@@ -1360,6 +1381,7 @@ final class badgeinfo
                new SelectColumn('name', Alias:'badge_type_name', JoinedTableAlias:'typ'),
                new SelectColumn('payable_onsite', Alias:'badge_type_payable_onsite', JoinedTableAlias:'typ'),
                new SelectColumn('email_address', Alias:'contact_email_address', JoinedTableAlias:'con'),
+               'notes',
              )
             ),
             array(
@@ -1524,6 +1546,9 @@ final class badgeinfo
                 'name_on_badge',
                new SelectColumn('context_code', JoinedTableAlias:'grp'),
                new SelectColumn('assignment_count'),
+               new SelectColumn('AssignmentCount',EncapsulationFunction:'ifnull(?,0)',Alias:'assignments',JoinedTableAlias:'ac'),
+               new SelectColumn('LocationIDs',EncapsulationFunction:'ifnull(?,\'\')',Alias:'assignments_locations',JoinedTableAlias:'ac'),
+               new SelectColumn('CategoryIDs',EncapsulationFunction:'ifnull(?,\'\')',Alias:'assignments_categories',JoinedTableAlias:'ac'),
                new SelectColumn('application_status'),
                new SelectColumn('badge_type_id'),
                new SelectColumn('payment_status'),
@@ -1559,6 +1584,13 @@ final class badgeinfo
                      ),
                      alias:'con'
                  ),
+                 new Join($this->g_assignment,['application_id'=>'id'],'LEFT',
+                 'ac',[
+                     new SelectColumn('application_id',true),
+                     new SelectColumn('location_id',false,'GROUP_CONCAT(? SEPARATOR \',\')','LocationIDs'),
+                     new SelectColumn('category_id',false,'GROUP_CONCAT(? SEPARATOR \',\')','CategoryIDs'),
+                     new SelectColumn('id',false,'count(?)','AssignmentCount')
+                 ]),
                  )
         );
 
@@ -1752,48 +1784,94 @@ final class badgeinfo
                     )
                 );
                 //Process adds
-                foreach (array_udiff($setSubbadges, $currentSubbadges, array($this,'compareID')) as &$newSubbadge) {
-                    $curIx = array_search($newSubbadge, $setSubbadges, true);
+                foreach (array_udiff($setSubbadges, $currentSubbadges, array($this,'compareID')) as &$newAssignment) {
+                    $curIx = array_search($newAssignment, $setSubbadges, true);
 
-                    unset($newSubbadge['id']);//Just in case
-                    $newSubbadge['application_id'] = $result['id'];
-                    $newSubbadge['contact_id'] = $result['contact_id'];
-                    $newSubbadge['date_of_birth'] = empty($newSubbadge['date_of_birth']) ? '1000-01-01' : $newSubbadge['date_of_birth'] ;
+                    unset($newAssignment['id']);//Just in case
+                    $newAssignment['application_id'] = $result['id'];
+                    $newAssignment['contact_id'] = $result['contact_id'];
+                    $newAssignment['date_of_birth'] = empty($newAssignment['date_of_birth']) ? '1000-01-01' : $newAssignment['date_of_birth'] ;
 
-                    $newSubbadge['id'] = $this->g_badge->Create($newSubbadge)['id'];
+                    $newAssignment['id'] = $this->g_badge->Create($newAssignment)['id'];
                     //Tag this badge as new...?
-                    $newSubbadge['created'] = true;
+                    $newAssignment['created'] = true;
 
                     //If completed payment and accepted add display ID
-                    if ($newSubbadge['display_id'] ??null==null && in_array(
+                    if ($newAssignment['display_id'] ??null==null && in_array(
                         $result['application_status']??'',
                         ['PendingAcceptance','Accepted','Onboarding','Active']
                     )) {
-                        $newSubbadge['display_id'] = $this->setNextDisplayIDSpecificSubBadge($newSubbadge['id'], $result['context_code']);
+                        $newAssignment['display_id'] = $this->setNextDisplayIDSpecificSubBadge($newAssignment['id'], $result['context_code']);
                     }
                     //Save back to the subbadges
-                    $setSubbadges[$curIx] = $newSubbadge;
+                    $setSubbadges[$curIx] = $newAssignment;
                 }
                 //Process removes
-                foreach (array_udiff($currentSubbadges, $setSubbadges, array($this,'compareID')) as $deletedSubbadge) {
-                    $deletedSubbadge['application_id'] = $result['id'];
-                    $this->g_badge->Delete($deletedSubbadge);
+                foreach (array_udiff($currentSubbadges, $setSubbadges, array($this,'compareID')) as $deletedAssignment) {
+                    $deletedAssignment['application_id'] = $result['id'];
+                    $this->g_badge->Delete($deletedAssignment);
                 }
                 //Process modifications
-                foreach (array_uintersect($setSubbadges, $currentSubbadges, array($this,'compareID')) as $existingSubbadge) {
-                    $curIx = array_search($existingSubbadge, $setSubbadges, true);
-                    $existingSubbadge['application_id'] = $result['id'];
-                    $this->g_badge->Update($existingSubbadge);
+                foreach (array_uintersect($setSubbadges, $currentSubbadges, array($this,'compareID')) as $existingAssignment) {
+                    $curIx = array_search($existingAssignment, $setSubbadges, true);
+                    $existingAssignment['application_id'] = $result['id'];
+                    $this->g_badge->Update($existingAssignment);
 
                     //If completed payment and accepted add display ID
-                    if (($existingSubbadge['display_id'] ??null)==null && in_array(
+                    if (($existingAssignment['display_id'] ??null)==null && in_array(
                         $result['application_status']??'',
                         ['PendingAcceptance','Accepted','Onboarding','Active']
                     )) {
-                        $existingSubbadge['display_id'] = $this->setNextDisplayIDSpecificSubBadge($existingSubbadge['id'], $result['context_code']);
+                        $existingAssignment['display_id'] = $this->setNextDisplayIDSpecificSubBadge($existingAssignment['id'], $result['context_code']);
                     }
                     //Save back to the subbadges
-                    $setSubbadges[$curIx] = $existingSubbadge;
+                    $setSubbadges[$curIx] = $existingAssignment;
+                }
+            }
+
+            //Now do the assignments
+
+            if (isset($result['assignments'])) {
+                $setAssignments = &$result['assignments'];
+                $currentAssignments = $this->g_assignment->Search(
+                    array(
+                            'id'
+                    ),
+                    array(
+                        new SearchTerm('application_id', $result['id'])
+                    )
+                );
+                //Process adds
+                foreach (array_udiff($setAssignments, $currentAssignments, array($this,'compareID')) as &$newAssignment) {
+                    $curIx = array_search($newAssignment, $setAssignments, true);
+
+                    unset($newAssignment['id']);//Just in case
+                    $newAssignment['application_id'] = $result['id'];
+                    $newAssignment['start_time'] = empty($newAssignment['start_time']) ? null : $newAssignment['start_time'] ;
+                    $newAssignment['end_time'] = empty($newAssignment['end_time']) ? null : $newAssignment['end_time'] ;
+
+                    $newAssignment['id'] = $this->g_assignment->Create($newAssignment)['id'];
+                    //Tag this badge as new...?
+                    $newAssignment['created'] = true;
+
+                    //Save back to the Assignments
+                    $setAssignments[$curIx] = $newAssignment;
+                }
+                //Process removes
+                foreach (array_udiff($currentAssignments, $setAssignments, array($this,'compareID')) as $deletedAssignment) {
+                    $deletedAssignment['application_id'] = $result['id'];
+                    $this->g_assignment->Delete($deletedAssignment);
+                }
+                //Process modifications
+                foreach (array_uintersect($setAssignments, $currentAssignments, array($this,'compareID')) as $existingAssignment) {
+                    $curIx = array_search($existingAssignment, $setAssignments, true);
+                    $existingAssignment['application_id'] = $result['id'];
+                    $existingAssignment['start_time'] = empty($existingAssignment['start_time']) ? null : $existingAssignment['start_time'] ;
+                    $existingAssignment['end_time'] = empty($existingAssignment['end_time']) ? null : $existingAssignment['end_time'] ;
+                    $this->g_assignment->Update($existingAssignment);
+
+                    //Save back to the Assignments
+                    $setAssignments[$curIx] = $existingAssignment;
                 }
             }
         }

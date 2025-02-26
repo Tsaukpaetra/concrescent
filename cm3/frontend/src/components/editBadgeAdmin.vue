@@ -30,7 +30,7 @@
         <v-container>
             <v-tab-item :value="0">
 
-                <badgeGenInfo v-model="model.badgeGenInfoData"
+                <badgeGenInfo v-model="badgeGenInfoData"
                               :application_name1="currentContext.application_name1"
                               :application_name2="currentContext.application_name2"
                               @valid="setValidGenInfo"
@@ -39,7 +39,6 @@
                                    :badges="badges"
                                    no-data-text="No badges currently available!"
                                    :editBadgePriorBadgeId="model.editBadgePriorBadgeId" />
-
                 <v-expansion-panels>
                     <v-expansion-panel v-if="selectedbadge != null">
                         <v-expansion-panel-header>
@@ -224,12 +223,11 @@
               :fullscreen="$vuetify.breakpoint.xsOnly"
               scrollable>
         <template v-slot:activator="{ on, attrs }">
-
             <v-btn :color="applicationStatusData.color"
                    fixed
                    bottom
                    right
-                   v-if="model.application_status"
+                   v-show="model.application_status"
                    faba
                    v-bind="attrs"
                    v-on="on">
@@ -259,7 +257,65 @@
                             type="number"
                             ></v-text-field>
                     </v-col>
+                    
+                    <v-col cols="8">
+                        Assignments
+                        <v-simple-table>
+                            <template v-slot:default>
+                                <thead>
+                                    <tr>
+                                        <th class="text-left">
+                                            Short Code
+                                        </th>
+                                        <th class="text-left">
+                                            Name
+                                        </th>
+                                        <th class="text-left">
+                                            Start
+                                        </th>
+                                        <th class="text-left">
+                                            End
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="(item, ix) in model.assignments" :key="item.id">
+                                        <td>{{ item.short_code }}</td>
+                                        <td>{{ item.name }}</td>
+                                        <td>{{ item.start_time }}</td>
+                                        <td>{{ item.end_time }}</td>
+                                        <td>
+                                            <v-btn dark @click="editAssignment = ix">Edit</v-btn>
+                                            <v-btn dark @click="model.assignments.splice(ix,1)">Delete</v-btn>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </template>
+                        </v-simple-table>
+                        <v-btn @click="addAssignment">Add</v-btn>
+                    </v-col>
                 </v-row>
+                <v-dialog scrollable :value="editAssignment != null" @input="editAssignment = null">
+
+                    <v-card>
+                        <v-card-title class="text-h5 grey lighten-2">
+                            Edit Assignment
+                        </v-card-title>
+
+                        <v-card-text>
+                            <editApplicationAssignment v-if="editAssignment != null" v-model="model.assignments[editAssignment]"
+                                :application="model"></editApplicationAssignment>
+                        </v-card-text>
+
+                        <v-divider></v-divider>
+
+                        <v-card-actions>
+                            <v-spacer></v-spacer>
+                            <v-btn color="primary" text @click="editAssignment = null">Ok
+                            </v-btn>
+                        </v-card-actions>
+                    </v-card>
+                </v-dialog>
             </v-card-text>
             <v-divider></v-divider>
             <v-card-actions>
@@ -288,6 +344,11 @@ import {
     mapGetters,
     mapActions
 } from 'vuex';
+function nullIfEmptyOrZero(inValue) {
+    if (inValue == 0 || inValue == '' || inValue == null) return null;
+    return inValue;
+}
+
 
 import badgeGenInfo from '@/components/badgeGenInfo.vue';
 import formQuestions from '@/components/formQuestions.vue';
@@ -297,6 +358,7 @@ import badgePerksRender from '@/components/badgePerksRender.vue';
 import profileForm from '@/components/profileForm.vue';
 import paymentItemView from '@/components/paymentItemView.vue';
 import editBadgeApplicationStaffPosition from '@/components/editBadgeApplicationStaffPosition.vue';
+import editApplicationAssignment from './editApplicationAssignment.vue';
 
 export default {
     props: ['value'],
@@ -304,33 +366,19 @@ export default {
         return {
             step: 0,
             skipEmitOnce: false,
-            reviewDialog: false,
+            reviewDialog: false,            
+            editAssignment: null,
             validGenInfo: false,
             validContactInfo: false,
             validAdditionalInfo: false,
             sendUpdate: false,
+            badgeGenInfoData:{
+                real_name: null,
+                fandom_name: null,
+                name_on_badge: null,
+                date_of_birth: null,
+            },
             model: {
-                cartIx: -1,
-                id: -1, // Attendee's ID, not the badgeType
-                uuid: '',
-                editBadgePriorBadgeId: -1,
-                editBadgePriorAddons: [],
-
-                context_code: 'A',
-                badge_type_id: -1,
-
-                notify_email: '',
-                can_transfer: false,
-                ice_name: '',
-                ice_relationship: '',
-                ice_email_address: '',
-                ice_phone_number: '',
-
-                form_responses: {},
-                assignment_count:0,
-                application_status: '',
-
-                assigned_positions: undefined,
             },
             newApplication_status: null,
             addonsSelected: [],
@@ -411,42 +459,6 @@ export default {
 
             badges.sort((a, b) => a.order - b.order);
             return badges;
-        },
-        compiledBadge() {
-            // Special because of how the select dropdown works
-            return {
-                id: this.model.id,
-                contact_id: this.model.contact_id,
-                display_id: this.model.display_id,
-                editBadgePriorBadgeId: this.model.editBadgePriorBadgeId,
-                editBadgePriorAddons: this.model.editBadgePriorAddons,
-
-                ...this.model.badgeGenInfoData,
-                context_code: this.model.context_code,
-                badge_type_id: this.model.badge_type_id,
-                assignment_count: this.model.assignment_count,
-                application_status: this.model.application_status,
-                time_checked_in: this.model.time_checked_in,
-                time_printed: this.model.time_printed,
-
-                notify_email: this.model.notify_email,
-                ice_name: this.model.ice_name,
-                ice_relationship: this.model.ice_relationship,
-                ice_email_address: this.model.ice_email_address,
-                ice_phone_number: this.model.ice_phone_number,
-                form_responses: this.model.form_responses,
-                addons: this.addonsSelected.map(id => {
-                    return {
-                        'addon_id': id
-                    }
-                }),
-
-                notes: this.model.notes,
-                //supplementary data
-                assigned_positions: this.model.assigned_positions,
-                subbadges: this.model.subbadges,
-
-            };
         },
         context_code() {
             return this.model.context_code;
@@ -573,6 +585,7 @@ export default {
                             'Cancelled',
                             'Waitlisted',
                             'Accepted',
+                            'Submitted'
                         ]
                     },
                     'Waitlisted': {
@@ -645,6 +658,7 @@ export default {
                             'Cancelled',
                             'Waitlisted',
                             'Onboarding',
+                            'Submitted'
                         ]
                     },
                     'Waitlisted': {
@@ -745,39 +759,39 @@ export default {
             }
 
         },
-        value(newValue) {
-            //Check if we have a certain minimum things needed
-            if (newValue.context_code != undefined) {
-
-                this.loadBadge(newValue);
-            }
-        },
+        
         model: {
-
-            handler(newBadgeData, oldBadgeData) {
-                //this.skipEmitOnce = true;
-                // console.log('Emitting')
-                // this.$emit('input', JSON.parse(JSON.stringify(this.compiledBadge));
-                // return;
-                var same = JSON.stringify(this.compiledBadge) == this.modelString;
-                // console.log('ad badge mod', {
-                //     new: JSON.stringify(this.compiledBadge),
-                //     old: this.modelString,
-                //     same: same
-                // })
-                if (same) {
-                    this.skipEmitOnce = false;
-                    //console.log('skipping pre-skip, catching next update')
-
-                } else {
-
-                    this.modelString = JSON.stringify(this.compiledBadge);
-                    //console.log('and we want parent to know')
-                    this.skipEmitOnce = true;
-                    this.$emit('input', JSON.parse(this.modelString));
-                }
+            handler(newData) {
+                newData.display_id = nullIfEmptyOrZero(newData.display_id);
+                this.$emit('input', newData);
             },
-            deep: true
+            deep: true,
+            immediate: true
+        },
+        value: {
+            handler(newValue) {
+                this.model = newValue;
+                this.badgeGenInfoData.real_name = newValue.real_name;
+                this.badgeGenInfoData.fandom_name = newValue.fandom_name;
+                this.badgeGenInfoData.name_on_badge = newValue.name_on_badge;
+                this.badgeGenInfoData.date_of_birth = newValue.date_of_birth;
+
+            },
+            deep: true,
+            immediate: true
+        },
+        addonsSelected(newSelects){
+            this.model.addons = newSelects.map(id => {
+                return {
+                    'addon_id': id
+                }
+            });
+        },
+        badgeGenInfoData(newData){
+            Object.keys(newData).forEach((key) => {
+                    this.model[key] = newData[key];
+                }
+            )
         },
         newApplication_status(newStatus) {
             if (newStatus != null)
@@ -793,62 +807,6 @@ export default {
         saveBDay(date) {
             this.$refs.menuBDay.save(date);
             this.date_of_birth = this.date_of_birth;
-        },
-        async loadBadge(badgeData) {
-            var same = JSON.stringify(badgeData) == this.modelString;
-            if (same) return;
-            //Are we already loading/emitting?
-            // if (this.skipEmitOnce == true) {
-            //     console.log('but not actually loading here because skipEmitOnce')
-            //     this.skipEmitOnce = false;
-            //     return;
-            // }
-
-            let cartItem = JSON.parse(JSON.stringify(badgeData));
-            console.log('load a badge')
-            this.skipEmitOnce = true;
-            let badge_type_id = -1;
-
-            //If nothing loaded,  early exit
-            if (cartItem != undefined) {
-                // Pull out the BadgeId and selected addons
-                badge_type_id = cartItem.badge_type_id || 0;
-                let addons = cartItem.addons || [];
-                // delete cartItem.badge_type_id;
-                //Import the general badge info
-                cartItem.badgeGenInfoData = {
-                    real_name: cartItem.real_name,
-                    fandom_name: cartItem.fandom_name,
-                    name_on_badge: cartItem.name_on_badge,
-                    date_of_birth: cartItem.date_of_birth,
-                };
-                //Object.assign(this.model, cartItem);
-                //this.model = cartItem;
-                this.$set(this, 'model', cartItem);
-                // Special props
-
-                await this.$store.dispatch('products/selectContext', this.model.context_code);
-                this.skipEmitOnce = true;
-
-                this.checkBadge();
-                this.addonsSelected = addons.map(addon => addon['addon_id']);
-                // setTimeout(async () => {
-                //     console.log('yah')
-                //     const newIndex = _this.badges.findIndex((badge) => badge.id == badge_type_id);
-                //     if (newIndex > -1) {
-                //         _this.selectedbadge = newIndex;
-                //     }
-                //     //Also select any selected addons
-                //     _this.model.addonsSelected = addons.map(addon => addon['addon_id']);
-                //
-                // }, 1200);
-
-                //Also reset the Review form
-                this.newApplication_status = null;
-                this.sendUpdate = false;
-            }
-
-
         },
         checkBadge() {
             // Ensure only applicable badges are selected!
@@ -884,6 +842,24 @@ export default {
             this.$nextTick(function() {
                 that.$emit('save', that.sendUpdate);
             })
+        },
+        
+        addAssignment() {
+            this.$set(this.model.assignments, this.model.assignments.length, {
+                id: Math.floor(-10000*Math.random()),
+                "application_id": this.model.id,
+                "location_id": 0,
+                "category_id": 0,
+                "start_time": null,
+                "end_time": null,
+                "real_name": this.model.real_name,
+                "fandom_name": this.model.fandom_name,
+                "name_on_badge": this.model.name_on_badge,
+                "application_status": this.model.application_status,
+                "display_name": this.model.display_name
+
+            });
+            this.editAssignment = this.model.assignments.length - 1;
 
 
         },
@@ -896,10 +872,11 @@ export default {
         profileForm,
         paymentItemView,
         editBadgeApplicationStaffPosition,
-        subBadgeListEditor
+        subBadgeListEditor,
+        editApplicationAssignment
     },
     created() {
-        this.loadBadge(this.value);
+        // this.loadBadge(this.value);
     },
 };
 </script>

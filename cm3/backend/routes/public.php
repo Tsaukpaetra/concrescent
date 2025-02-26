@@ -16,6 +16,9 @@ return function (App $app) {
             $app->get('', \CM3_Lib\Action\Public\ListEventInfo::class);
 
             $app->get('/{event_id}/badges', \CM3_Lib\Action\Public\ListBadgeContexts::class);
+            $app->get('/{event_id}/locations', \CM3_Lib\Action\Public\ListLocations::class);
+            $app->get('/{event_id}/locationcategories', \CM3_Lib\Action\Public\ListLocationCategories::class);
+            $app->get('/{event_id}/locationevents', \CM3_Lib\Action\Public\ListLocationEvents::class);
             //What badges are available for a given context
             $app->get('/{event_id}/badges/A', \CM3_Lib\Action\Public\ListAttendeeBadges::class);
             $app->get('/{event_id}/badges/A/addons', \CM3_Lib\Action\Public\ListAllAttendeeAddons::class);
