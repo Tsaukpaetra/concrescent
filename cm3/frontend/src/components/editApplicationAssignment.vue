@@ -84,10 +84,6 @@
                 </v-sheet>
             </v-col>
         </v-row>
-        <v-row>
-
-        </v-row>
-
     </v-container>
 </template>
 
@@ -526,7 +522,7 @@ export default {
         // this.refreshLocations();
         // this.refreshCategories();
         await this.$store.dispatch('products/getLocations', this.context_code);
-        await this.$store.dispatch('products/getLocationCategories', this.context_code);
+        await this.$store.dispatch('products/getLocationCategories');
         // this.getEvents();
     },
 };

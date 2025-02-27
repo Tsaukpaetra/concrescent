@@ -64,6 +64,7 @@ final class Search
             'name',
             'color',
             'active',
+            'description'
             
         ]), $whereParts, $pg['order'], $pg['limit'], $pg['offset'], $totalRows);
 

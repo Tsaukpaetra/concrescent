@@ -12,7 +12,7 @@ trait orderableTrait
     public array $orderGroupColumns = [];
 
     //Override the table's Create method
-    public function _createOrUpdate_entry( array $entrydata, bool $isNew)
+    public function _createOrUpdate_entry( array $entrydata, bool $isNew): array|bool
     {
         if($isNew 
         || (isset($entrydata[$this->orderColumn]) && ($entrydata[$this->orderColumn] ?? 0) == 0)

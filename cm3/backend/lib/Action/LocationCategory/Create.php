@@ -38,6 +38,7 @@ final class Create
 
         //Ensure we're only attempting to create a location for the current Event
         $data['event_id'] = $request->getAttribute('event_id');
+        unset($data['id']);
 
         // Invoke the Domain with inputs and retain the result
         $data = $this->locationcategory->Create($data);

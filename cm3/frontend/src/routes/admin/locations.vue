@@ -90,6 +90,162 @@
                 </v-col>
             </v-row>
         </v-tab-item>
+
+        <v-tab-item value="Categories">
+
+            <v-item-group v-model="locationCategorySelectedIx">
+                <v-container>
+                    <v-row>
+                        <v-col v-for="item in locationCategories" :key="item.id" cols="12" md="4">
+                            <v-item v-slot="{ active, toggle }">
+                                <v-card min-height="200"
+                                    :elevation="active ? 20 : (locationCategorySelectedIx != undefined ? 1 : 3)"
+                                    :ripple="!active" :disabled="locationCategorySelectedIx != undefined && !active"
+                                    @click="!active ? toggle() : null">
+                                    <v-col>
+                                        <v-toolbar flat>
+
+                                            <v-checkbox v-if="active" v-model="locationCategorySelected.active"
+                                                hide-details :true-value="1" :false-value="0" on-icon="mdi-eye"
+                                                off-icon="mdi-eye-off" class=""></v-checkbox>
+                                            <v-checkbox v-else v-model="item.active" hide-details :true-value="1"
+                                                :false-value="0" on-icon="mdi-eye" off-icon="mdi-eye-off" readonly
+                                                class=""></v-checkbox>
+                                            <v-toolbar-title>
+
+                                                <v-text-field v-if="active" v-model="locationCategorySelected.name"
+                                                    class="text-h6" hide-details filled></v-text-field>
+                                                <div v-else class="pa-3">{{ item.name }}</div>
+                                            </v-toolbar-title>
+                                            <v-spacer></v-spacer>
+                                            <v-menu v-if="active" v-model="item.ColorEditing" left
+                                                :close-on-content-click="false" :nudge-width="200">
+                                                <template v-slot:activator="{ on, attrs }">
+                                                    <v-btn :color="locationCategorySelected.color" elevation="5"
+                                                        height="40" width="40" min-width="40" v-bind="attrs" v-on="on">
+                                                    </v-btn>
+                                                </template>
+
+                                                <v-card>
+                                                    <v-color-picker dot-size="22" mode="rgba"
+                                                        v-model="locationCategorySelected.color"></v-color-picker>
+                                                    <v-card-actions>
+                                                        <v-spacer></v-spacer>
+                                                        <v-btn color="primary" @click="item.ColorEditing = false">
+                                                            Ok
+                                                        </v-btn>
+                                                    </v-card-actions>
+                                                </v-card>
+                                            </v-menu>
+                                            <v-list-item-avatar v-else tile size="40"
+                                                :color="item.color"></v-list-item-avatar>
+                                        </v-toolbar>
+                                    </v-col>
+                                    <v-col>
+                                        <v-textarea v-if="active" v-model="locationCategorySelected.description"
+                                            auto-grow rows="1" filled></v-textarea>
+                                        <div v-else class="pa-3">{{ item.description }}</div>
+
+                                    </v-col>
+                                    <v-scroll-y-transition>
+                                        <v-card-actions v-if="active">
+                                            <v-btn outlined text @click.stop="locationCategorySelectedIx = undefined">
+                                                Cancel
+                                            </v-btn>
+                                            <v-spacer></v-spacer>
+
+                                            <v-btn color="primary" @click.stop="saveLocationCategory">
+                                                Save
+                                            </v-btn>
+                                        </v-card-actions>
+                                    </v-scroll-y-transition>
+                                </v-card>
+                            </v-item>
+                        </v-col>
+                        <!-- and the same now for Create New-->
+                        <v-col cols="12" md="4">
+                            <v-item v-if="locationCategorySelectedIx != -1">
+
+                                <v-card  height="200" :disabled="locationCategorySelectedIx > -1"
+                                    @click="createLocationCategory">
+                                    
+                                    <v-col>
+                                        <v-toolbar flat>
+
+                                            <v-checkbox value="0" hide-details :true-value="1"
+                                                :false-value="0" on-icon="mdi-eye" off-icon="mdi-eye-off" readonly
+                                                class=""></v-checkbox>
+                                            <v-toolbar-title>
+
+                                                <div class="pa-3">(Create New)</div>
+                                            </v-toolbar-title>
+                                            <v-spacer></v-spacer>
+                                            <v-list-item-avatar tile size="40"
+                                                color="#2196F3"></v-list-item-avatar>
+                                        </v-toolbar>
+                                    </v-col>
+                                </v-card>
+                            </v-item>
+
+                            <v-card min-height="200" v-else-if="locationCategorySelected"
+                                :elevation="20">
+                                <v-col >
+                                    <v-toolbar flat>
+
+                                        <v-checkbox
+                                            v-model="locationCategorySelected.active" hide-details :true-value="1"
+                                            :false-value="0" on-icon="mdi-eye" off-icon="mdi-eye-off"
+                                            class=""></v-checkbox>
+                                        <v-toolbar-title>
+
+                                            <v-text-field v-model="locationCategorySelected.name"
+                                                class="text-h6" hide-details filled></v-text-field>
+                                        </v-toolbar-title>
+                                        <v-spacer></v-spacer>
+                                        <v-menu v-model="locationCategorySelectedNewColorEditing" left
+                                            :close-on-content-click="false" :nudge-width="200">
+                                            <template v-slot:activator="{ on, attrs }">
+                                                <v-btn :color="locationCategorySelected.color" elevation="5" height="40"
+                                                    width="40" min-width="40" v-bind="attrs" v-on="on">
+                                                </v-btn>
+                                            </template>
+
+                                            <v-card>
+                                                <v-color-picker dot-size="22" mode="rgba"
+                                                    v-model="locationCategorySelected.color"></v-color-picker>
+                                                <v-card-actions>
+                                                    <v-spacer></v-spacer>
+                                                    <v-btn color="primary" @click="locationCategorySelectedNewColorEditing = false">
+                                                        Ok
+                                                    </v-btn>
+                                                </v-card-actions>
+                                            </v-card>
+                                        </v-menu>
+                                    </v-toolbar>
+                                </v-col>
+                                <v-col>
+                                    <v-textarea v-model="locationCategorySelected.description" auto-grow
+                                        rows="1" filled></v-textarea>
+
+                                </v-col>
+                                <v-scroll-y-transition>
+                                    <v-card-actions>
+                                        <v-btn outlined text @click.stop="locationCategorySelectedIx = undefined">
+                                            Cancel
+                                        </v-btn>
+                                        <v-spacer></v-spacer>
+
+                                        <v-btn color="primary" @click.stop="saveLocationCategory">
+                                            Save
+                                        </v-btn>
+                                    </v-card-actions>
+                                </v-scroll-y-transition>
+                            </v-card>
+                        </v-col>
+                    </v-row>
+                </v-container>
+            </v-item-group>
+        </v-tab-item>
         <v-dialog v-model="loading" width="200" height="200" close-delay="1200" content-class="elevation-0" persistent>
             <v-card-text class="text-center overflow-hidden">
                 <v-progress-circular :size="150" class="mb-0" indeterminate />
@@ -107,7 +263,7 @@
 </template>
 <script>
 import {
-    mapActions,mapGetters
+    mapActions, mapGetters
 } from 'vuex';
 import admin from '../../api/admin';
 import {
@@ -222,6 +378,9 @@ export default {
         ],
 
         ///end Grid tab
+        locationCategorySelectedIx: undefined,
+        locationCategorySelected: {},
+        locationCategorySelectedNewColorEditing: false,
 
     }),
     computed: {
@@ -230,6 +389,7 @@ export default {
         },
         ...mapGetters('products', {
             'selectedEvent': 'selectedEvent',
+            'locationCategories': 'locationCategories'
         }),
         listActions: function () {
             var result = [];
@@ -292,7 +452,8 @@ export default {
             console.log("Saving Location", this.lSelected)
             this.loading = true;
             admin.genericPost(this.authToken, url, this.lSelected, (editBt) => {
-
+                this.lSelected.id = editBt.id;
+                this.$store.commit('products/updateLocation', this.lSelected);
                 this.loading = false;
                 this.lEdit = false;
             }, () => {
@@ -345,9 +506,9 @@ export default {
 
         ///Grid tab        
         getEventColor(event) {
-            var category = this.categoryList.find(x=>x.id == event.category_id) || {
+            var category = this.categoryList.find(x => x.id == event.category_id) || {
                 //Default blue if we don't have that category loaded yet
-                color:  '#2196F3'
+                color: '#2196F3'
             }
             const rgb = parseInt(category.color.substring(1), 16)
             const r = (rgb >> 16) & 0xFF
@@ -358,13 +519,13 @@ export default {
                 ? `rgba(${r}, ${g}, ${b}, 0.7)`
                 : category.color
         },
-        gridCalendarprev () {
+        gridCalendarprev() {
             this.$refs.gridCalendar.prev()
         },
-        gridCalendarnext () {
+        gridCalendarnext() {
             this.$refs.gridCalendar.next()
         },
-        fetchEvents ({ start, end }) {
+        fetchEvents({ start, end }) {
             //Actually get this lmao
             const events = 
             [
@@ -386,10 +547,57 @@ export default {
         },
 
         ///end grid tab
+        createLocationCategory() {
+            console.log('creating location category')
+            this.locationCategorySelectedIx = -1;
+        },
+        saveLocationCategory() {
+
+            var url = 'LocationCategory';
+
+            if (this.locationCategorySelected.id != null)
+                url = url + '/' + this.locationCategorySelected.id;
+            console.log("Saving LocationCategory", this.locationCategorySelected)
+            this.loading = true;
+            admin.genericPost(this.authToken, url, this.locationCategorySelected, (result) => {
+                //For some reason the API returns the new ID as a string?
+                this.locationCategorySelected.id = parseInt(result.id);
+                this.$store.commit('products/updateLocationCategory', this.locationCategorySelected);
+
+                this.locationCategorySelectedIx = undefined;
+                this.loading = false;
+            },  () => {
+                this.loading = false;
+            })
+        },
+
     },
     watch: {
+        locationCategorySelectedIx(ix) {
+            if (ix != undefined) {
+                this.locationCategorySelected = structuredClone(this.locationCategories[ix]) || {
+                    id: null,
+                    active: 1,
+                    name: '',
+                    description: '',
+                    color: '#2196F3'
+                };
+            } else {
+                this.locationCategorySelected = {
+                    id: null,
+                    active: 1,
+                    name: '',
+                    description: '',
+                    color: '#2196F3'
+                };
+            }
+        },
         $route() {
             this.$nextTick(this.checkPermission);
+        },
+        'selectedEvent'() {
+            //This should only happen if we started on this page
+            this.$store.dispatch('products/getLocationCategories');
         },
     },
     created() {
@@ -410,7 +618,17 @@ export default {
             text: 'Grid',
             title: 'Grid'
         },
+        {
+            key: 'Categories',
+            text: 'Categories',
+            title: 'Categories'
+        },
         ]);
+        //Skip doing this if we're not ready yet
+        if (this.selectedEvent.id)
+            this.$store.dispatch('products/getLocationCategories');
+
+
     }
 };
 </script>

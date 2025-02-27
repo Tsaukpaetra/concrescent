@@ -431,11 +431,11 @@ const mutations = {
         state.gotLocations = true;
     },
     updateLocation(state,location) {
-        var existing = state.location.findIndex(x=>x.id == location.id);
+        var existing = state.locations.findIndex(x=>x.id == location.id);
         if(existing > -1) {
-            state.location[existing] = location;
+            state.locations[existing] = location;
         } else {
-            state.location.push(location);
+            state.locations.push(location);
         }
     },
     setLocationCategories(state, categories) {

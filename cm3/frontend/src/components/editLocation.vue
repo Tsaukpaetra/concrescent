@@ -75,7 +75,7 @@
 
                 <v-card-actions>
                     <v-spacer></v-spacer>
-                    <v-btn color="primary" text @click="editAssignment = null">Ok
+                    <v-btn color="primary" @click="editAssignment = null">Ok
                     </v-btn>
                 </v-card-actions>
             </v-card>
