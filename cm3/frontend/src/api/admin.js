@@ -227,6 +227,21 @@ export default {
             })
         })
     },
+    getLocationEvents(token) {
+        return new Promise((resolve,reject) =>{
+            axios.get(global.config.apiHostURL + 'Location/Assignments', {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            })
+            .then(function(response) {
+                resolve(response.data);
+            })
+            .catch(function(error) {
+                reject(error.response.data);
+            })
+        })
+    },
 
 
 }

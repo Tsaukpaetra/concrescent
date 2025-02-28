@@ -17,6 +17,7 @@ const state = {
     addons: {},
     locations:[],
     locationCategories:[],
+    locationEvents:[],
     gotEventInfo: false,
     gotBadgeContexts: false,
     gotBadges: {},
@@ -24,6 +25,7 @@ const state = {
     gotAddons: {},
     gotLocations: false,
     gotLocationCategories: false,
+    gotLocationEvents: false,
 }
 
 // getters
@@ -74,6 +76,9 @@ const getters = {
     },
     locationCategories: (state) => {
         return state.locationCategories || [];
+    },
+    locationEvents: (state) => {
+        return state.locationEvents || [];
     },
 }
 
@@ -349,8 +354,42 @@ const actions = {
                     });
                 } else {
 
-                    shop.getLocations(state.selectedEventId, contexts => {
+                    shop.getLocationCategories(state.selectedEventId, contexts => {
                         commit('setLocationCategories', contexts);
+                        resolve();
+                    })
+                }
+            } else {
+                resolve();
+            }
+        })
+    },
+    getLocationEvents({
+        commit,
+        state,
+        rootState
+    }) {
+        return new Promise((resolve, reject) => {
+            if (state.selectedEventId == null)
+                return reject('Unable to get location events if the event ID is not known');            
+            //Load only if necessary
+            if (!state.gotLocationEvents) {
+                commit('setLocationEvents', []);
+                //Hack: Ask the mydata if we're an admin and use that to load contexts
+                if(rootState.mydata.permissions != null 
+                    && rootState.mydata.permissions != undefined
+                    && rootState.mydata.adminMode == true){
+                    admin.getLocationEvents(rootState.mydata.token)
+                    .then(contexts => {
+                        commit('setLocationEvents', contexts);
+                        resolve();
+                    }).catch(err =>{
+                        reject(err)
+                    });
+                } else {
+
+                    shop.getLocationEvents(state.selectedEventId, contexts => {
+                        commit('setLocationEvents', contexts);
                         resolve();
                     })
                 }
@@ -449,7 +488,27 @@ const mutations = {
         } else {
             state.locationCategories.push(category);
         }
-    }
+    },
+    setLocationEvents(state, Events) {
+        state.locationEvents = Events;
+        state.gotLocationEvents = true;
+    },
+    updateLocationEvent(state,event) {
+        var existing = state.locationEvents.findIndex(x=>x.id == event.id);
+        if(existing > -1) {
+            state.locationEvents[existing] = event;
+        } else {
+            state.locationEvents.push(event);
+        }
+    },
+    deleteLocationEvent(state,event) {
+        var existing = state.locationEvents.findIndex(x=>x.id == event.id);
+        if(existing > -1) {
+            state.locationEvents = state.locationEvents.splice(existing,1);
+        } else {
+            console.log('deleteLocationEvent failed, not found', event)
+        }
+    },
 }
 
 export default {

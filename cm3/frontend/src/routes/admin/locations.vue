@@ -61,31 +61,77 @@
                 <v-col>
                     <v-sheet height="64">
                         <v-toolbar flat>
-                            <v-btn fab text small color="grey darken-2" @click="gridCalendarprev">
-                                <v-icon small>
-                                    mdi-chevron-left
-                                </v-icon>
-                            </v-btn>
-                            <v-btn fab text small color="grey darken-2" @click="gridCalendarnext">
-                                <v-icon small>
-                                    mdi-chevron-right
-                                </v-icon>
-                            </v-btn>
-                            <v-toolbar-title v-if="$refs.calendar">
-                                {{ $refs.gridCalendar.title }}
-                            </v-toolbar-title>
-                            {{ selectedEvent.date_start }} -> {{ selectedEvent.date_end }}
+                            <v-select v-model="gridLocations" :items="locations" item-text="name" item-value="id"
+                                return-object clearable open-on-clear @click:append-outer="gridLocationSelectDefaults"
+                                append-outer-icon="mdi-cached" chips single-line hide-details
+                                label="Select locations to begin" multiple filled>
+                                <template v-slot:selection="{ item }">
+                                    <v-btn readonly outlined small>
+                                        <v-chip label small>{{ item.short_code }}</v-chip>
+                                        {{ item.name }}
+                                    </v-btn>
+                                </template>
+                                <template v-slot:item="{ item, on, attrs }">
+                                    <v-list-item v-bind="attrs" v-on="on">
+                                        <v-list-item-action>
+                                            <v-chip label small>{{ item.short_code }}</v-chip>
+                                        </v-list-item-action>
+                                        <v-list-item-content>
+                                            <v-list-item-title :class="attrs.inputValue ? 'primary--text' : ''">
+                                                {{ item.name }}
+                                            </v-list-item-title>
+                                        </v-list-item-content>
+                                    </v-list-item>
+                                </template>
+
+                            </v-select>
                             <v-spacer></v-spacer>
+
+                            <v-select v-model="gridCategories" :items="locationCategories" item-text="name"
+                                item-value="id" filled chips single-line hide-details label="Showing all Categories"
+                                multiple>
+                                <template v-slot:selection="{ item }">
+                                    <v-chip :color="item.color">
+                                        {{ item.name }}
+                                    </v-chip>
+                                </template>
+                                <template v-slot:item="{ item, on, attrs }">
+                                    <v-list-item v-on="on">
+                                        <v-list-item-action>
+                                            <v-simple-checkbox :value="attrs.inputValue" v-on="on" :color="item.color"
+                                                :ripple="false"></v-simple-checkbox>
+                                        </v-list-item-action>
+                                        <v-list-item-content>
+                                            <v-list-item-title :class="attrs.inputValue ? 'primary--text' : ''">
+                                                {{ item.name }}
+                                            </v-list-item-title>
+                                        </v-list-item-content>
+                                    </v-list-item>
+                                </template>
+                            </v-select>
                         </v-toolbar>
                     </v-sheet>
-                    <v-sheet height="600">
-                        <v-calendar ref="gridCalendar" v-model="gridFocus" color="primary" type="category" category-show-all
-                            :categories="gridCategories" category-text="name" 
-                             :events="gridEvents" :event-color="getEventColor" event-category="category_id"
-                            :start="selectedEvent.date_start" :end="selectedEvent.date_end"
-                            event-name="display_name" event-start="start_time" event-end="end_time" 
-                            
-                            @change="fetchEvents"></v-calendar>
+                    <v-sheet style="overflow-y: scroll">
+                        <v-calendar ref="grids" v-for="day in eventDates" :key="day" :value="day" type="category"
+                            category-show-all :categories="gridLocations" category-text="id" :events="gridEvents"
+                            :weekday-format="() => ''"
+                            :day-format="function (d) { return (new Date(d.date)).toDateString() }"
+                            :event-color="getEventColor" event-category="location_id" event-name="display_name"
+                            event-start="start_time" event-end="end_time" v-scroll.self="gridScrolled">
+                            <template v-slot:category="{ category }">
+                                <div class="text-center">
+                                    <v-tooltip bottom>
+                                        <template v-slot:activator="{ on, attrs }">
+                                            <span v-bind="attrs" v-on="on">
+                                                <v-chip label small>{{ category.short_code }}</v-chip>
+                                                {{ category.name }}
+                                            </span>
+                                        </template>
+                                        <span>{{ category.description }}</span>
+                                    </v-tooltip>
+                                </div>
+                            </template>
+                        </v-calendar>
                     </v-sheet>
                 </v-col>
             </v-row>
@@ -166,40 +212,36 @@
                         <v-col cols="12" md="4">
                             <v-item v-if="locationCategorySelectedIx != -1">
 
-                                <v-card  height="200" :disabled="locationCategorySelectedIx > -1"
+                                <v-card height="200" :disabled="locationCategorySelectedIx > -1"
                                     @click="createLocationCategory">
-                                    
+
                                     <v-col>
                                         <v-toolbar flat>
 
-                                            <v-checkbox value="0" hide-details :true-value="1"
-                                                :false-value="0" on-icon="mdi-eye" off-icon="mdi-eye-off" readonly
-                                                class=""></v-checkbox>
+                                            <v-checkbox value="0" hide-details :true-value="1" :false-value="0"
+                                                on-icon="mdi-eye" off-icon="mdi-eye-off" readonly class=""></v-checkbox>
                                             <v-toolbar-title>
 
                                                 <div class="pa-3">(Create New)</div>
                                             </v-toolbar-title>
                                             <v-spacer></v-spacer>
-                                            <v-list-item-avatar tile size="40"
-                                                color="#2196F3"></v-list-item-avatar>
+                                            <v-list-item-avatar tile size="40" color="#2196F3"></v-list-item-avatar>
                                         </v-toolbar>
                                     </v-col>
                                 </v-card>
                             </v-item>
 
-                            <v-card min-height="200" v-else-if="locationCategorySelected"
-                                :elevation="20">
-                                <v-col >
+                            <v-card min-height="200" v-else-if="locationCategorySelected" :elevation="20">
+                                <v-col>
                                     <v-toolbar flat>
 
-                                        <v-checkbox
-                                            v-model="locationCategorySelected.active" hide-details :true-value="1"
-                                            :false-value="0" on-icon="mdi-eye" off-icon="mdi-eye-off"
+                                        <v-checkbox v-model="locationCategorySelected.active" hide-details
+                                            :true-value="1" :false-value="0" on-icon="mdi-eye" off-icon="mdi-eye-off"
                                             class=""></v-checkbox>
                                         <v-toolbar-title>
 
-                                            <v-text-field v-model="locationCategorySelected.name"
-                                                class="text-h6" hide-details filled></v-text-field>
+                                            <v-text-field v-model="locationCategorySelected.name" class="text-h6"
+                                                hide-details filled></v-text-field>
                                         </v-toolbar-title>
                                         <v-spacer></v-spacer>
                                         <v-menu v-model="locationCategorySelectedNewColorEditing" left
@@ -215,7 +257,8 @@
                                                     v-model="locationCategorySelected.color"></v-color-picker>
                                                 <v-card-actions>
                                                     <v-spacer></v-spacer>
-                                                    <v-btn color="primary" @click="locationCategorySelectedNewColorEditing = false">
+                                                    <v-btn color="primary"
+                                                        @click="locationCategorySelectedNewColorEditing = false">
                                                         Ok
                                                     </v-btn>
                                                 </v-card-actions>
@@ -224,8 +267,8 @@
                                     </v-toolbar>
                                 </v-col>
                                 <v-col>
-                                    <v-textarea v-model="locationCategorySelected.description" auto-grow
-                                        rows="1" filled></v-textarea>
+                                    <v-textarea v-model="locationCategorySelected.description" auto-grow rows="1"
+                                        filled></v-textarea>
 
                                 </v-col>
                                 <v-scroll-y-transition>
@@ -333,49 +376,8 @@ export default {
         ///Grid tab
 
         gridFocus: '',
-        gridEvents: [],
-        gridCategories: [
-            {
-                "id": 3,
-                "short_code": "S1",
-                "name": "Mane Hall",
-                "description": "Gran Peninsula D, E, F, and G on floor 1",
-                "active": 1,
-                "AssignmentCount": 0
-            },
-            {
-                "id": 4,
-                "short_code": "S2",
-                "name": "Solar Hall",
-                "description": "Grand Peninsula A on floor 1",
-                "active": 1,
-                "AssignmentCount": 2
-            },
-            {
-                "id": 5,
-                "short_code": "T1",
-                "name": "Trixie's Tables",
-                "description": "Sandpebble A, B, and C on floor 1",
-                "active": 1,
-                "AssignmentCount": 2
-            },
-            {
-                "id": 6,
-                "short_code": "T2",
-                "name": "Kiddie Corner",
-                "description": "Sandpebble D and E on floor 1",
-                "active": 1,
-                "AssignmentCount": 0
-            },
-            {
-                "id": 7,
-                "short_code": "S3",
-                "name": "Lunar Hall",
-                "description": "Grand Pinendicular",
-                "active": 1,
-                "AssignmentCount": 1
-            }
-        ],
+        gridLocations: [],
+        gridCategories: [],
 
         ///end Grid tab
         locationCategorySelectedIx: undefined,
@@ -389,8 +391,21 @@ export default {
         },
         ...mapGetters('products', {
             'selectedEvent': 'selectedEvent',
-            'locationCategories': 'locationCategories'
+            'locations': 'locations',
+            'locationCategories': 'locationCategories',
+            'locationEvents': 'locationEvents'
         }),
+        eventDates: function () {
+            const dates = [];
+            let currentDate = new Date(this.selectedEvent.date_start);
+            let endDate = new Date(this.selectedEvent.date_end);
+
+            while (currentDate <= endDate && dates.length < 100) {
+                dates.push(currentDate.toISOString().split('T')[0]);
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+            return dates;
+        },
         listActions: function () {
             var result = [];
             result.push({
@@ -408,6 +423,12 @@ export default {
                 icon: 'plus'
             });
             return result;
+        },
+        gridEvents: function () {
+
+            return this.locationEvents
+                .filter(e => this.gridCategories.length == 0 || (this.gridCategories.findIndex(c => c == e.category_id) > -1))
+                .map((e) => this.fixAssnForEvent(e, false));
         }
     },
     methods: {
@@ -506,44 +527,50 @@ export default {
 
         ///Grid tab        
         getEventColor(event) {
-            var category = this.categoryList.find(x => x.id == event.category_id) || {
+            var category = this.locationCategories.find(x => x.id == event.category_id) || {
                 //Default blue if we don't have that category loaded yet
                 color: '#2196F3'
             }
-            const rgb = parseInt(category.color.substring(1), 16)
-            const r = (rgb >> 16) & 0xFF
-            const g = (rgb >> 8) & 0xFF
-            const b = (rgb >> 0) & 0xFF
+            return category.color;
+        },
+        gridScrolled(e) {
+            console.log('scrolled grid', e.target.scrollLeft)
+            // this.gridScrollY = e.target.scrollLeft;
+            this.$refs.grids.forEach((grid) => grid.$el.scrollLeft = e.target.scrollLeft);
+        },
 
-            return (event === this.locationEvents.find(x => x.editable) && this.dragMode)
-                ? `rgba(${r}, ${g}, ${b}, 0.7)`
-                : category.color
+        fixAssnForEvent(assn, editable) {
+
+            var timed = true;
+            var start = new Date(assn.start_time || '');
+            var end = new Date(assn.end_time);
+
+            if (isNaN(start.valueOf()) || start.valueOf() == 0) {
+                start = this.selectedEvent.date_start
+                end = this.selectedEvent.date_end
+                timed = false;
+            }
+            //Clone to avoid side effects!
+            var result = structuredClone(assn);
+            result.start_time = start;
+            result.end_time = end;
+            result.timed = timed;
+            result.editable = editable;
+            return result;
         },
-        gridCalendarprev() {
-            this.$refs.gridCalendar.prev()
-        },
-        gridCalendarnext() {
-            this.$refs.gridCalendar.next()
-        },
-        fetchEvents({ start, end }) {
-            //Actually get this lmao
-            const events = 
-            [
-                {
-                    "id": 6,
-                    "application_id": 58,
-                    "category_id": 1,
-                    "start_time": "2036-04-15 01:35:00",
-                    "end_time": "2036-04-16 02:40:00",
-                    "real_name": "BUCK",
-                    "fandom_name": "Brony UK Convention",
-                    "name_on_badge": "Real Name Large, Fandom Name Small",
-                    "application_status": "PendingAcceptance",
-                    "display_name": "BUCK (Brony UK Convention)"
+        gridLocationSelectDefaults() {
+            var result = [...(new Set(this.locationEvents.map(e => {
+                var start = new Date(e.start_time || '');
+                if (isNaN(start.valueOf()) || start.valueOf() == 0) {
+                    return undefined
+                } else {
+                    return e.location_id
                 }
-            ]
-
-            this.gridEvents = events
+            })))].filter(x => x).map(l => this.locations.find(f => f.id == l));
+            //Order by short code
+            result.sort((a,b) => (a.short_code > b.short_code) ? 1 : ((b.short_code > a.short_code) ? -1 : 0));
+            // console.log('grid location defaults', result, this.gridLocations)
+            this.gridLocations = result;
         },
 
         ///end grid tab
@@ -566,7 +593,7 @@ export default {
 
                 this.locationCategorySelectedIx = undefined;
                 this.loading = false;
-            },  () => {
+            }, () => {
                 this.loading = false;
             })
         },
@@ -595,12 +622,15 @@ export default {
         $route() {
             this.$nextTick(this.checkPermission);
         },
-        'selectedEvent'() {
+        async 'selectedEvent'() {
             //This should only happen if we started on this page
-            this.$store.dispatch('products/getLocationCategories');
+            await this.$store.dispatch('products/getLocations');
+            await this.$store.dispatch('products/getLocationCategories');
+            await this.$store.dispatch('products/getLocationEvents');
+            this.gridLocationSelectDefaults();
         },
     },
-    created() {
+    async created() {
         this.checkPermission();
         //this.doSearch();
         this.$emit('updateSubTabs', [{
@@ -625,10 +655,59 @@ export default {
         },
         ]);
         //Skip doing this if we're not ready yet
-        if (this.selectedEvent.id)
-            this.$store.dispatch('products/getLocationCategories');
+        if (this.selectedEvent.id) {
+            await this.$store.dispatch('products/getLocations');
+            await this.$store.dispatch('products/getLocationCategories');
+            await this.$store.dispatch('products/getLocationEvents');
+            this.gridLocationSelectDefaults();
+        }
 
 
     }
 };
 </script>
+
+<style scoped lang="scss">
+.v-event-draggable {
+    padding-left: 6px;
+    height: 100%;
+    border-style: dashed;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.v-event-readonly {
+    padding-left: 6px;
+}
+
+.v-event-timed {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.v-event-drag-bottom {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0px;
+    height: 14px;
+    cursor: ns-resize;
+
+    &::after {
+        display: none;
+        position: absolute;
+        left: 50%;
+        height: 4px;
+        border-top: 1px solid white;
+        border-bottom: 1px solid white;
+        width: 26px;
+        margin-left: -8px;
+        opacity: 0.8;
+        content: '';
+    }
+
+    &:hover::after {
+        display: block;
+    }
+}
+</style>

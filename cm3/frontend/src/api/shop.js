@@ -46,6 +46,17 @@ export default {
                     errorCb(error);
             })
     },
+    getLocationEvents(event_id, cb, errorCb) {
+        axios.get(global.config.apiHostURL + "public/" + event_id + '/locationevents')
+            .then(function (response) {
+                cb(response.data);
+            })
+            .catch(function (error) {
+                console.log(error)
+                if (typeof errorCb == "function")
+                    errorCb(error);
+            })
+    },
     getBadges(event_id, context, override_code, cb, errorCb) {
         const override = (override_code ?? '').replace(/[^a-z0-9]/gi, '').toUpperCase();
         var query = override != '' ? '?override=' + override : '';

@@ -25,9 +25,11 @@ final class Update
      * @param Responder $responder The responder
      * @param eventinfo $eventinfo The service
      */
-    public function __construct(private Responder $responder, 
-    private location $location, private assignment $assignment)
-    {
+    public function __construct(
+        private Responder $responder,
+        private location $location,
+        private assignment $assignment
+    ) {
     }
 
     /**
@@ -41,22 +43,25 @@ final class Update
     public function __invoke(ServerRequestInterface $request, ResponseInterface $response, $params): ResponseInterface
     {
         // Extract the form data from the request body
-        $data = (array)$request->getParsedBody();
+        $data = (array) $request->getParsedBody();
         $data['id'] = $params['id'];
 
         $result = $this->location->GetByID($params['id'], array('event_id'));
-        if ($result === false) {
+        if ($result === false)
+        {
             throw new HttpNotFoundException($request);
         }
-        if ($result['event_id'] != $request->getAttribute('event_id')) {
+        if ($result['event_id'] != $request->getAttribute('event_id'))
+        {
             throw new HttpBadRequestException($request, 'Location does not belong to the current event!');
         }
 
         // Invoke the Domain with inputs and retain the result
         $result = $this->location->Update($data);
 
-        
-        if (isset($data['Assignments'])) {
+
+        if (isset($data['Assignments']))
+        {
             $result['AssnResults'] = [];
             $setAssignments = $data['Assignments'];
             $currentAssignments = $this->assignment->Search(
@@ -68,23 +73,27 @@ final class Update
                 )
             );
             //Process adds
-            foreach (array_udiff($setAssignments, $currentAssignments, array($this,'compareAssignmentID')) as $newAssignment) {
+            foreach (array_udiff($setAssignments, $currentAssignments, array($this, 'compareAssignmentID')) as $newAssignment)
+            {
                 $newAssignment['location_id'] = $result['id'];
                 unset($newAssignment['id']);
-                $result['AssnResults']['Added'] = 
-                $this->assignment->Create($newAssignment);
+                $result['AssnResults']['Added'][] =
+                    array_merge($newAssignment, $this->assignment->Create($newAssignment));
             }
             //Process removes
-            foreach (array_udiff($currentAssignments, $setAssignments, array($this,'compareAssignmentID')) as $deletedAssignment) {
+            foreach (array_udiff($currentAssignments, $setAssignments, array($this, 'compareAssignmentID')) as $deletedAssignment)
+            {
                 $deletedAssignment['location_id'] = $result['id'];
-                $result['AssnResults']['Deleted'] = 
-                $this->assignment->Delete($deletedAssignment);
+                if ($this->assignment->Delete($deletedAssignment))
+                    $result['AssnResults']['Deleted'][] = $deletedAssignment['id'];
+
             }
             //Process modifications
-            foreach (array_uintersect($setAssignments, $currentAssignments, array($this,'compareAssignmentID')) as $modifiedAssignment) {
+            foreach (array_uintersect($setAssignments, $currentAssignments, array($this, 'compareAssignmentID')) as $modifiedAssignment)
+            {
                 $modifiedAssignment['location_id'] = $result['id'];
-                $result['AssnResults']['Updated'] = 
-                $this->assignment->Update($modifiedAssignment);
+                $result['AssnResults']['Updated'][] =
+                    $this->assignment->Update($modifiedAssignment)['id'];
             }
         }
 
@@ -92,7 +101,7 @@ final class Update
         return $this->responder
             ->withJson($response, $result);
     }
-    
+
     public function compareAssignmentID($left, $right)
     {
         //Spaceship!

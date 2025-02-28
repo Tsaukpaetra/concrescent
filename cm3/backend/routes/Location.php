@@ -20,6 +20,8 @@ return function (App $app, $container) {
                 ->add($accessPerm);
             $app->get('/AvailableApplications', \CM3_Lib\Action\Location\AvailableApplications::class)
                 ->add($accessPerm);
+            $app->get('/Assignments', \CM3_Lib\Action\Location\Assignments::class)
+                ->add($accessPerm);
             $app->get('/{id}', \CM3_Lib\Action\Location\Read::class);
             $app->get('/{id}/Assignments', \CM3_Lib\Action\Location\Assignments::class)
                 ->add($accessPerm);

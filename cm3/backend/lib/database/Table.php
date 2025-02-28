@@ -437,6 +437,8 @@ abstract class Table
         //Check if we're doing joins because we're a view
         if (isset($viewName) && isset($viewJoins)) {
             foreach ($viewJoins as $join) {
+                //If join isn't a Join, skip!
+                if(!($join instanceof Join)) continue;
                 $joinSubQueryExposed = array();
                 $joinSubQueryColumns = [];
                 $joinSubQueryHavingPart = "";
