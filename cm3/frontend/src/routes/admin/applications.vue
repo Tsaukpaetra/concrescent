@@ -613,9 +613,9 @@ export default {
                 //Process assignment updates
                 SavedDetails.assignments.forEach((e) =>{
                     if(e.action == 'deleted')
-                        this.$store.commit('products/updateLocationEvent', e);
-                    else
                         this.$store.commit('products/deleteLocationEvent', e);
+                    else
+                        this.$store.commit('products/updateLocationEvent', e);
 
                 });
 

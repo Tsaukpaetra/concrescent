@@ -556,9 +556,6 @@ export default {
 
 .v-event-readonly {
     padding-left: 6px;
-}
-
-.v-event-timed {
     user-select: none;
     -webkit-user-select: none;
 }

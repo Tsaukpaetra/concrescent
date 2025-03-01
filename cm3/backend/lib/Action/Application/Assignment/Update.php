@@ -37,6 +37,8 @@ final class Update
         $data = (array)$request->getParsedBody();
         $data['id'] = $params['id'];
 
+        //TODO: Validate....?
+
         // Invoke the Domain with inputs and retain the result
         $data = $this->assignment->Update($data);
 

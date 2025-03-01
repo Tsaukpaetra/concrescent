@@ -61,10 +61,10 @@
                 <v-col>
                     <v-sheet height="64">
                         <v-toolbar flat>
-                            <v-select v-model="gridLocations" :items="locations" item-text="name" item-value="id"
-                                return-object clearable open-on-clear @click:append-outer="gridLocationSelectDefaults"
-                                append-outer-icon="mdi-cached" chips single-line hide-details
-                                label="Select locations to begin" multiple filled>
+                            <v-autocomplete v-model="gridLocations" :items="locationsSorted" item-text="searchtext"
+                                item-value="id" return-object clearable open-on-clear
+                                @click:append-outer="gridLocationSelectDefaults" append-outer-icon="mdi-cached" chips
+                                single-line hide-details label="Select locations to begin" multiple filled>
                                 <template v-slot:selection="{ item }">
                                     <v-btn readonly outlined small>
                                         <v-chip label small>{{ item.short_code }}</v-chip>
@@ -84,7 +84,42 @@
                                     </v-list-item>
                                 </template>
 
-                            </v-select>
+                            </v-autocomplete>
+                            <v-spacer></v-spacer>
+
+                            <v-tooltip bottom v-if="!gridEditedEvents.length">
+                                <template v-slot:activator="{ on, attrs }">
+                                    <v-checkbox v-model="gridUnlocked" off-icon="mdi-lock" on-icon="mdi-lock-open"
+                                        hide-details v-bind="attrs" v-on="on"></v-checkbox>
+                                </template>
+                                <span>{{ gridUnlocked ? 'Allow' : 'Disallow' }} editing Assignments</span>
+                            </v-tooltip>
+                            <div v-else>
+                                <v-tooltip bottom>
+                                    <template v-slot:activator="{ on, attrs }">
+
+                                        <v-btn color="primary" icon v-bind="attrs" v-on="on"
+                                            @click="gridSaveEditedAssignments" :loading="gridSaving">
+                                            <v-icon color="primary" dark>
+                                                mdi-content-save
+                                            </v-icon>
+                                        </v-btn>
+                                    </template>
+                                    <span>Save {{ gridEditedEvents.length }} Assignments</span>
+                                </v-tooltip>
+                                <v-tooltip bottom>
+                                    <template v-slot:activator="{ on, attrs }">
+
+                                        <v-btn color="primary" icon v-bind="attrs" v-on="on"
+                                            @click="gridEditedEvents = []">
+                                            <v-icon color="primary" dark>
+                                                mdi-restore
+                                            </v-icon>
+                                        </v-btn>
+                                    </template>
+                                    <span>Revert {{ gridEditedEvents.length }} Assignments</span>
+                                </v-tooltip>
+                            </div>
                             <v-spacer></v-spacer>
 
                             <v-select v-model="gridCategories" :items="locationCategories" item-text="name"
@@ -117,7 +152,11 @@
                             :weekday-format="() => ''"
                             :day-format="function (d) { return (new Date(d.date)).toDateString() }"
                             :event-color="getEventColor" event-category="location_id" event-name="display_name"
-                            event-start="start_time" event-end="end_time" v-scroll.self="gridScrolled">
+                            event-start="start_time" event-end="end_time" v-scroll.self="gridScrolled"
+                            @mousedown:event="gridStartDrag" @mousedown:time="gridStartTime"
+                            @mousemove:time-category="gridMouseMove" @mousemove:event="gridMouseMoveEvent"
+                            @mouseup:time="gridEndDrag" @mouseleave.native="gridCancelDrag">
+                            >
                             <template v-slot:category="{ category }">
                                 <div class="text-center">
                                     <v-tooltip bottom>
@@ -129,6 +168,13 @@
                                         </template>
                                         <span>{{ category.description }}</span>
                                     </v-tooltip>
+                                </div>
+                            </template>
+                            <template v-slot:event="{ event, timed, eventSummary }">
+                                <div :class="[event.editable ? 'v-event-draggable' : 'v-event-readonly']">
+                                    <component :is="{ render: eventSummary }"></component>
+                                </div>
+                                <div v-if="timed" class="v-event-drag-bottom" @mousedown.stop="gridExtendBottom(event)">
                                 </div>
                             </template>
                         </v-calendar>
@@ -308,6 +354,12 @@
 import {
     mapActions, mapGetters
 } from 'vuex';
+
+function nullIfEmptyOrZero(inValue) {
+    if (inValue == 0 || inValue == '' || inValue == null) return null;
+    return inValue;
+}
+
 import admin from '../../api/admin';
 import {
     debounce
@@ -376,8 +428,14 @@ export default {
         ///Grid tab
 
         gridFocus: '',
+        gridUnlocked: false,
+        gridDragging: undefined,
+        gridDragMode: 0, //1 = change end time, 2 = move
+        gridDragOffset: null,
         gridLocations: [],
         gridCategories: [],
+        gridEditedEvents: [],
+        gridSaving: false,
 
         ///end Grid tab
         locationCategorySelectedIx: undefined,
@@ -424,11 +482,21 @@ export default {
             });
             return result;
         },
+        locationsSorted: function () {
+            var result = structuredClone(this.locations)
+                .map(x => { return { ...x, searchtext: x.short_code + ' ' + x.name } });
+            //Order by short code
+            result.sort((a, b) => (a.short_code > b.short_code) ? 1 : ((b.short_code > a.short_code) ? -1 : 0));
+            return result;
+        },
         gridEvents: function () {
-
+            // Filter in the selected categories, and swap in any currently editing events over the saved ones while editing
             return this.locationEvents
                 .filter(e => this.gridCategories.length == 0 || (this.gridCategories.findIndex(c => c == e.category_id) > -1))
-                .map((e) => this.fixAssnForEvent(e, false));
+                .map((e) => {
+                    var edit = this.gridEditedEvents.find(a => a.id == e.id);
+                    return edit == undefined ? this.fixAssnForEvent(e, false) : edit
+                });
         }
     },
     methods: {
@@ -543,8 +611,8 @@ export default {
             return category.color;
         },
         gridScrolled(e) {
-            console.log('scrolled grid', e.target.scrollLeft)
-            // this.gridScrollY = e.target.scrollLeft;
+            // console.log('scrolled grid', e.target.scrollLeft)
+            // Scroll all the grids to match
             this.$refs.grids.forEach((grid) => grid.$el.scrollLeft = e.target.scrollLeft);
         },
 
@@ -582,6 +650,122 @@ export default {
             this.gridLocations = result;
         },
 
+        gridStartDrag({ event }) {
+            if (!this.gridUnlocked) {
+                console.log('not starting drag', this.gridUnlocked)
+                return;
+            }
+            //Check that we're not already dragging for some reaon
+            if (this.gridDragging != undefined) {
+                console.log('Drag start while already dragging?', this.gridDragging, event);
+                return;
+            }
+            this.gridDragging = this.gridEditedEvents.findIndex(x => x.id == event.id);
+            //Add it if we haven't started editing this yet
+            if (this.gridDragging == -1) {
+                this.gridDragging = this.gridEditedEvents.push(structuredClone(event)) - 1
+            }
+            this.gridDragMode = 2
+            this.gridDragOffset = null
+        },
+        gridStartTime(tms) {
+            if (!this.gridUnlocked) return;
+            const mouse = this.toTime(tms)
+            // const event = this.gridEvents.find(x => x.editable);
+
+            if (this.gridDragMode == 2 && this.gridDragOffset === null) {
+                this.gridDragOffset = mouse - this.gridEditedEvents[this.gridDragging].start_time
+            }
+        },
+        gridExtendBottom(event) {
+            if (!this.gridUnlocked) return;
+            //Check that we're not already dragging for some reaon
+            if (this.gridDragging != undefined) {
+                console.log('Drag start while already dragging?', this.gridDragging, event);
+                return;
+            }
+            this.gridDragging = this.gridEditedEvents.findIndex(x => x.id == event.id);
+            //Add it if we haven't started editing this yet
+            if (this.gridDragging == -1) {
+                this.gridDragging = this.gridEditedEvents.push(structuredClone(event)) - 1
+            }
+            // console.log('starting drag move')
+            this.gridDragMode = 1
+        },
+        gridMouseMove(tms) {
+            const mouse = this.toTime(tms)
+            const event = this.gridEditedEvents[this.gridDragging];
+
+            if (this.gridDragMode == 2 && this.gridDragOffset !== null) {
+                const start = event.start_time
+                const end = event.end_time
+                const duration = end - start
+                const newStartTime = mouse - this.gridDragOffset
+                const newStart = this.roundTime(newStartTime)
+                const newEnd = newStart + duration
+
+                event.start_time = newStart
+                event.end_time = newEnd
+                event.location_id = tms.category.id;
+            } else if (this.gridDragMode == 1) {
+                const mouseRounded = this.roundTime(mouse, false)
+                const min = Math.min(mouseRounded, event.start_time)
+                const max = Math.max(mouseRounded, event.start_time)
+
+                event.start_time = min
+                event.end_time = max
+            }
+        },
+        gridEndDrag() {
+            this.gridDragOffset = null
+            this.gridDragMode = 0
+            this.gridDragging = null
+        },
+        gridCancelDrag() {
+            //Disabling the out-of-bounds drag end in case we  cross the day border
+            //This means if you leave the calendar proper, the event will still be 
+            //on the mouse and you'll need to click it again to un-stick it
+            //... oh well, it's more usable overall like that.
+            // this.gridDragOffset = null
+            // this.gridDragMode = 0
+            // this.gridDragging = null
+        },
+        roundTime(time, down = true) {
+            const roundTo = 5 // minutes
+            const roundDownTime = roundTo * 60 * 1000
+
+            return down
+                ? time - time % roundDownTime
+                : time + (roundDownTime - (time % roundDownTime))
+        },
+        toTime(tms) {
+            return new Date(tms.year, tms.month - 1, tms.day, tms.hour, tms.minute).getTime()
+        },
+
+        async gridSaveEditedAssignments() {
+            var failIx = 0;
+            this.gridSaving = true;
+            while (this.gridEditedEvents.length >= failIx + 1) {
+                var assn = structuredClone(this.gridEditedEvents[0]);
+
+                assn.start_time = nullIfEmptyOrZero(this.formatDate(new Date(assn.start_time)));
+                assn.end_time = assn.start_time == null ? null : nullIfEmptyOrZero(this.formatDate(new Date(assn.end_time)));
+
+                await new Promise((resolve, reject) =>
+                    admin.genericPost(this.authToken, 'Location/Assignments/' + assn.id, assn, resolve, reject)
+                ).then((result) => {
+                    //Assume it was good                    
+                    this.$store.commit('products/updateLocationEvent', assn);
+                    this.gridEditedEvents.splice(0, 1);
+                }).catch((err) => {
+                    console.log('failed save assignment', err);
+                    failIx++;
+                })
+            }
+            this.gridSaving = false;
+        },
+
+
         ///end grid tab
         createLocationCategory() {
             console.log('creating location category')
@@ -607,6 +791,17 @@ export default {
             })
         },
 
+        //TODO: Get rid of this hack please
+        formatDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        },
     },
     watch: {
         locationCategorySelectedIx(ix) {
@@ -686,12 +881,9 @@ export default {
 }
 
 .v-event-readonly {
-    padding-left: 6px;
-}
-
-.v-event-timed {
     user-select: none;
     -webkit-user-select: none;
+    padding-left: 6px;
 }
 
 .v-event-drag-bottom {
