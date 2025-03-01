@@ -154,7 +154,7 @@
                             :event-color="getEventColor" event-category="location_id" event-name="display_name"
                             event-start="start_time" event-end="end_time" v-scroll.self="gridScrolled"
                             @mousedown:event="gridStartDrag" @mousedown:time="gridStartTime"
-                            @mousemove:time-category="gridMouseMove" @mousemove:event="gridMouseMoveEvent"
+                            @mousemove:time-category="gridMouseMove"
                             @mouseup:time="gridEndDrag" @mouseleave.native="gridCancelDrag">
                             >
                             <template v-slot:category="{ category }">
