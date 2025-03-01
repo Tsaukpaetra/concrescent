@@ -475,9 +475,18 @@ export default {
             admin.genericPost(this.authToken, url, this.lSelected, (editBt) => {
                 this.lSelected.id = editBt.id;
                 this.$store.commit('products/updateLocation', this.lSelected);
+                //Process assignment updates
+                if (editBt.AssnResults.Added)
+                    editBt.AssnResults.Added.forEach(e => this.$store.commit('products/updateLocationEvent', e))
+                if (editBt.AssnResults.Updated)
+                    editBt.AssnResults.Updated.forEach(e => this.$store.commit('products/updateLocationEvent', this.lSelected.Assignments.find(a => a.id == e)))
+                if (editBt.AssnResults.Deleted)
+                    editBt.AssnResults.Deleted.forEach(e => this.$store.commit('products/deleteLocationEvent', this.lSelected.Assignments.find(a => a.id == e)))
+
                 this.loading = false;
                 this.lEdit = false;
-            }, () => {
+            }, (err) => {
+                console.log(err)
                 this.loading = false;
             })
         },
@@ -568,7 +577,7 @@ export default {
                 }
             })))].filter(x => x).map(l => this.locations.find(f => f.id == l));
             //Order by short code
-            result.sort((a,b) => (a.short_code > b.short_code) ? 1 : ((b.short_code > a.short_code) ? -1 : 0));
+            result.sort((a, b) => (a.short_code > b.short_code) ? 1 : ((b.short_code > a.short_code) ? -1 : 0));
             // console.log('grid location defaults', result, this.gridLocations)
             this.gridLocations = result;
         },

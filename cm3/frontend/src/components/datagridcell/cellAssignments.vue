@@ -1,6 +1,6 @@
 <template>
     <v-toolbar dense flat color="transparent">
-        <v-tooltip v-for="(id, ix) in location_ids" :key="id" left>
+        <v-tooltip v-for="(id, ix) in location_ids" :key="ix" left>
             <template v-slot:activator="{ on, attrs }">
                 <v-chip v-bind="attrs" v-on="on" :color="getCategory(category_ids[ix]).color">{{
                     location(id).short_code}}</v-chip>

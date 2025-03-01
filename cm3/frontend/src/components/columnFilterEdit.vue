@@ -62,6 +62,10 @@ export default {
             text: "One of (in)",
             multiValue: true
         }, {
+            value: 'not in',
+            text: "Not One of (not in)",
+            multiValue: true
+        }, {
             value: '>',
             text: "Greater than (>)",
             multiValue: true

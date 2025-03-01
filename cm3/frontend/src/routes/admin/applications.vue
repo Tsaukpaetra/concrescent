@@ -610,6 +610,15 @@ export default {
                 that.bEdit = false;
                 that.bSaved = true;
                 that.bSavedDetails = SavedDetails;
+                //Process assignment updates
+                SavedDetails.assignments.forEach((e) =>{
+                    if(e.action == 'deleted')
+                        this.$store.commit('products/updateLocationEvent', e);
+                    else
+                        this.$store.commit('products/deleteLocationEvent', e);
+
+                });
+
                 that.$nextTick(() => {
                     that.bModified = false;
                 })

@@ -79,6 +79,7 @@ final class Assignments
         //Add in the assignments
         $data = $this->assignment->Search(
             new View([
+                'id',
                 'application_id',
                 'location_id',
                 'category_id',

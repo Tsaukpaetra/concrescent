@@ -50,7 +50,7 @@ final class Update
         $data['id'] = $params['id'];
 
         // Invoke the Domain with inputs and retain the result
-        $data = $this->badgeinfo->UpdateSpecificGroupApplicationUnchecked($params['id'], $params['context_code'], $data);
+        $this->badgeinfo->UpdateSpecificGroupApplicationUnchecked($params['id'], $params['context_code'], $data);
         if (isset($qp['sendupdate']) && $qp['sendupdate'] == 'true') {
 
             //TODO: Use the notification framework for this...
