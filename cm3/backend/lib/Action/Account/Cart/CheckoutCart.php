@@ -55,6 +55,8 @@ class CheckoutCart
         $cart_id = $data['id'] ?? $params['id'] ?? 0;
         $cart_uuid = $data['uuid'] ?? null;
 
+        $data['handler_id'] = $data['handler_id'] ?? $this->CurrentUserInfo->GetContactId();
+
         if (!$this->PaymentBuilder->loadCart($cart_id, $cart_uuid)) {
             throw new HttpNotFoundException($request);
         }

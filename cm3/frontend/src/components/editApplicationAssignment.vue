@@ -15,13 +15,25 @@
             </v-col>
             <v-col cols="12" sm="4">
                 <v-autocomplete dense hide-details v-model="model.location_id" :items="locationList"
-                    :readonly="lockLocation" persistent-placeholder item-value="id" item-text="name">
+                    :readonly="lockLocation" persistent-placeholder item-value="id" item-text="searchtext">
                     <template v-slot:label>
                         Location
                     </template>
                     <template v-slot:selection="data">
                         <v-chip label small>{{ data.item.short_code }}</v-chip>
                         {{ data.item.name }}
+                    </template>
+                    <template v-slot:item="{ item, on, attrs }">
+                        <v-list-item v-bind="attrs" v-on="on">
+                            <v-list-item-action>
+                                <v-chip label small>{{ item.short_code }}</v-chip>
+                            </v-list-item-action>
+                            <v-list-item-content>
+                                <v-list-item-title :class="attrs.inputValue ? 'primary--text' : ''">
+                                    {{ item.name }}
+                                </v-list-item-title>
+                            </v-list-item-content>
+                        </v-list-item>
                     </template>
                 </v-autocomplete>
             </v-col>
@@ -126,8 +138,6 @@ export default {
             menuStartDate: false,
             menuEndDate: false,
             applicationListData: [],
-            // locationListData: [],
-            // categoryList:[],
 
             RulesRequired: [
                 (v) => !!v || 'Required',
@@ -168,7 +178,7 @@ export default {
         }),
         ...mapGetters('products', {
             'selectedEvent': 'selectedEvent',
-            'locationListData': 'locations',
+            'locations': 'locations',
             'categoryList': 'locationCategories',
             'locationEvents': 'locationEvents',
         }),
@@ -190,8 +200,11 @@ export default {
             if (this.lockLocation) {
                 return [this.location];
             } else {
-                //TODO: Fetch locations
-                return this.locationListData;
+                var result = structuredClone(this.locations)
+                    .map(x => { return { ...x, searchtext: x.short_code + ' ' + x.name } });
+                //Order by short code
+                result.sort((a, b) => (a.short_code > b.short_code) ? 1 : ((b.short_code > a.short_code) ? -1 : 0));
+                return result;
             }
         },
 
@@ -224,7 +237,7 @@ export default {
             } else {
                 // console.log('setting event ix as edit', editingIx)
                 events[editingIx] = this.editingEvent;
-                console.log('editn',events[editingIx])
+                console.log('editn', events[editingIx])
                 // events[editingIx].editable = true;
             }
             console.log('resultant events', events)
