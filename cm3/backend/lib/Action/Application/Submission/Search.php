@@ -82,7 +82,7 @@ final class Search
             return !empty($v);
         });
         // Invoke the Domain with inputs and retain the result
-        $data = $this->badgeinfo->SearchGroupApplicationsText($params['context_code'], $find, $pg['order'], $pg['limit'], $pg['offset'], $totalRows, $questionIds);
+        $data = $this->badgeinfo->SearchGroupApplicationsText($params['context_code'], $find, $pg['order'], $pg['limit'], $pg['offset'], $totalRows, $questionIds, $qp['filter'] ??'');
         // if (count($questionIds)>0) {
         //     $responses = $this->badgeinfo->GetFormResponses(array_column($data, 'id'), $params['context_code'], $questionIds);
         //     //Add the responses into the data

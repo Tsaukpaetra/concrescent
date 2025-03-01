@@ -767,6 +767,7 @@ final class badgeinfo
         if(count($filter))
         {
             $whereParts[] = new SearchTerm('', '', subSearch: $filter);
+            $wherePartsSimpler[] = new SearchTerm('', '', subSearch: $filter);
         }
 
         $result = $this->SearchBadges($context, $whereParts, $order, $limit, $offset, $totalRows, false, $includeFormQuestions);
@@ -776,7 +777,7 @@ final class badgeinfo
         }
         return $result;
     }
-    public function SearchGroupApplicationsText($context, string $searchText, $order, $limit, $offset, &$totalRows, $includeFormQuestions = null)
+    public function SearchGroupApplicationsText($context, string $searchText, $order, $limit, $offset, &$totalRows, $includeFormQuestions = null,  string|array $filter = [])
     {
         $whereParts =
         empty($searchText) ? [] :
@@ -811,6 +812,15 @@ final class badgeinfo
                     //TODO: This isn't working for some reason
                     //new SearchTerm('payment_id', $exactSearch['id'])
                 ));
+        }
+        if(gettype($filter) == 'string')
+        {
+            $filter = array_filter(explode(chr(28),$filter ?? ''));
+        }
+        if(count($filter))
+        {
+            $whereParts[] = new SearchTerm('', '', subSearch: $filter);
+            $wherePartsSimpler[] = new SearchTerm('', '', subSearch: $filter);
         }
 
         $result = $this->SearchGroupApplications($context, $whereParts, $order, $limit, $offset, $totalRows, false, $includeFormQuestions);
@@ -963,7 +973,7 @@ final class badgeinfo
             $g_bv->Columns[] = 'notes';
         }
 
-        //$this->g_badge->debugThrowBeforeSelect = true;
+        // $this->g_badge_submission->debugThrowBeforeSelect = true;
         $g_data = $this->g_badge_submission->Search($g_bv, $g_terms, $order, $limit, $offset, $totalRows);
 
 
@@ -1852,7 +1862,7 @@ final class badgeinfo
 
                     $newAssignment['id'] = $this->g_assignment->Create($newAssignment)['id'];
                     //Tag this badge as new...?
-                    $newAssignment['created'] = true;
+                    $newAssignment['action'] = 'created';
 
                     //Save back to the Assignments
                     $setAssignments[$curIx] = $newAssignment;
@@ -1861,6 +1871,9 @@ final class badgeinfo
                 foreach (array_udiff($currentAssignments, $setAssignments, array($this,'compareID')) as $deletedAssignment) {
                     $deletedAssignment['application_id'] = $result['id'];
                     $this->g_assignment->Delete($deletedAssignment);
+                    $deletedAssignment['action'] = 'deleted';
+                    //Save back to the Assignments
+                    $setAssignments[$curIx] = $deletedAssignment;
                 }
                 //Process modifications
                 foreach (array_uintersect($setAssignments, $currentAssignments, array($this,'compareID')) as $existingAssignment) {
@@ -1869,6 +1882,7 @@ final class badgeinfo
                     $existingAssignment['start_time'] = empty($existingAssignment['start_time']) ? null : $existingAssignment['start_time'] ;
                     $existingAssignment['end_time'] = empty($existingAssignment['end_time']) ? null : $existingAssignment['end_time'] ;
                     $this->g_assignment->Update($existingAssignment);
+                    $existingAssignment['action'] = 'updated';
 
                     //Save back to the Assignments
                     $setAssignments[$curIx] = $existingAssignment;
