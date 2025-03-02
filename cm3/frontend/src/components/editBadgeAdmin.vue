@@ -246,10 +246,10 @@
                         <editBadgeApplicationStaffPosition v-model="model.assigned_positions" />
                     </v-col>
                 </v-row>
-                <v-row v-if="isGroupApp">
+                <v-row v-if="isGroupApp && badgeTypeMaxAssignments > 0">
                     <v-col cols="4">
                         <v-text-field
-                            v-if="badgeTypeMaxAssignments > 0" 
+                            
                             label="Assignment Slots approved for"
                             v-model.number="model.assignment_count"
                             min="0"
