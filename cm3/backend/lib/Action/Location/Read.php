@@ -59,7 +59,7 @@ final class Read
         }
         //Add in the assignments
         $result['Assignments'] = $this->assignment->Search(new View([
-            'id','application_id','category_id','start_time','end_time',
+            'id','application_id','location_id','category_id','start_time','end_time',
             new SelectColumn('real_name', JoinedTableAlias:'s'),
             new SelectColumn('fandom_name', JoinedTableAlias:'s'),
             new SelectColumn('name_on_badge', JoinedTableAlias:'s'),
