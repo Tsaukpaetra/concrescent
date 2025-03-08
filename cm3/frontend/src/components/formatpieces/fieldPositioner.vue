@@ -136,7 +136,7 @@ export default {
             this.$emit('move');
         },
         toPx(percent, isHeight, defaultIfNull) {
-            if (percent == undefined || percent == null) {
+            if (percent == undefined || percent == null || isNaN(percent)) {
                 //console.log('toPx had invalid percent of', percent);
                 percent = defaultIfNull;
             }
@@ -157,11 +157,12 @@ export default {
             this.pos_px = {
                 x: this.toPx(this.model.left, false, 0.20),
                 y: this.toPx(this.model.top, true, 0.10),
-                w: this.toPx(this.model.width, false, 0.80),
+                w: this.toPx(this.model.width, false, 0.20),
                 h: this.toPx(this.model.height, true, 0.20),
             };
             //TODO: Make sure it's in-bounds?
-            //console.log('pos_px is now', this.pos_px);
+            
+            // console.log('pos_px is now', structuredClone(this.pos_px));
             this.updateRenderScale();
             // this.$nextTick(() => {
             // });
@@ -267,23 +268,25 @@ export default {
         model: {
             handler: function(newData) {
                 if (this.readOnly) return;
-                if (this.skipEmitOnce == true) {
-                    this.skipEmitOnce = false;
-                    return;
+                var skipEmit = Object.keys(newData).length < 1;
+
+                this.updatePx();
+                if (!skipEmit) {
+                    // console.log('emitting format', newData);
+                    this.$emit('update:format', newData);
                 }
-                //console.log('emitting format', newData);
-                this.$emit('update:format', newData);
             },
             deep: true
         },
-        format(newformat) {
-            //Splat the input into the form
-            //console.log('got new positioner format', newformat);
-            this.skipEmitOnce = true;
-            this.model = {
-                ...newformat,
-            }
-            this.updatePx();
+        format: { 
+            handler(newformat) {
+                //Splat the input into the form
+                // console.log('got new positioner format', structuredClone(newformat));
+                this.model = newformat
+                
+            },
+            deep:true,
+            immediate: true
         },
         value() {
             if (this.$refs.contained == undefined) return;
@@ -374,7 +377,8 @@ export default {
 
 .contained {
     box-sizing: border-box;
-    display: inline-block;
+    display: inline-flex;
+    flex-wrap: wrap;
     transform-origin: 0 0;
     white-space: pre;
     line-height: 1;

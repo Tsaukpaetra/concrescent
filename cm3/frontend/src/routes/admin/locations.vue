@@ -573,31 +573,37 @@ export default {
         createMap: function () {
             this.mEdit = true;
             this.mSelected = {
-                active: true
+                active: true,
+                bgImageID:null,
+                coords:[],
+                name:'New Map',
+                description:'',
+                notes:''
+
             };
         },
         mSetActive: function (id, active) {
-            this.lEdit = true;
+            this.mEdit = true;
             var url = 'LocationMap/' + id;
             console.log("Saving LocationMap active state", id, active)
             admin.genericPost(this.authToken, url, { active }, () => {
                 this.mEdit = false;
-            }, function () {
+            },  () => {
 
             })
         },
         saveMap: function () {
             var url = 'LocationMap';
 
-            if (this.lSelected.id != null)
-                url = url + '/' + this.lSelected.id;
-            console.log("Saving LocationMap", this.lSelected)
+            if (this.mSelected.id != null)
+                url = url + '/' + this.mSelected.id;
+            console.log("Saving LocationMap", this.mSelected)
             this.loading = true;
-            admin.genericPost(this.authToken, url, this.lSelected, (editBt) => {
+            admin.genericPost(this.authToken, url, this.mSelected, (editBt) => {
 
                 this.loading = false;
                 this.mEdit = false;
-            }, function () {
+            }, () => {
                 this.loading = false;
             })
         },

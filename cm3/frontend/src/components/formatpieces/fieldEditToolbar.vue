@@ -1,143 +1,119 @@
 <template>
-<v-toolbar elevation="0"
-           color="blue">
+    <v-toolbar elevation="0" color="blue">
 
-    <template v-if="$vuetify.breakpoint.mdAndUp">
-        <v-tooltip bottom>
-            <template v-slot:activator="{ on, attrs }">
-                <v-btn v-bind="attrs"
-                       color="primary"
-                       v-on="on"
-                       @click="templateTextDialog = true">
-                    <v-icon>mdi-text-recognition</v-icon>
-                </v-btn>
-            </template>
-            <span>Edit template text</span>
-        </v-tooltip>
-        <v-combobox :items="dropdown_font"
-                    v-model="model.style['font-family']"
-                    label="Select font"
-                    hide-details
-                    outlined
-                    dense
-                    style="width:0px;">
-        </v-combobox>
-        <v-combobox :items="dropdown_size"
-                    v-model="applySize"
-                    label="Font size"
-                    hide-details
-                    outlined
-                    dense
-                    style="width:0px;">
-        </v-combobox>
-
-        <v-select :items="content_fit"
-                  v-model="model.fit"
-                  label="Content Scale"
-                  hide-details
-                  outlined
-                  dense
-                  style="width:0px;"
-                  overflow></v-select>
-
-        <v-btn-toggle multiple
-                      v-model="applyStyles">
-            <v-tooltip v-for="s in style_toggles"
-                       :key="s.name"
-                       bottom>
+        <template v-if="$vuetify.breakpoint.mdAndUp">
+            <v-spacer></v-spacer>
+            <v-tooltip bottom>
                 <template v-slot:activator="{ on, attrs }">
-                    <v-btn v-bind="attrs"
-                           v-on="on">
-                        <v-icon>mdi-{{s.icon}}</v-icon>
+                    <v-btn v-bind="attrs" color="primary" v-on="on" @click="templateTextDialog = true">
+                        <v-icon>mdi-text-recognition</v-icon>
                     </v-btn>
                 </template>
-                <span>{{s.title}}</span>
+                <span>Edit template text</span>
             </v-tooltip>
-        </v-btn-toggle>
-        <v-divider vertical></v-divider>
-
-        <v-btn-toggle v-model="applyAlign">
-            <v-btn v-for="alignment in alignments"
-                   :key="alignment">
-                <v-icon>mdi-format-align-{{alignment}}</v-icon>
+            <v-btn @click="expanded = !expanded">
+                <v-icon>{{ expanded ? 'mdi-chevron-right' : 'mdi-chevron-left' }}</v-icon>
             </v-btn>
-        </v-btn-toggle>
-        <v-btn icon>
-            <v-icon>mdi-format-color-fill</v-icon>
-        </v-btn>
-    </template>
-    <template v-else>
-        <!-- For smol screens -->
-        <v-dialog v-model="dialog"
-                  scrollable>
-            <template v-slot:activator="{ on, attrs }">
-                <v-btn color="primary"
-                       dark
-                       v-bind="attrs"
-                       v-on="on">
-                    <v-icon>mdi-pencil</v-icon>
-                </v-btn>
-            </template>
-            <v-card>
-                <v-card-title>Edit field</v-card-title>
+            <v-slide-x-reverse-transition>
+                <div v-if="expanded" class="toolbar-buttons d-flex">
+                    <v-combobox :items="dropdown_font" v-model="model.style['font-family']" label="Select font"
+                        hide-details outlined dense style="width:0px;">
+                    </v-combobox>
+                    <v-combobox :items="dropdown_size" v-model="applySize" label="Font size" hide-details outlined dense
+                        style="width:0px;">
+                    </v-combobox>
+
+                    <v-select :items="content_fit" v-model="model.fit" label="Content Scale" hide-details outlined dense
+                        style="width:0px;" overflow></v-select>
+
+                    <v-btn-toggle multiple v-model="applyStyles">
+                        <v-tooltip v-for="s in style_toggles" :key="s.name" bottom>
+                            <template v-slot:activator="{ on, attrs }">
+                                <v-btn v-bind="attrs" v-on="on">
+                                    <v-icon>mdi-{{ s.icon }}</v-icon>
+                                </v-btn>
+                            </template>
+                            <span>{{ s.title }}</span>
+                        </v-tooltip>
+                    </v-btn-toggle>
+                    <v-divider vertical></v-divider>
+
+                    <v-btn-toggle v-model="applyAlign">
+                        <v-btn v-for="alignment in alignments" :key="alignment">
+                            <v-icon>mdi-format-align-{{ alignment }}</v-icon>
+                        </v-btn>
+                    </v-btn-toggle>
+                    <v-btn-toggle v-model="applyVAlign">
+                        <v-btn v-for="alignment in valignmentsIcons" :key="alignment">
+                            <v-icon>mdi-format-vertical-align-{{ alignment }}</v-icon>
+                        </v-btn>
+                    </v-btn-toggle>
+                    <v-btn icon>
+                        <v-icon>mdi-format-color-fill</v-icon>
+                    </v-btn>
+
+                </div>
+            </v-slide-x-reverse-transition>
+        </template>
+        <template v-else>
+            <!-- For smol screens -->
+            <v-dialog v-model="dialog" scrollable>
+                <template v-slot:activator="{ on, attrs }">
+                    <v-btn color="primary" dark v-bind="attrs" v-on="on">
+                        <v-icon>mdi-pencil</v-icon>
+                    </v-btn>
+                </template>
+                <v-card>
+                    <v-card-title>Edit field</v-card-title>
+                    <v-divider></v-divider>
+                    <v-card-text>
+                        Controls here
+                        <fieldRender :value="value" :format="model" class="contained" ref="contained" />
+                    </v-card-text>
+                    <v-divider></v-divider>
+                    <v-card-actions>
+                        <v-btn color="blue darken-1" text @click="dialog = false">
+                            Close
+                        </v-btn>
+                    </v-card-actions>
+                </v-card>
+            </v-dialog>
+        </template>
+
+        <v-dialog v-model="templateTextDialog" scrollable>
+            <v-card v-if="format">
+                <v-card-title>Edit field template</v-card-title>
                 <v-divider></v-divider>
                 <v-card-text>
-                    Controls here
-                    <fieldRender :value="value"
-                                 :format="model"
-                                 class="contained"
-                                 ref="contained" />
+
+                    <template v-if="format.type == 'debug'">
+                        <pre>{{ format }}</pre>
+                    </template>
+                    <template v-else-if="format.type == 'simpletext'">
+                        <v-text-field v-model="templateText" hide-details="true">
+                        </v-text-field>
+                    </template>
+                    <template v-else-if="format.type == 'text'">
+                        <v-md-editor v-model="templateText" />
+                    </template>
+                    <template v-else-if="format.type == 'image'">
+                        Image picker goes here
+                    </template>
+                    <template v-else>
+                        Unknown field type: {{ format.type }}
+                    </template>
+
+
                 </v-card-text>
                 <v-divider></v-divider>
                 <v-card-actions>
-                    <v-btn color="blue darken-1"
-                           text
-                           @click="dialog = false">
-                        Close
-                    </v-btn>
+                    <v-spacer></v-spacer>
+                    <v-btn color="default" @click="revertTemplateText">Cancel</v-btn>
+                    <v-btn color="primary" @click="saveTemplateText">Save</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
-    </template>
-
-    <v-dialog v-model="templateTextDialog"
-              scrollable>
-        <v-card v-if="format">
-            <v-card-title>Edit field template</v-card-title>
-            <v-divider></v-divider>
-            <v-card-text>
-
-                <template v-if="format.type == 'debug'">
-                    <pre>{{format}}</pre>
-                </template>
-                <template v-else-if="format.type == 'simpletext'">
-                    <v-text-field v-model="templateText"
-                                  hide-details="true">
-                    </v-text-field>
-                </template>
-                <template v-else-if="format.type == 'text'">
-                    <v-md-editor v-model="templateText" />
-                </template>
-                <template v-else-if="format.type == 'image'">
-                    Image picker goes here
-                </template>
-                <template v-else>
-                    Unknown field type: {{format.type}}
-                </template>
-
-
-            </v-card-text>
-            <v-divider></v-divider>
-            <v-card-actions>
-                <v-spacer></v-spacer>
-                <v-btn color="default"
-                       @click="revertTemplateText">Cancel</v-btn>
-                <v-btn color="primary"
-                       @click="saveTemplateText">Save</v-btn>
-            </v-card-actions>
-        </v-card>
-    </v-dialog>
-</v-toolbar>
+    </v-toolbar>
 </template>
 
 <script>
@@ -158,30 +134,31 @@ export default {
     },
     data() {
         return {
+            expanded: false,
             dialog: false,
             templateTextDialog: false,
             templateText: this.format.text,
 
             content_fit: [{
-                    text: 'Fill',
-                    value: 'fill'
-                },
-                {
-                    text: 'Contain',
-                    value: 'contain'
-                },
-                {
-                    text: 'Cover',
-                    value: 'cover'
-                },
-                {
-                    text: 'Scale Down',
-                    value: 'scale-down'
-                },
-                {
-                    text: 'None',
-                    value: 'none'
-                },
+                text: 'Fill',
+                value: 'fill'
+            },
+            {
+                text: 'Contain',
+                value: 'contain'
+            },
+            {
+                text: 'Cover',
+                value: 'cover'
+            },
+            {
+                text: 'Scale Down',
+                value: 'scale-down'
+            },
+            {
+                text: 'None',
+                value: 'none'
+            },
             ],
             dropdown_font: [
                 'Arial', 'Calibri', 'Courier', 'Verdana'
@@ -189,7 +166,9 @@ export default {
             dropdown_size: [
                 '8px', '9px', '10px', '11px', '12px', '14px', '16px', '18px', '20px', '22px', '24px', '26px', '28px', '36px', '48px', '72px'
             ],
-            alignments: ['left', 'center', 'right', 'justify'],
+            alignments: ['left', 'center', 'right'],
+            valignmentsIcons: ['top', 'center', 'bottom'],
+            valignments: ['start', 'center', 'end'],
             style_toggles: [{
                 title: 'Bold',
                 icon: 'format-bold',
@@ -208,7 +187,7 @@ export default {
                 on: 'underline',
                 off: undefined,
                 name: 'text-decoration'
-            }, ],
+            },],
             model: {
                 type: 'debug',
                 text: "small-name",
@@ -238,7 +217,7 @@ export default {
     },
     watch: {
         model: {
-            handler: function(newData) {
+            handler: function (newData) {
                 if (this.skipEmitOnce == true) {
                     this.skipEmitOnce = false;
                     return;
@@ -296,14 +275,30 @@ export default {
         },
         applyAlign: {
             get() {
-                if (this.format == undefined) return false;
-                var a = this.alignments.findIndex(a => a == this.format.style['text-align']);
+                if (this.format == undefined || this.format.style == undefined) return false;
+                var a = this.alignments.findIndex(a => a == this.format.style['text-align'] || undefined);
                 //console.log('looking for align, which is ix', a)
                 return a
             },
             set(newAlign) {
                 //console.log('setting aign to', newAlign);
                 this.model.style['text-align'] = this.alignments[newAlign];
+                this.model.style['justify-content'] = this.alignments[newAlign];
+                this.model.style = {
+                    ...this.model.style
+                };
+            }
+        },
+        applyVAlign: {
+            get() {
+                if (this.format == undefined || this.format.style == undefined) return false;
+                var a = this.alignments.findIndex(a => a == this.format.style['align-content'] || undefined);
+                //console.log('looking for valign, which is ix', a)
+                return a
+            },
+            set(newAlign) {
+                //console.log('setting valign to', newAlign);
+                this.model.style['align-content'] = this.valignments[newAlign];
                 this.model.style = {
                     ...this.model.style
                 };
@@ -340,4 +335,9 @@ export default {
 </script>
 
 <style scoped>
+.toolbar-buttons {
+    flex-grow: 1;
+    justify-content: center;
+    align-items: center;
+}
 </style>

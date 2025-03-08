@@ -56,6 +56,9 @@ export default {
         'context': {
             type: String
         },
+        'value':{
+            type: null
+        },
         'valueKey': {
             type: String,
             default: 'id'
@@ -83,6 +86,7 @@ export default {
         model: null,
         searchText: "",
         loading: false,
+        deferredUpdate: false,
         tableOptions: {},
         searchResults: [],
         totalResults: 0,
@@ -139,7 +143,18 @@ export default {
                 this.searchResults = results;
                 this.loading = false;
                 console.log('finished loading list, is model in it', this.model)
-                this.$emit('selected',this.searchResults.find(x => x.id == newData))
+                //Only emit the full object if we know we have something
+                if(results.length > 0){
+                    var found = results.find(x => x[this.valueKey] == this.model)
+                    if(found != undefined){
+                        console.log('yes, it is',found)
+                        this.$emit('selected',found)
+                    } else {
+                        console.log('no!')
+                    }
+                } else {
+                    console.log('probably not, empty result')
+                }
             })
         },
         noFilter: function() {
@@ -150,14 +165,28 @@ export default {
         }
     },
     watch: {
-        model(newData) {
-            if (this.skipEmitOnce == true) {
-                this.skipEmitOnce = false;
-                return;
-            }
-            console.log('emitting dropdown value', newData);
-            this.$emit('input', newData);
-            this.$emit('selected',this.searchResults.find(x => x.id == newData))
+        model:{
+            handler(newData) {
+                console.log('emitting dropdown value', newData);
+                this.$emit('input', newData);
+                //Only emit the full object if we know we have something
+                if(this.searchResults.length > 0){
+                    var found = this.searchResults.find(x => x[this.valueKey] == newData)
+                    if(found != undefined)
+                        this.$emit('selected',found)
+                } else {
+                    this.deferredUpdate = true;
+                }
+            },
+            deep: true,
+            immediate: true
+        },
+        value: {
+            handler(newValue) {
+                this.model = newValue;
+            },
+            deep: true,
+            immediate: true
         },
 
         searchText: debounce(function(newSearch) {

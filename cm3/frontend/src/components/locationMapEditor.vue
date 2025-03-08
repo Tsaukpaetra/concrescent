@@ -1,150 +1,114 @@
 <template>
-<v-container fluid
-             class="pa-0">
-    <v-toolbar :color="'blue'"
-               dark
-               style="position: sticky; top: 0; z-index: 1;">
-        <v-app-bar-nav-icon @click.stop="mainPropsForm = !mainPropsForm" />
-        <v-toolbar-title>{{model.name}}</v-toolbar-title>
-        <v-spacer></v-spacer>
+    <v-container fluid fill-height class="pa-0">
+        <v-toolbar :color="'blue'" dark style="position: sticky; top: 0; z-index: 1;">
+            <v-app-bar-nav-icon @click.stop="mainPropsForm = !mainPropsForm" />
+            <v-toolbar-title>{{ model.name }}</v-toolbar-title>
+            <v-spacer></v-spacer>
 
-        <template v-if="!fieldIsSelected">
-            <v-menu offset-y>
-                <template v-slot:activator="{ on, attrs }">
-                    <v-btn color="primary"
-                           v-bind="attrs"
-                           v-on="on">
-                        <v-icon>mdi-plus</v-icon>
-                    </v-btn>
-                </template>
-                <v-list>
-                    <v-list-item v-for="(fieldType, index) in fieldTypes"
-                                 :key="index"
-                                 @click="addField(fieldType.name)">
-                        <v-list-item-title>{{ fieldType.title }}</v-list-item-title>
-                    </v-list-item>
-                </v-list>
-            </v-menu>
-        </template>
-        <template v-else>
-            <fieldEditToolbar :format.sync="model.layout[fieldSelectedIx]" />
+            <template v-if="!fieldIsSelected">
+                <v-menu offset-y>
+                    <template v-slot:activator="{ on, attrs }">
+                        <v-btn color="primary" v-bind="attrs" v-on="on">
+                            <v-icon>mdi-plus</v-icon>
+                        </v-btn>
+                    </template>
+                    <v-list>
+                        <v-list-item v-for="(fieldType, index) in fieldTypes" :key="index" @click="addField(index)">
+                            <v-list-item-title>{{ fieldType.title }}</v-list-item-title>
+                        </v-list-item>
+                    </v-list>
+                </v-menu>
+            </template>
+            <template v-else>
 
-            <v-btn color="primary"
-                   @click="delField(fieldSelectedIx)">
-                <v-icon>mdi-delete</v-icon>
-            </v-btn>
-        </template>
-    </v-toolbar>
-    <v-sheet color="white"
-             class="mx-auto ma-3"
-             elevation="4"
-             :style="sStyle">
-        <fieldPositioner v-for="(item,ix) in model.layout"
-                         :key="ix"
-                         :format.sync="model.layout[ix]"
-                         :value="badge"
-                         :readOnly="preview"
-                         :edit="ix == fieldSelectedIx"
-                         :order="ix"
-                         @click="toggleSelected(ix)"
-                         @move="selectField(ix)" />
-    </v-sheet>
-    <v-navigation-drawer v-model="mainPropsForm"
-                         absolute
-                         width="400"
-                         temporary>
-                         <fileStoreDropdown v-model="model.bgImageID"
-                         @selected="setbackground"/>
-        <formatPropEditForm  v-model="model"
-                            @selectLayout="selectField" />
+                <v-autocomplete dense hide-details v-model="model.coords[fieldSelectedIx].location_id"
+                    :items="locationList" persistent-placeholder item-value="id" item-text="searchtext">
+                    <template v-slot:label>
+                        Location
+                    </template>
+                    <template v-slot:selection="data">
+                        <v-chip label small>{{ data.item.short_code }}</v-chip>
+                        {{ data.item.name }}
+                    </template>
+                    <template v-slot:item="{ item, on, attrs }">
+                        <v-list-item v-bind="attrs" v-on="on">
+                            <v-list-item-action>
+                                <v-chip label small>{{ item.short_code }}</v-chip>
+                            </v-list-item-action>
+                            <v-list-item-content>
+                                <v-list-item-title :class="attrs.inputValue ? 'primary--text' : ''">
+                                    {{ item.name }}
+                                </v-list-item-title>
+                            </v-list-item-content>
+                        </v-list-item>
+                    </template>
+                </v-autocomplete>
 
-    </v-navigation-drawer>
-    <v-speed-dial v-model="fab"
-                  bottom
-                  right
-                  style="position:absolute;">
-        <template v-slot:activator>
-            <v-btn v-model="fab"
-                   color="blue darken-2"
-                   dark
-                   fab>
-                <v-icon v-if="fab">
-                    mdi-close
-                </v-icon>
-                <v-icon v-else>
-                    mdi-magnify
-                </v-icon>
-            </v-btn>
-        </template>
-        <div @click.stop=""
-             style="width:350px; align-self: end;">
+                <v-btn color="primary" @click="delField(fieldSelectedIx)">
+                    <v-icon>mdi-delete</v-icon>
+                </v-btn>
+            </template>
+        </v-toolbar>
+
+        <v-container fluid>
+            <v-spacer></v-spacer>
             <v-card>
-                <v-tooltip top>
-                    <template v-slot:activator="{ on, attrs }">
-                        <v-btn color="primary"
-                               v-bind="attrs"
-                               v-on="on"
-                               :outlined="preview"
-                               @click="preview = !preview">
-                            <v-icon>mdi-file-find</v-icon>
-                        </v-btn>
-                    </template>
-                    <span>Preview</span>
-                </v-tooltip>
-                <v-tooltip top>
-                    <template v-slot:activator="{ on, attrs }">
-                        <v-btn color="primary"
-                               v-bind="attrs"
-                               v-on="on"
-                               :outlined="preview"
-                               @click="editBadgeData">
-                            <v-icon>mdi-script-text</v-icon>
-                        </v-btn>
-                    </template>
-                    <span>Preview Data editor</span>
-                </v-tooltip>
-                <v-tooltip top>
-                    <template v-slot:activator="{ on, attrs }">
-                        <v-btn color="primary"
-                               v-bind="attrs"
-                               v-on="on"
-                               :outlined="preview"
-                               @click="loadBadgeDataDialog = true">
-                            <v-icon>mdi-briefcase-upload</v-icon>
-                        </v-btn>
-                    </template>
-                    <span>Load Preview Data</span>
-                </v-tooltip>
-                <v-tooltip top>
-                        <template v-slot:activator="{ on, attrs }">                        
-                            <v-btn color="primary"
-                                        v-bind="attrs"
-                                        v-on="on"
-                                   :outlined="preview"
-                                @click="ExecutePrint">
-                                        <v-icon>mdi-printer-eye</v-icon>
-                            </v-btn>
-                        </template>
-                        <span>Print</span>
-                    </v-tooltip>
-            </v-card>
-        </div>
-    </v-speed-dial>
+                <v-sheet>
 
-    
-    <v-dialog v-model="printPanel"
-                            fullscreen
-                            transition="none">
-        <v-card :class="{ 'printing': printPanel }">
-        </v-card>
-    </v-dialog>
-</v-container>
+                    <v-img color="white" class="mx-auto ma-3" lazy-src="@/assets/logo.svg" :src="bgImageURL"
+                        ref="hiddenImg" elevation="4" contain @load="bgLoaded" @loading="bgLoading">
+                        <fieldPositioner v-for="(item, ix) in model.coords.filter(_ => bgImageLoaded)" :key="ix"
+                            :format="coordFormat(ix)" @update:format="coordFormatdUpdate(ix, $event)"
+                            :value="coordTemplateData(item)" :readOnly="!bgImageLoaded" :edit="ix == fieldSelectedIx"
+                            :order="ix" @click="toggleSelected(ix)" @move="selectField(ix)" />
+                    </v-img>
+                </v-sheet>
+            </v-card>
+            <v-spacer></v-spacer>
+        </v-container>
+        <v-navigation-drawer v-model="mainPropsForm" absolute width="400" temporary>
+
+            <v-list>
+                <v-list-item>
+                    <v-list-item-content>
+                        <v-text-field v-model="model.name" label="Name" />
+                    </v-list-item-content>
+                </v-list-item>
+                <v-list-item>
+                    <v-list-item-content>
+                        <v-checkbox dense hide-details v-model="model.active">
+                            <template v-slot:label>
+                                Active
+                            </template>
+                        </v-checkbox>
+                    </v-list-item-content>
+                </v-list-item>
+                <v-list-item>
+                    <v-list-item-content>
+                        <fileStoreDropdown v-model="model.bgImageID" @selected="setbackground" />
+                    </v-list-item-content>
+                </v-list-item>
+                <v-list-item>
+                    <v-list-item-content>
+                        <v-textarea label="Public Description" v-model="model.description" />
+                    </v-list-item-content>
+                </v-list-item>
+                <v-list-item>
+                    <v-list-item-content>
+                        <v-textarea label="Notes" v-model="model.notes" />
+                    </v-list-item-content>
+                </v-list-item>
+            </v-list>
+        </v-navigation-drawer>
+    </v-container>
 </template>
 
-<script >
+<script>
 import admin from '../api/admin';
 import Vue from "vue";
 import interact from "interactjs";
+
+
 import fileStoreDropdown from '@/components/fileStoreDropdown.vue';
 import formatPropEditForm from '@/components/formatpieces/formatPropEditForm.vue';
 import fieldPositioner from '@/components/formatpieces/fieldPositioner.vue';
@@ -157,53 +121,47 @@ import {
 export default Vue.extend({
     components: {
         fileStoreDropdown,
-        formatPropEditForm,
+        // formatPropEditForm,
         fieldPositioner,
-        fieldEditToolbar,
-        //scaleToParent
+        // fieldEditToolbar,
+        // scaleToParents
+        // Viewer,
+        // Teleport
     },
     props: ['value'],
-    data: function() {
+    data: function () {
         var v = this.value || {};
         return {
             preview: false,
             mainPropsForm: false,
             fab: false,
-            bgImageURL:'',
+            bgImageURL: '',
+            bgImageLoaded: false,
             zoom: 1,
             printPanel: false,
-            model: {
-                id: v.id,
-                name: v.name || 'New Badge Format',
-                customSize: v.customSize || '5in*3in',
-                bgImageID: v.bgImageID,
-                layoutPosition: v.layoutPosition || null,
-                layout: v.layout || []
-            },
+            model: {},
             fieldTypes: [{
-                    name: 'debug',
-                    title: 'Debug field'
-                },
-                {
-                    name: 'simpletext',
-                    title: 'Template Text'
-                },
-                {
-                    name: 'text',
-                    title: 'Markdown text'
-                },
-                {
-                    name: 'image',
-                    title: 'Image'
-                },
-                {
-                    name: 'unknown',
-                    title: 'Unknown'
-                },
+                name: 'debug',
+                title: 'Debug field'
+            },
+            {
+                title: 'Short Code',
+                templatetext: '[[short_code]]',
+            },
+            {
+                title: 'Name',
+                templatetext: '[[name]]',
+            },
+            {
+                title: 'Short code and name',
+                templatetext: '[ [[short_code]] ] [[name]]',
+            },
             ],
             fieldSelected: null,
             fieldSelectedIx: -1,
             fieldSelectedFromMove: false,
+            fieldTemplate: null,
+            fieldFormatPainting: false,
         };
     },
     computed: {
@@ -212,8 +170,18 @@ export default Vue.extend({
             'authToken': 'getAuthToken',
         }),
         ...mapGetters('products', {
-            'badgeContexts': 'badgeContexts',
+            'locations': 'locations',
+            'locationCategories': 'locationCategories',
+            'locationEvents': 'locationEvents',
         }),
+
+        locationList() {
+            var result = structuredClone(this.locations)
+                .map(x => { return { ...x, searchtext: x.short_code + ' ' + x.name } });
+            //Order by short code
+            result.sort((a, b) => (a.short_code > b.short_code) ? 1 : ((b.short_code > a.short_code) ? -1 : 0));
+            return result;
+        },
         sSizeArray() {
             //TODO: Retrieve default size somewhere else and inject it here?
             return (this.model.customSize || '5in*3in').split('*');
@@ -234,29 +202,72 @@ export default Vue.extend({
                 width: this.sWidth,
                 position: 'relative',
                 'z-index': 0,
-                backgroundImage:this.bgImageURL.length > 2 ?(  "url('" + this.bgImageURL + "')" ): 'none',
-                backgroundSize:'contain, cover'
+                backgroundImage: this.bgImageURL.length > 2 ? ("url('" + this.bgImageURL + "')") : 'none',
+                backgroundSize: 'contain, cover'
             };
             return v;
         },
         fieldIsSelected() {
             return this.fieldSelectedIx > -1;
         },
+        coordTemplateData() {
+            return (coord) => {
+                //var coord = this.model.coords[ix];
+                //Shouldn't happen, but just in case...
+                if (coord == undefined) return {};
+
+                return this.locations.find(x => x.id == coord.location_id) || {
+                    Assignmentcount: 0,
+                    description: '[Desc Loading...]',
+                    name: '[Name Loading...]',
+                    short_code: '...'
+                };
+
+            }
+        },
     },
     methods: {
-        setbackground(bgData){
-            this.bgImageURL = global.config.apiHostURL + 'Filestore/' + bgData.id + '/' + encodeURI(bgData.name) + '?auth=' + this.authToken
+        setbackground({ id, name }) {
+            this.bgImageURL = global.config.apiHostURL + 'Filestore/' + id + '/' + encodeURI(name) + '?auth=' + this.authToken
         },
-        addField(fieldType) {
-            console.log('Adding new field', fieldType)
-            this.model.layout.push({
-                type: fieldType,
-                text: 'New Item'
-            })
+        bgLoading() {
+            console.log('bg loading')
+            this.bgImageLoaded = false;
+        },
+        bgLoaded() {
+            console.log('bg loaded')
+            this.bgImageLoaded = true;
+
+        },
+        updateAspectRatio() {
+            if (this.$refs.hiddenImg) {
+                const img = this.$refs.hiddenImg;
+                var newAR = img.image.naturalWidth / img.image.naturalHeight;
+                console.log('new aspect ratio', newAR, img)
+                this.bgImageAspectRatio = newAR;
+
+            } else {
+                console.log('attempting to update aspect ratio but the image does not exist?')
+            }
+        },
+        inited(viewer) {
+            this.$viewer = viewer
+        },
+        show() {
+            this.$viewer.show()
+        },
+        addField(fieldTypeIx) {
+            console.log('Adding new field', this.fieldTypes[fieldTypeIx].title.toString())
+            var newCoord = {
+                id: -1 * Math.ceil(Math.random() * 1000),
+                coords: fieldTypeIx + ':0.2:0.2:0.2:0.2',
+                location_id: null
+            }
+            this.model.coords.push(newCoord)
         },
         delField(ix) {
             console.log('Deleting field', ix)
-            this.model.layout.splice(ix, 1);
+            this.model.coords.splice(ix, 1);
             this.fieldSelectedIx = -1;
         },
         toggleSelected(ix) {
@@ -280,18 +291,9 @@ export default Vue.extend({
             this.fieldSelectedIx = ix;
             this.mainPropsForm = false;
         },
-        editBadgeData() {
-            this.editBadgeDataDialog = true;
-        },
-        loadBadgeData() {
-
-            admin.genericGet(this.authToken, 'Badge/CheckIn/' + this.loadBadgeDataContext + '/' + this.loadBadgeDataID, null, (badgeData) => {
-
-                this.badgeData = badgeData;
-                this.loadBadgeDataDialog = false;
-            }, function() {
-                //Whoops
-            })
+        coordSelect(ix) {
+            console.log('Selecting coord', ix)
+            this.$emit('selectcoord', ix);
         },
         zoomIn() {
 
@@ -299,60 +301,75 @@ export default Vue.extend({
         zoomOut() {
 
         },
-        ExecutePrint: async function() {
-
-            this.printPanel = true;
-            await this.$nextTick();
-            //Print and close
-            (function(app) {
-                setTimeout(() => {
-                    window.print();
-                }, 430);
-            }(this));
-        },
-        printLocalStart: function() {
-            if(this.$el.clientHeight == 0){
-                console.log('Ignoring print because format editor is not visible')
-                return;
+        coordFormat(ix) {
+            var c = this.model.coords[ix];
+            var [typeId, left, top, width, height, ...extra] = c.coords.split(':');
+            // console.log('decoded coords', c.coords, typeId, left, top, width, height)
+            var result = {
+                fieldTypeIx: typeId,
+                type: typeId > 0 ? 'simpletext' : 'debug',
+                text: this.fieldTypes[typeId]?.templatetext || '',
+                left: parseFloat(left),
+                top: parseFloat(top),
+                width: parseFloat(width),
+                height: parseFloat(height),
+                fit: 'scale-down',
+                style: {
+                    'font-size': '36px',
+                    'text-align': 'center',
+                    'justify-content': 'center',
+                    'align-content': 'center',
+                    //Magic to take any extra values as kvp split on = and splat them into the style area
+                    ...extra.map(e => e.split('=', 2)).map(([key, value]) => ({ [key]: value }))
+                        .reduce((acc, curr) => ({ ...acc, ...curr }), {})
+                }
             }
-            console.log('Prep printing')
-            this.printPanel = true;
-
+            // console.log('reult', (result))
+            return result;
         },
-        printLocalEnd: function() {
-            console.log('Done printing')
-            this.printPanel = false;
-
-        },
+        coordFormatdUpdate(ix, data) {
+            // console.log('coord data update', ix, data)
+            this.model.coords[ix].coords =
+                [
+                    data.fieldTypeIx,
+                    data.left, data.top, data.width, data.height,
+                    //Magic to take the extra values in the styles and kvp them
+                    ...Object.keys(data.style)
+                        .filter(f => [
+                            'font-size',
+                            'text-align',
+                            'justify-content',
+                            'align-content',
+                        ].findIndex(j => f != j) == -1)
+                        .map(m => m + "=" + data.style[m])
+                ].join(':')
+        }
     },
     watch: {
         model(newData) {
+            // console.log('model updated', newData)
             this.$emit('input', newData);
         },
-        value(newValue) {
-            console.log('a new value',newValue)
-            //Splat the input into the form
-            if (!newValue)
-                this.fieldSelectedIx = -1;
-            this.model = newValue;
+        value: {
+            handler(newValue) {
+                // console.log('a new value', newValue)
+                //Splat the input into the form
+                if (!newValue)
+                    this.fieldSelectedIx = -1;
+                this.model = newValue;
+                this.setbackground({ id: newValue.bgImageID, name: newValue.bgFileName });
+            },
+            immediate: true
         },
     },
-    mounted: function() {
-        //Hook the printing events
-        window.addEventListener('beforeprint', this.printLocalStart);
-        window.addEventListener('afterprint', this.printLocalEnd);
-        console.log('format editor watching for print preview')
+    mounted: function () {
 
     },
     created() {
-        this.model = this.value;
+        // this.model = this.value;
     },
-  beforeDestroy() {
-    console.log(`format editor no longer watching for print preview.`)
-        //Un-hook the printing events
-        window.removeEventListener('beforeprint', this.printLocalStart);
-        window.removeEventListener('afterprint', this.printLocalEnd);
-  }
-    
+    beforeDestroy() {
+    }
+
 });
 </script>
