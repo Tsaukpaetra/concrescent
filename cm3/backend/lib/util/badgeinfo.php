@@ -1924,10 +1924,17 @@ final class badgeinfo
         $result['badge_id_display'] = $result['context_code'] . $result['display_id'];
         $result['qr_data'] = 'CM*' . $result['context_code'] . $result['display_id'] . '*' . $result['uuid'];
         $result['event_id'] = $this->CurrentUserInfo->GetEventId();
-        //Add in the retrieve url
-        $result['retrieve_url'] = $this->FrontendUrlTranslator->GetBadgeLoad($result);
-        //Add in the cart url
-        $result['cart_url'] = $this->FrontendUrlTranslator->GetCartLoad($result);
+        //Only do this if the user is a event admin or this is their own badge
+        if($result['contact_id'] == $this->CurrentUserInfo->GetContactId() 
+        || $this->CurrentUserInfo->HasEventPerm(PermEvent::EventAdmin)){
+            //Add in the retrieve url
+            $result['retrieve_url'] = $this->FrontendUrlTranslator->GetBadgeLoad($result);
+            //Add in the cart url
+            $result['cart_url'] = $this->FrontendUrlTranslator->GetCartLoad($result);
+        } else {
+            $result['retrieve_url'] = $this->FrontendUrlTranslator->routedURL('mybadges?obfusctated');
+            $result['cart_url'] = $this->FrontendUrlTranslator->routedURL('cart?id='. $result['payment_id']);
+        }
 
         if ($includeImageData) {
             $bc = new barcode_generator();
