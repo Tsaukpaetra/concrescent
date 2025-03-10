@@ -787,11 +787,11 @@ abstract class Table
         $sqlWindowing = '';
         if ($limit > -1) {
             $sqlWindowing .= ' LIMIT ' . $limit . ' ';
-        }
 
-        //Skipping?
-        if ($offset > 0) {
-            $sqlWindowing .= ' OFFSET ' . $offset . ' ';
+            //Skipping?
+            if ($offset > 0) {
+                $sqlWindowing .= ' OFFSET ' . $offset . ' ';
+            }
         }
 
         $sqlText = $selectParts . $sqlBody .$sqlGrouping . $sqlHaving . $sqlOrdering . $sqlWindowing ;
