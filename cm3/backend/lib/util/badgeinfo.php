@@ -868,6 +868,7 @@ final class badgeinfo
             if(is_null($col->subSearch)) return;
             $col->subSearch = array_filter($col->subSearch, function ($search) {
                 if(gettype($search) == 'string') return !str_starts_with($search, 'form_responses');
+                return true;
             });
         });
         $g_data = $this->g_badge->Search($g_bv, $g_terms, $orderNoFormResponses, $limit, $offset, $trG, 'b');
