@@ -9,6 +9,12 @@
               :item-key="internalKey"
               class="elevation-1 fill-height"
               :show-expand='showExpand'
+              :show-select='showSelect'
+              :single-select='singleSelect'
+              @item-selected="doEmit('item-selected',$event)"
+              @toggle-select-all="doEmit('toggle-select-all',$event)"
+              :value="value"
+              @input="doEmit('input',$event)"
               @item-expanded="doEmit('item-expanded',$event)"
               :disabled="isExporting"
               :footer-props="{
@@ -391,6 +397,15 @@ export default {
         'dense': {
             type: Boolean
         },
+        'showSelect': {
+            type: Boolean
+        },
+        'singleSelect': {
+            type: Boolean
+        },
+        'value': {
+            type: Array
+        },
     },
     data() {
         return {
@@ -578,6 +593,9 @@ export default {
                     this.tableOptions['page'] = 1;
                 }
 
+                this.doEmit('update:results',results);
+                this.doEmit('update:totalcount',total);
+
                 //If this looks like a badge scan, and we had exactly one result, emit it
                 if (results.length == 1) {
                     let r = results[0];
@@ -709,6 +727,8 @@ export default {
         }, 20),
         tableOptions: {
             handler() {
+                //If server side pagination is disabled, don't ask the server for new data
+                if(this.totalResults != undefined)
                 this.doSearch()
             },
             deep: true,
@@ -716,6 +736,12 @@ export default {
         apiPath() {
             this.doRefreshQuestions();
             this.doSearch();
+        },
+        apiAddParams: {
+            handler() {
+                this.doSearch()
+            },
+            deep: true,
         },
         actionToggles(){
             if(this.actionToggles && this.actionToggles.length >0)

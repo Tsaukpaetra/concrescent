@@ -51,7 +51,7 @@ function expandTpl(template, templateData) { // s0 is the link_template_input
         //console.log('expanding', a[0])
         var v = getValueByPath(templateData, a[1]);
         if (v == undefined) {
-            console.log('object did not have this property', a[0])
+            console.log('object did not have this property', a[0], structuredClone(templateData))
             //v = a[0];
             v = '';
         }

@@ -46,7 +46,8 @@ final class Search
     {
         // Extract the form data from the request body
         $qp = $request->getQueryParams();
-
+        $includePrinted = ($qp['includePrinted'] ?? 'false') == 'true';
+        $allowUnpaid = ($qp['allowUnpaid'] ?? 'false') == 'true';
 
         $result = $this->format->Exists($params['format_id']);
         if ($result === false) {
@@ -69,18 +70,23 @@ final class Search
             return $accumulator;
         }, []);
 
-        $searchTerms = array_map(function ($context_code, $badge_type_ids) {
+        $searchTerms = array_map(function ($context_code, $badge_type_ids) use ($includePrinted, $allowUnpaid) {
             return new SearchTerm('', '', TermType:'OR', subSearch: array(
                 new SearchTerm('context_code', $context_code, JoinedTableAlias:'grp'),
-                new SearchTerm('id', $badge_type_ids, 'IN', JoinedTableAlias:'typ')
+                new SearchTerm('id', $badge_type_ids, 'IN', JoinedTableAlias:'typ'),
+                $includePrinted ? null : new SearchTerm('time_printed','','IS'),
+                $allowUnpaid ? null : new SearchTerm('payment_status','Completed')
             ));
         }, array_keys($applicableBadgeTypesByContext), array_values($applicableBadgeTypesByContext));
 
+        //force disable pagination for this 
+        $pg['limit'] = -1;
+        $pg['offset'] = 0;
         $totalRows = 0;
         $data = $this->badgeinfo->SearchBadges(false, $searchTerms, $pg['order'], $pg['limit'], $pg['offset'], $totalRows);
 
 
-        $response = $response->withHeader('X-Total-Rows', (string)$totalRows);
+        // $response = $response->withHeader('X-Total-Rows', (string)$totalRows);
         // Build the HTTP response
         return $this->responder
             ->withJson($response, $data);

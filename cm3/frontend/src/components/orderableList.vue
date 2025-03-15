@@ -4,10 +4,17 @@
               :loading="loading"
               :headers="headers"
               multi-sort
+              :dense="dense"
               :items="tableResults"
               :item-key="internalKey"
               class="elevation-1 fill-height"
               :show-expand='showExpand'
+              :show-select='showSelect'
+              :single-select='singleSelect'
+              @item-selected="doEmit('item-selected',$event)"
+              @toggle-select-all="doEmit('toggle-select-all',$event)"
+              :value="value"
+              @input="doEmit('input',$event)"
               @item-expanded="doEmit('item-expanded',$event)"
               :search="searchText">
 
@@ -198,6 +205,18 @@ export default {
         'showExport':{
             type: Boolean
         },
+        'dense': {
+            type: Boolean
+        },
+        'showSelect': {
+            type: Boolean
+        },
+        'singleSelect': {
+            type: Boolean
+        },
+        'value': {
+            type: Array
+        },
     },
     data() {
         return {
@@ -261,6 +280,9 @@ export default {
                 this.totalResults = total;
                 this.loading = false;
                 
+                this.doEmit('update:results',results);
+                this.doEmit('update:totalcount',total);
+
                 //If they're on a page that apparently doesn't exist
                 if(results.length == 0 && total != 0){
                     this.tableOptions['page'] = 1;
@@ -353,12 +375,20 @@ export default {
         }, 200),
         tableOptions: {
             handler() {
+                //If server side pagination is disabled, don't ask the server for new data
+                if(this.totalResults != undefined)
                 this.doSearch()
             },
             deep: true,
         },
         apiPath() {
             this.doSearch();
+        },
+        apiAddParams: {
+            handler() {
+                this.doSearch()
+            },
+            deep: true,
         },
         actionToggles(){
             if(this.actionToggles && this.actionToggles.length >0)

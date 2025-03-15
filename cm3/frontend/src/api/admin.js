@@ -85,7 +85,7 @@ export default {
                 }
             })
             .then(function(response) {
-                cb(response.data, parseInt(response.headers['x-total-rows']));
+                cb(response.data, response.headers['x-total-rows'] != undefined ? parseInt(response.headers['x-total-rows']) : undefined);
             })
             .catch(function(error) {
                 if (typeof errorCb != "undefined")

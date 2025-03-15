@@ -38,7 +38,7 @@
         <v-spacer></v-spacer>
     </v-navigation-drawer>
 
-    <v-app-bar app
+    <v-app-bar app class="hideIfPrintHeaderHidden"
                color="appbar"
                dark>
         <v-app-bar-nav-icon @click.stop="drawer = !drawer"></v-app-bar-nav-icon>
@@ -511,34 +511,66 @@ export default {
 @media print {
     :root {
         --printing-visibility: visible;
-        --printing-height: initial;
+        /* --printing-height: initial; */
         --printing-display: unset;
     }
 
     :root:has(.printing) {
         --printing-visibility: hidden;
-        --printing-height: 0;
-        --printing-display: none
+        /* --printing-height: 0; */
+        --printing-display: none;
+    overflow: auto !important;
+    height: auto; 
+    visibility: collapse;
     }
 
-    body *:where(:not(.printing)) {
-        visibility: var(--printing-visibility);
+    body *:where(:not(.printing):has(.printing)) {
+        visibility: collapse;
         /* display: var(--printing-display); */
-        height: var(--printing-height);
+        /* height: var(--printing-height); */
         background: none;
+    }
+    :root:has(.printHeaderHidden) .hideIfPrintHeaderHidden{
+        /* --printing-visibility: hidden; */
+        /* --printing-height: 0; */
+        /* --printing-display: none; */
+        visibility: collapse;
+        display: none;
+    }
+    
+    :root:has(.printHeaderHidden) .v-main{
+        padding: 0px !important;
+    }
+
+    body:has(.v-dialog--active.v-dialog--fullscreen .printing) .v-main{
+        display: none;
+    }
+    div.v-dialog__content--active:has(.v-dialog--active.v-dialog--fullscreen .printing){
+        position: relative !important;
+    }
+    div.v-dialog--active.v-dialog--fullscreen:has( .printing){
+        position: relative !important;
     }
 
     .printing,
     .printing * {
         visibility: visible !important;
         height: auto;
+        /* --printing-height: initial; */
+        --printing-display: unset;
+        --printing-visibility: visible;
         /* overflow: visible !important; */
+        display: revert;
     }
 
     .printing {
         position: absolute;
         left: 0;
         top: 0;
+    }
+
+    .page-break:not(:last-child){
+        break-after: page;
     }
 
     #app {

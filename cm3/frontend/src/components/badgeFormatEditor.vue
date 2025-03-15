@@ -192,9 +192,11 @@
     <v-dialog v-model="printPanel"
                             fullscreen
                             transition="none">
-        <v-card :class="{ 'printing': printPanel }">
-            <badgeFullRender :format="model"
-                                :badge="badgeData" />
+        <v-card :class="{ 'printing': printPanel, printHeaderHidden: true }">
+            <v-sheet color="white" class="mx-auto page-break" elevation="4">
+                <badgeFullRender :format="model"
+                                    :badge="badgeData" />
+            </v-sheet>
         </v-card>
     </v-dialog>
 </v-container>
