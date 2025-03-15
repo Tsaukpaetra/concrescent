@@ -1915,10 +1915,14 @@ final class badgeinfo
                 break;
             case 'Fandom Name Only':
                 $result['only_name'] = $result['fandom_name']??'';
+                $result['large_name'] = '';
+                $result['small_name'] = '';
                 $result['display_name'] = $result['fandom_name']??'';
                 break;
             case 'Real Name Only':
                 $result['only_name'] = $result['real_name'];
+                $result['large_name'] = '';
+                $result['small_name'] = '';
                 $result['display_name'] = $result['real_name'];
                 break;
         }
