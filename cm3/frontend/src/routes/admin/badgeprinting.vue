@@ -38,7 +38,7 @@
 
                     <v-divider></v-divider>
 
-                    <v-stepper-step step="2" edit-icon="$vuetify.icons.complete" :editable='fSelected.id != undefined'>
+                    <v-stepper-step step="2" edit-icon="$vuetify.icons.complete" :editable='fSelected.id != undefined' :complete="printSelected.length > 0">
                         Select badges
                     </v-stepper-step>
 
@@ -71,29 +71,60 @@
                             :RemoveHeaders="badgeSelectRemoveHeaders" :actions="ptActions"
                             :footerActions="ptFooterActions" v-model="printSelected" @update:results="receiveResults"
                             @selectAllOfType="selectAllOfType" />
-                        {{ JSON.stringify(printSelected) }}
                     </v-stepper-content>
                     <v-stepper-content step="3">
-                        <v-container >
-                            <v-row>
+                        <v-container>
+                            <v-row v-show="!printLocalDone">
                                 <v-col cols="3">
                                     <v-text-field placeholder="This station" label="Printing to station"
-                                    v-model="printToStation" clearable persistent-placeholder
-                                    ></v-text-field>
+                                        v-model="printToStation" clearable persistent-placeholder></v-text-field>
                                 </v-col>
                                 <v-col cols="7">
                                 </v-col>
                                 <v-col cols="2">
-                                    <v-btn @click="printPanel = !printPanel">Start Printing</v-btn>
+                                    <v-btn @click="enqueueBadgePrintingBatch">Start Printing</v-btn>
+
+                                </v-col>
+                            </v-row>
+                            <v-row v-show="printLocalDone">
+                                <v-col cols="3">
+                                    Select any that failed to print
+                                </v-col>
+                                <v-col cols="7">
+                                    <v-btn @click="printPanel = true">Retry Printing {{ printSelectedAgain.length ? 'Selected' : 'All' }}</v-btn>
+                                </v-col>
+                                <v-col cols="2">
+                                    <v-btn @click="completePrintingBatch">Complete Printing</v-btn>
 
                                 </v-col>
                             </v-row>
                             <v-row class="printing printHeaderHidden">
-                                <v-col class="d-flex flex-wrap justify-center">
-                                    <v-sheet color="white" class="ma-2" elevation="4"
-                                        v-for="selectedBadge in printSelected" :key="selectedBadge.uuid">
-                                        <badgeFullRender :format="fSelected" :badge="selectedBadge" />
-                                    </v-sheet>
+                                <v-col>
+                                    <v-item-group v-model="printSelectedAgain" multiple  class="d-flex flex-wrap justify-center">
+                                        <v-item v-slot="{ active, toggle }"  v-for="selectedBadge in printSelected" :key="selectedBadge.uuid">
+                                            
+                                            <v-sheet color="white" class="ma-2" elevation="2"  @click="toggle"
+                                            >
+                                            <v-container>
+                                                <v-row>
+                                                    Status: {{ badgePrintJobStatus(selectedBadge) }}
+                                                    <v-spacer></v-spacer>
+                                                    <v-btn icon v-show="printLocalDone">
+                                                        <v-icon>
+                                                            {{ active ? 'mdi-refresh' : 'mdi-checkbox-blank-outline' }}
+                                                        </v-icon>
+                                                    </v-btn>
+                                                </v-row>
+                                                    
+                                                <v-sheet color="white" class="ma-2" elevation="4">
+                                                    <badgeFullRender :format="fSelected" :badge="selectedBadge" />
+                                                </v-sheet>
+                                            </v-container>
+                                            
+                                            </v-sheet>
+
+                                        </v-item>
+                                    </v-item-group>
                                 </v-col>
                             </v-row>
                         </v-container>
@@ -101,7 +132,7 @@
                             transition="none">
                             <v-card v-if="printPanel" :class="{ 'printing': printPanel, printHeaderHidden: true }">
                                 <v-sheet color="white" class="mx-auto page-break" elevation="4"
-                                    v-for="selectedBadge in printSelected" :key="selectedBadge.uuid">
+                                    v-for="selectedBadge in badgesForPrint" :key="selectedBadge.uuid">
                                     <badgeFullRender :format="fSelected" :badge="selectedBadge" />
                                 </v-sheet>
                             </v-card>
@@ -224,10 +255,12 @@ export default {
         printTypes: [],
         printAvailable: [],
         printSelected: [],
-        printQueueIDs: [],
+        printJobStatuses:{},
+        printSelectedAgain: [],
         printToStation: '',
         printPanel: false,
-
+        printLocalDone: false,
+        printQueuePollTimer: 0,
 
         queueStateSearch: '',
         queueRemoveHeaders: [
@@ -329,6 +362,10 @@ export default {
             });
             return result;
         },
+        badgesForPrint: function(){
+            if(!this.printLocalDone || this.printSelectedAgain.length ==  0) return this.printSelected;
+            return this.printSelectedAgain.map(x=> this.printSelected[x]);
+        },
         queueStates: function () {
             return ['', ...this.jPrintStates];
         }
@@ -408,6 +445,100 @@ export default {
             ))
 
         },
+        enqueueBadgePrintingBatch: function () {
+            console.log('enqueue selected badges for batch print', structuredClone(this.printSelected));
+            this.loading = true;
+            admin.genericPost(this.authToken, 'Badge/Format/' + this.fSelected.id + '/Badges/BatchPrint', {
+                overridePaymentRequirement: this.badgeSelectParams.allowUnpaid,
+                meta: {
+                    stationName: this.printToStation || this.$store.state.station.servicePrintJobsAs || 'Batch'
+                },
+                badges: this.printSelected.map(x => {return { uuid : x.uuid, context_code : x.context_code, id: x.id }})
+            },
+                (result) => {
+                    for (var ix = 0; ix < this.printSelected.length; ix++) {
+                        var cur = this.printSelected[ix];
+                        if (result['failed'][cur.uuid]) {
+                            console.log('noting batch submit failure', cur.uuid, result['failed'][cur.uuid])
+                            this.$set(cur, 'failed', result['failed'][cur.uuid])
+                        } else {
+                            this.$set(this.printSelected, ix, result['enqueued'][cur.uuid])
+                            this.$set(this.printJobStatuses, result['enqueued'][cur.uuid].printjob_id,'Queued')
+                        }
+                    }
+
+                    //If we're doing the printing, trigger the print panel
+                    if (this.printToStation == '')
+                        this.printPanel = true;
+                    else
+                        this.printLocalDone = true;
+
+                    this.loading = false;
+                }, (err) => {
+                    this.loading = false;
+                    console.log('failed enqueue', err)
+                })
+        },
+        updateBadgePrintingBatch: function(newState, result){
+            console.log('enqueue selected badges for batch print', structuredClone(this.printSelected));
+            this.loading = true;
+            admin.genericPatch(this.authToken, 'Badge/Format/' + this.fSelected.id + '/Badges/BatchPrint', {
+                badges: this.badgesForPrint.map(x => {return { uuid : x.uuid, context_code : x.context_code, id: x.id ,
+                    printjob_id: x.printjob_id,
+                    printjob_state: newState,
+                    printjob_result: result
+                }}),
+            }, (result) => {
+                this.loading = false;
+
+            }, (err) =>  {
+                this.loading = false;
+
+            });
+        },
+        retryPrintingBatch: function(){
+            
+            //If we're doing the printing, just trigger the print panel
+            if (this.printToStation == '') {                
+                this.printPanel = true;
+            } else {
+                //Otherwise, just update all the selected ones to be Queued (again)
+                this.updateBadgePrintingBatch('Queued');
+            }
+        },
+        completePrintingBatch: function(){
+            //Signal completion if we're local. Remote automatically completes the jobs
+             if(this.printToStation == '')
+                this.updateBadgePrintingBatch('Completed', 'Printed locally')
+            //Clean up everything and go back to the badge selection step
+            this.printLocalDone = false;
+            this.printSelectedAgain = [];
+            this.printSelected = [];
+            this.printJobStatuses = {};
+            this.printStage = 2;
+
+        },
+        badgePrintGetJobStatus: function(){
+
+            admin.genericPost(this.authToken, 'Badge/Format/' + this.fSelected.id + '/Badges/BatchPrintRefresh', 
+                this.badgesForPrint.map(x => x.printjob_id)
+            , (result) => {
+                result.forEach(job => {
+                    this.$set(this.printJobStatuses,job.id, job.state)
+                });
+                
+            }, (err) =>  {
+                console.log('Error refreshing jobs', err)
+                
+            });
+        },
+        badgePrintJobStatus: function(badge){
+            if (badge.printjob_id == undefined){
+                return 'Not Queued';                    
+            }
+            var result = 'Print job ' + badge.printjob_id + ': '  + this.printJobStatuses[badge.printjob_id];
+            return result;
+        },
         enqueueBadgeForPrinting: function (selectedBadge) {
             console.log('enqueue single badge for batch print from grid', selectedBadge);
             this.loading = true;
@@ -460,6 +591,33 @@ export default {
         $route() {
             this.$nextTick(this.checkPermission);
         },
+        printPanel: async function (shown) {
+            //This should only happen when locally printing anyways
+            if (shown == false) {
+                this.printLocalDone = true;
+                this.printSelectedAgain = [];
+            } else {
+                await this.$nextTick();
+                //Print and close
+                setTimeout(() => {
+                    window.print();
+                    this.printPanel = false;
+                }, 430);
+                //Also inform the batched that w're printing
+                this.updateBadgePrintingBatch('InProgress');
+            }
+        },
+        printLocalDone: function(isDone){
+            if(isDone){
+                //Start up the queue watcher
+                this.printQueuePollTimer = setInterval(() => this.badgePrintGetJobStatus(), 5000);
+
+            } else {
+                //Stop it
+                clearInterval(this.printQueuePollTimer);
+                this.printQueuePollTimer = 0;
+            }
+        }
 
     },
     created() {
@@ -481,6 +639,11 @@ export default {
             title: 'Printing Queue'
         },
         ]);
+    },
+    beforeDestroy: function(){        
+        console.log('Shutting down local Batch Print Daemon')
+        clearInterval(this.printQueuePollTimer);
+        this.printPanel = false;
     }
 };
 </script>

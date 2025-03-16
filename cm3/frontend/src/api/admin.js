@@ -59,6 +59,20 @@ export default {
                     errorCb(response.response.data);
             })
     },
+    genericPatch(token, path, data, cb, errorCb) {
+        axios.patch(global.config.apiHostURL + path, data, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            })
+            .then(function(response) {
+                cb(response.data);
+            })
+            .catch(function(error) {
+                if (typeof errorCb != "undefined")
+                    errorCb(response.response.data);
+            })
+    },
     genericDelete(token, path, cb, errorCb) {
         axios.delete(global.config.apiHostURL + path, {
                 headers: {

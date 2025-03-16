@@ -3,6 +3,7 @@
 namespace CM3_Lib\models\badge;
 
 use CM3_Lib\database\Column as cm_Column;
+use CM3_Lib\database\ColumnIndex;
 
 class printjob extends \CM3_Lib\database\Table
 {
@@ -30,8 +31,8 @@ class printjob extends \CM3_Lib\database\Table
             'date_modified'	=> new cm_Column('TIMESTAMP', null, false, false, false, false, 'CURRENT_TIMESTAMP', false, 'ON UPDATE CURRENT_TIMESTAMP'),
 
         );
-        $this->IndexDefs = array();
-        $this->PrimaryKeys = array('id'=>false);
+        $this->IndexDefs = array(new ColumnIndex(['format_id'=>false,'state'=>false,'meta'=>false]));
+        $this->PrimaryKeys = array('id'=>true);
         $this->DefaultSearchColumns = array('format_id','meta','state');
     }
 }

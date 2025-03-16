@@ -80,7 +80,7 @@ final class Search
         }
 
         // Invoke the Domain with inputs and retain the result
-        $pg = $this->badgeinfo->parseQueryParamsPagination($qp);
+        $pg = $this->badgeinfo->parseQueryParamsPagination($qp, defaultSortDesc:true);
         $totalRows = 0;
         $data = $this->printjob->Search($view, $whereParts, $pg['order'], $pg['limit'], $pg['offset'], $totalRows);
 

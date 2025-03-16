@@ -41,6 +41,12 @@ return function (App $app, $container) {
             $printPerm = $accessPerm->withAllowedPerm(PermEvent::Badge_Print());
             $app->get('', \CM3_Lib\Action\Badge\Format\Badges\Search::class)
             ->add($printPerm);
+            $app->post('/BatchPrint', \CM3_Lib\Action\Badge\Format\Badges\PostBatch::class)
+            ->add($printPerm);
+            $app->patch('/BatchPrint', \CM3_Lib\Action\Badge\Format\Badges\PatchBatch::class)
+            ->add($printPerm);
+            $app->post('/BatchPrintRefresh', \CM3_Lib\Action\Badge\Format\Badges\PostBatchRefresh::class)
+            ->add($printPerm);
             $app->post('/{context_code}/{badge_id}', \CM3_Lib\Action\Badge\Format\Badges\PostPrint::class)
             ->add($printPerm);
         }
