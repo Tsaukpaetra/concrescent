@@ -511,13 +511,10 @@ export default {
 @media print {
     :root {
         --printing-visibility: visible;
-        /* --printing-height: initial; */
         --printing-display: unset;
     }
-
     :root:has(.printing) {
         --printing-visibility: hidden;
-        /* --printing-height: 0; */
         --printing-display: none;
     overflow: auto !important;
     height: auto; 
@@ -526,14 +523,9 @@ export default {
 
     body *:where(:not(.printing):has(.printing)) {
         visibility: collapse;
-        /* display: var(--printing-display); */
-        /* height: var(--printing-height); */
         background: none;
     }
     :root:has(.printHeaderHidden) .hideIfPrintHeaderHidden{
-        /* --printing-visibility: hidden; */
-        /* --printing-height: 0; */
-        /* --printing-display: none; */
         visibility: collapse;
         display: none;
     }
@@ -549,17 +541,15 @@ export default {
         position: relative !important;
     }
     div.v-dialog--active.v-dialog--fullscreen:has( .printing){
-        position: relative !important;
+        position: static !important;
     }
 
     .printing,
     .printing * {
         visibility: visible !important;
         height: auto;
-        /* --printing-height: initial; */
         --printing-display: unset;
         --printing-visibility: visible;
-        /* overflow: visible !important; */
         display: revert;
     }
 
