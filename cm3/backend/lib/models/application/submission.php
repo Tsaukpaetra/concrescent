@@ -14,8 +14,8 @@ class submission extends \CM3_Lib\database\Table
             'id' 			=> new cm_Column('INT', null, false, true, false, true, null, true),
             'badge_type_id'		=> new cm_Column('INT', null, false),
             'contact_id'	=> new cm_Column('BIGINT', null, false, false, false, false),
-            'uuid_raw'		=> new cm_Column('BINARY', 16, false, false, true, false, '(UUID_TO_BIN(UUID()))'),
-            'uuid'			=> new cm_Column('CHAR', 36, null, false, false, false, null, false, 'GENERATED ALWAYS as (BIN_TO_UUID(`uuid_raw`)) VIRTUAL'),
+            'uuid_raw'		=> new cm_Column('BINARY', 16, false, false, true, false, '(UNHEX(REPLACE(UUID(),\'-\',\'\')))'),
+            'uuid'			=> new cm_Column('CHAR', 36, null, false, false, false, null, false, 'GENERATED ALWAYS as (LOWER(CONCAT_WS(\'-\',SUBSTR(HEX(`uuid_raw`), 1, 8),SUBSTR(HEX(`uuid_raw`), 9, 4),SUBSTR(HEX(`uuid_raw`), 13, 4),SUBSTR(HEX(`uuid_raw`), 17, 4),SUBSTR(HEX(`uuid_raw`), 21)))) VIRTUAL'),
             'display_id'	=> new cm_Column('INT', null, true),
             'hidden'        => new cm_Column('BOOLEAN', null, false, defaultValue: 'false'),
 

@@ -62,7 +62,7 @@ class Login
         if (!password_verify($data['password'], $founduser['password'])) {
             //Nope!
             return $this->responder
-                ->withJson($response, array('error'=>array('message'=>'Unable to log in with supplied credentials.')))
+                ->withJson($response, array('error'=>array('message'=>'Unable to log in with supplied credentials!')))
                 ->withStatus(401);
         }
 

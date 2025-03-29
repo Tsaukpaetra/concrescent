@@ -173,7 +173,7 @@ final class badgevalidator
     {
         //TODO: Test for things like badge upgrades for the start_date and end_date?
         if(!in_array($item['application_status']??'NotStarted',['Accepted','PendingAcceptance'] )){
-            if(!$this->ignoreBadgeTypeAvailability){
+            if(!$this->ignoreBadgeTypeAvailability && $item['badge_type_id'] != ($item['existing']['badge_type_id']??0)){
                 if (isset($badgetypeData['start_date']) && date_create() < date_create($badgetypeData['start_date'])) {
                     $v->addColumnValidator('badge_type_id', v::alwaysInvalid()->setTemplate('badge_type_id not yet available'), true);
                 }

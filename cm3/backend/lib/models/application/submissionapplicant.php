@@ -16,8 +16,8 @@ class submissionapplicant extends \CM3_Lib\database\Table
             'contact_id'	=> new cm_Column('BIGINT', null, false, false, false, false),
             'display_id'	=> new cm_Column('INT', null, true),
             'hidden'        => new cm_Column('BOOLEAN', null, false, defaultValue: 'false'),
-            'uuid_raw'		=> new cm_Column('BINARY', 16, false, false, true, false, '(UUID_TO_BIN(UUID()))'),
-            'uuid'			=> new cm_Column('CHAR', 36, null, false, false, false, null, false, 'GENERATED ALWAYS as (BIN_TO_UUID(`uuid_raw`)) VIRTUAL'),
+            'uuid_raw'		=> new cm_Column('BINARY', 16, false, false, true, false, '(UNHEX(REPLACE(UUID(),\'-\',\'\')))'),
+            'uuid'			=> new cm_Column('CHAR', 36, null, false, false, false, null, false, 'GENERATED ALWAYS as (LOWER(CONCAT_WS(\'-\',SUBSTR(HEX(`uuid_raw`), 1, 8),SUBSTR(HEX(`uuid_raw`), 9, 4),SUBSTR(HEX(`uuid_raw`), 13, 4),SUBSTR(HEX(`uuid_raw`), 17, 4),SUBSTR(HEX(`uuid_raw`), 21)))) VIRTUAL'),
             'real_name'		=> new cm_Column('VARCHAR', '500', false),
             'fandom_name'	=> new cm_Column('VARCHAR', '255', true),
             'name_on_badge'	=> new cm_Column(
