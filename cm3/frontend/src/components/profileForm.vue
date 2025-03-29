@@ -200,6 +200,19 @@ export default {
             this.$emit('input', newData);
         },
         value(newValue) {
+            if(newValue == undefined) {
+                this.contactSubscribePromotions = '';
+                this.contactEmail = '';
+                this.contactName = '';
+                this.contactPhone = '';
+                this.contactStreet1 = '';
+                this.contactStreet2 = '';
+                this.contactCity = '';
+                this.contactState = '';
+                this.contactPostalCode = '';
+                this.contactCountry = '';
+                return;
+            }
             //Splat the input into the form
             this.contactSubscribePromotions = newValue.allow_marketing;
             this.contactEmail = newValue.email_address;
