@@ -22,6 +22,8 @@ abstract class Table
     public bool $debugThrowBeforeSelect = false;
     public bool $allowSettingOnUpdatedColumns = false;
 
+    private array $boolColumns = [];
+
     //Sets up table definitions above
     abstract protected function setupTableDefinitions(): void;
 
@@ -30,6 +32,10 @@ abstract class Table
         $this->cm_db = $cm_db;
         $this->setupTableDefinitions();
         $this->CheckTable();
+        //Set up the boolcolumns
+        $this->boolColumns = array_keys( array_filter($this->ColumnDefs, function(Column $col){
+            return str_starts_with(strtolower($col->dbType),'bool');
+        }));
     }
 
     public function CheckTable(bool $validateSchema = false): bool
@@ -108,6 +114,11 @@ abstract class Table
                 if ($columnDef->isAutoIncrement && $isNew) {
                     $errors[] ="Column $columnName was given a value despite being AutoIncrement, and we're not supposed to.";
                     $failCheck = true;
+                }
+                if (in_array($columnName, $this->boolColumns)) {
+                    //Ensure a 'boolean' value is actually a tinyint
+                    if (isset($entrydata[$columnName]))
+                        $entrydata[$columnName] = $entrydata[$columnName] ? 1 : 0;
                 }
                 if ($isNew || !isset($this->PrimaryKeys[$columnName])) {
                     $paramNames[] = $columnName;
