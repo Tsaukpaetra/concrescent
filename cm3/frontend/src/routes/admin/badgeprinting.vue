@@ -68,7 +68,7 @@
                         <badgeSearchList v-if="fSelected.id" show-select
                             :apiPath="'Badge/Format/' + fSelected.id + '/Badges'" internalKey="uuid"
                             :apiAddParams="badgeSelectParams" :AddHeaders="badgeSelectHeaders"
-                            :RemoveHeaders="badgeSelectRemoveHeaders" :actions="ptActions"
+                            :RemoveHeaders="badgeSelectRemoveHeaders" :actions="ptActions" group-by="badge_type_name"
                             :footerActions="ptFooterActions" v-model="printSelected" @update:results="receiveResults"
                             @selectAllOfType="selectAllOfType" />
                     </v-stepper-content>

@@ -16,7 +16,11 @@
               :value="value"
               @input="doEmit('input',$event)"
               @item-expanded="doEmit('item-expanded',$event)"
-              :search="searchText">
+              :search="searchText"
+            :group-by="groupBy"  @update:group-by="$emit('update:group-by', $event)"
+            :group-desc="groupDesc"
+            :show-group-by="showwGroupBy"
+            >
 
     <template v-slot:top="">
         <v-text-field v-model="searchText"
@@ -200,6 +204,15 @@ export default {
         },
         'value': {
             type: Array
+        },
+        'groupBy' :{
+            type: String
+        },
+        'groupDesc' :{
+            type: Boolean
+        },
+        'showwGroupBy' :{
+            type: Boolean
         },
     },
     data() {

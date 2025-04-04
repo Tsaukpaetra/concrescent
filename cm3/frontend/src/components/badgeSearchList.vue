@@ -20,6 +20,9 @@
               :footer-props="{
                 itemsPerPageOptions: [5,10,15,25,50,100,-1]
                 }"
+            :group-by="groupBy"  @update:group-by="$emit('update:group-by', $event)"
+            :group-desc="groupDesc"
+            :show-group-by="showwGroupBy"
               >
 
     <template v-slot:top="">
@@ -405,6 +408,15 @@ export default {
         },
         'value': {
             type: Array
+        },
+        'groupBy' :{
+            type: String
+        },
+        'groupDesc' :{
+            type: Boolean
+        },
+        'showwGroupBy' :{
+            type: Boolean
         },
     },
     data() {
