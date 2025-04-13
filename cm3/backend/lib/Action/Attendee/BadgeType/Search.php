@@ -64,6 +64,7 @@ final class Search
               'display_order',
               'name',
               'price',
+              'active',
               'quantity',
               'start_date',
               'end_date',

@@ -5,6 +5,7 @@
             :loading="loading"
             :true-value="1"
             :false-value="0"
+            @change="onchange"
             ></v-switch>
 </template>
 
@@ -24,16 +25,14 @@ export default {
     },
     methods: {
 
-    },
-    watch: {
-        currentValue: function(newValue){
+        onchange: function(newValue){
             this.loading = true;
             this.$emit('input',newValue);
         },
+    },
+    watch: {
         value: {
             handler: function(newValue) {
-                console.log('new value received', newValue)
-                // this.payment_id = newValue.payment_id;
                 this.currentValue = newValue;
                 this.loading= false;
             },

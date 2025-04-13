@@ -62,7 +62,7 @@ final class Search
 
         // Invoke the Domain with inputs and retain the result
         $data = $this->badgetype->Search(new View([
-            'id','name','price','quantity','base_applicant_count','dates_available',
+            'id','name','price','active','quantity','base_applicant_count','dates_available',
             new SelectColumn('quantity_sold', EncapsulationFunction: 'ifnull(?,0)', Alias: 'quantity_sold', JoinedTableAlias: 'q'),
             new SelectColumn('quantity_sold', EncapsulationFunction: 'quantity - ifnull(?,0)', Alias: 'quantity_remaining', JoinedTableAlias: 'q')
 

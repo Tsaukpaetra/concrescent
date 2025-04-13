@@ -56,7 +56,7 @@ final class Search
         $totalRows = 0;
 
         // Invoke the Domain with inputs and retain the result
-        $data = $this->addon->Search(array(), $whereParts, $pg['order'], $pg['limit'], $pg['offset'], $totalRows);
+        $data = $this->addon->Search(['id','name','price','active','quantity','dates_available'], $whereParts, $pg['order'], $pg['limit'], $pg['offset'], $totalRows);
 
         $response = $response->withHeader('X-Total-Rows', (string)$totalRows);
 

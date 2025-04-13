@@ -165,7 +165,11 @@
         <v-tab-item value="2">
             <orderableList :apiPath="'Application/' + context_code +'/BadgeType'" :AddHeaders="btAddHeaders"
                 :actions="btActions" :footerActions="btFooterActions" :isEditingItem="btDialog" @edit="editBadgeType"
-                @create="createBadgeType" />
+                @create="createBadgeType" >
+                <template v-slot:[`item.active`]="{ item }">
+                    <cell-toggle v-model="item.active" @input="tSetActive(item.id, $event)"></cell-toggle>
+                </template>
+            </orderableList>
 
             <v-dialog v-model="btDialog" scrollable>
 
@@ -198,6 +202,9 @@
                     {{item.is_percentage ? "":"$"}}
                     {{item.discount}}
                     {{item.is_percentage ? "%":""}}
+                </template>
+                <template v-slot:[`item.active`]="{ item }">
+                    <cell-toggle v-model="item.active" @input="pSetActive(item.id, $event)"></cell-toggle>
                 </template>
                 <template v-slot:expanded-item="{ headers, item }">
                     <td :colspan="headers.length">
@@ -251,6 +258,9 @@
                     {{item.is_percentage ? "":"$"}}
                     {{item.discount}}
                     {{item.is_percentage ? "%":""}}
+                </template>
+                <template v-slot:[`item.active`]="{ item }">
+                    <cell-toggle v-model="item.active" @input="aSetActive(item.id, $event)"></cell-toggle>
                 </template>
 
                 <template v-slot:expanded-item="{ headers, item }">
@@ -328,6 +338,7 @@ import formQuestionEditList from '@/components/formQuestionEditList.vue';
 import editBadgeAdmin from '@/components/editBadgeAdmin.vue';
 import importWizard from '@/components/importWizard.vue';
 import cellAssignments from '@/components/datagridcell/cellAssignments.vue';
+import cellToggle from '@/components/datagridcell/toggleValue.vue';
 
 export default {
     components: {
@@ -341,6 +352,7 @@ export default {
         editBadgeAdmin,
         importWizard,
         cellAssignments,
+        cellToggle,
     },
     props: [
         'subTabIx'
@@ -658,6 +670,17 @@ export default {
                 that.loading = false;
             })
         },
+        tSetActive: function (id, active) {
+            this.loading = true;
+            var url = 'Application/' + this.context_code + '/BadgeType/' + id;
+            console.log("Saving badge type active state", id, active)
+            admin.genericPost(this.authToken, url, { active }, (result) => {
+                this.btDialog = false;
+                this.loading = false;
+            }, () => {
+
+            })
+        },
         createDepartment: function() {
             this.dDialog = true;
             this.dSelected = {};
@@ -721,6 +744,17 @@ export default {
             this.pEdit = true;
             this.pSelected = {};
         },
+        pSetActive: function (id, active) {
+            this.loading = true;
+            var url = 'Application/' + this.context_code + '/PromoCode/' + id;
+            console.log("Saving PromoCode active state", id, active)
+            admin.genericPost(this.authToken, url, { active }, (result) => {
+                this.pEdit = false;
+                this.loading = false;
+            }, () => {
+
+            })
+        },
 
         editAddon: function(selectedAddon) {
             console.log(selectedAddon);
@@ -753,6 +787,17 @@ export default {
         createAddon: function() {
             this.aEdit = true;
             this.aSelected = {};
+        },
+        aSetActive: function (id, active) {
+            this.loading = true;
+            var url = 'Application/' + this.context_code + '/Addon/' + id;
+            console.log("Saving badge type active state", id, active)
+            admin.genericPost(this.authToken, url, { active }, (result) => {
+                this.aEdit = false;
+                this.loading = false;
+            }, () => {
+
+            })
         },
         editSubmissionFromAddon: function(selectedSubmission) {
             console.log('edit submission from addon grid', selectedSubmission);

@@ -52,7 +52,7 @@ final class Search
         $pg = $this->badgeinfo->parseQueryParamsPagination($qp, 'code');
         $totalRows = 0;
         // Invoke the Domain with inputs and retain the result
-        $data = $this->promocode->Search(array(), $whereParts, $pg['order'], $pg['limit'], $pg['offset'], $totalRows);
+        $data = $this->promocode->Search(['id','code','active','discount','quantity','dates_available'], $whereParts, $pg['order'], $pg['limit'], $pg['offset'], $totalRows);
 
         $response = $response->withHeader('X-Total-Rows', (string)$totalRows);
 

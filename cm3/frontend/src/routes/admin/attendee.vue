@@ -68,7 +68,11 @@
                        :footerActions="btFooterActions"
                        :isEditingItem="btDialog"
                        @edit="editBadgeType"
-                       @create="createBadgeType" />
+                       @create="createBadgeType" >
+            <template v-slot:[`item.active`]="{ item }">
+                <cell-toggle v-model="item.active" @input="tSetActive(item.id, $event)"></cell-toggle>
+            </template>
+        </orderableList>
 
         <v-dialog v-model="btDialog"
                   scrollable
@@ -110,6 +114,9 @@
                 {{item.is_percentage ? "":"$"}}
                 {{item.discount}}
                 {{item.is_percentage ? "%":""}}
+            </template>
+            <template v-slot:[`item.active`]="{ item }">
+                <cell-toggle v-model="item.active" @input="pSetActive(item.id, $event)"></cell-toggle>
             </template>
             <template v-slot:expanded-item="{ headers, item }">
                 <td :colspan="headers.length">
@@ -177,6 +184,9 @@
                 {{item.is_percentage ? "":"$"}}
                 {{item.discount}}
                 {{item.is_percentage ? "%":""}}
+            </template>
+            <template v-slot:[`item.active`]="{ item }">
+                <cell-toggle v-model="item.active" @input="aSetActive(item.id, $event)"></cell-toggle>
             </template>
             <template v-slot:expanded-item="{ headers, item }">
                 <td :colspan="headers.length">
@@ -256,6 +266,7 @@ import promoCodeForm from '@/components/promoCodeForm.vue';
 import addonTypeForm from '@/components/addonTypeForm.vue';
 import formQuestionEditList from '@/components/formQuestionEditList.vue';
 import editBadgeAdmin from '@/components/editBadgeAdmin.vue';
+import cellToggle from '@/components/datagridcell/toggleValue.vue';
 
 export default {
     components: {
@@ -266,7 +277,8 @@ export default {
         promoCodeForm,
         addonTypeForm,
         formQuestionEditList,
-        editBadgeAdmin
+        editBadgeAdmin,
+        cellToggle
     },
     props: [
         'subTabIx'
@@ -499,6 +511,17 @@ export default {
                 that.loading = false;
             })
         },
+        tSetActive: function (id, active) {
+            this.loading = true;
+            var url = 'Attendee/BadgeType/' + id;
+            console.log("Saving badge type active state", id, active)
+            admin.genericPost(this.authToken, url, { active }, (result) => {
+                this.btDialog = false;
+                this.loading = false;
+            }, () => {
+
+            })
+        },
         editPromoCode: function(selectedPromoCode) {
             console.log(selectedPromoCode);
             let that = this;
@@ -530,6 +553,17 @@ export default {
         createPromoCode: function() {
             this.pEdit = true;
             this.pSelected = {};
+        },
+        pSetActive: function (id, active) {
+            this.loading = true;
+            var url = 'Attendee/PromoCode/' + id;
+            console.log("Saving promocode active state", id, active)
+            admin.genericPost(this.authToken, url, { active }, (result) => {
+                this.pEdit = false;
+                this.loading = false;
+            }, () => {
+
+            })
         },
 
         editAddon: function(selectedAddon) {
@@ -563,6 +597,17 @@ export default {
         createAddon: function() {
             this.dEdit = true;
             this.dSelected = {};
+        },
+        aSetActive: function (id, active) {
+            this.loading = true;
+            var url = 'Attendee/Addon/' + id;
+            console.log("Saving addon active state", id, active)
+            admin.genericPost(this.authToken, url, { active }, (result) => {
+                this.aEdit = false;
+                this.loading = false;
+            }, () => {
+
+            })
         },
         editBadgeFromAddon: function(selectedBadge) {
             console.log(selectedBadge);
