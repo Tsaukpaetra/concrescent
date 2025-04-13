@@ -36,6 +36,7 @@
                                  dense
                                  :actions="[{name:'select',text:'Select'}]"
                                  :isEditingItem="checkinStage > 1"
+                                 internalKey="uuid"
                                  @select="selectBadge"
                                  @qrmatch="selectBadge">
                     <template v-slot:[`item.contact_email_address`]="{ item }">
