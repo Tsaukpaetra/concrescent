@@ -296,7 +296,7 @@ export default {
     data() {
         return {
             step: 0,
-            skipEmitOnce: false,
+            loading: false,
             reviewDialog: false,
             editAssignment: null,
             validGenInfo: false,
@@ -681,6 +681,9 @@ export default {
     watch: {
         selectedbadge(val) {
             //Check if we can
+            if(this.loading){
+                return;
+            }
             var newId = typeof this.badges[val] === 'undefined' ? this.model.badge_type_id : this.badges[val].id;
             if (newId != null) {
                 this.model.badge_type_id = newId;
@@ -690,15 +693,19 @@ export default {
 
         model: {
             handler(newData) {
+                if(this.loading){
+                    return;
+                }
                 newData.display_id = nullIfEmptyOrZero(newData.display_id);
                 // console.log('emitting model', structuredClone(newData));
                 this.$emit('input', newData);
             },
             deep: true,
-            immediate: true
+            // immediate: true
         },
         value: {
             async handler(newValue) {
+                this.loading = true;
                 this.model = newValue;
                 //If we're being reset, just stop here
                 if (newValue.context_code == undefined) {
@@ -709,11 +716,13 @@ export default {
                 this.badgeGenInfoData.name_on_badge = newValue.name_on_badge;
                 this.badgeGenInfoData.date_of_birth = newValue.date_of_birth;
                 await this.$store.dispatch('products/selectContext', newValue.context_code);
-                this.skipEmitOnce = true;
+                //Determine what index the badge currently is
+                this.selectedbadge = this.badges.findIndex((badge) => badge.id == newValue.badge_type_id);
 
                 this.checkBadge();
                 if (newValue.addons)
                     this.addonsSelected = newValue.addons.map(addon => addon['addon_id']);
+                this.loading = false;
             },
             deep: true,
             immediate: true
@@ -759,7 +768,9 @@ export default {
             if (this.badges.length > 0) {
                 const bid = this.model.badge_type_id;
                 let badge = this.badges.findIndex((badge) => badge.id == bid);
-                if (badge == -1) badge = 0;
+                if (badge == -1) {
+                    badge = 0;
+                }
                 this.selectedbadge = badge;
             }
 
