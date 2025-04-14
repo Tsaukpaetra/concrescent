@@ -177,9 +177,10 @@ const actions = {
                 if (state.badgecontextselected == undefined)
                     return reject('Context Code not found:' + context_code);
                 //Fetch all the things(if needed)!
-                await dispatch('getContextBadges', state.badgecontextselected.context_code);
-                await dispatch('getContextQuestions', state.badgecontextselected.context_code);
-                await dispatch('getContextAddons', state.badgecontextselected.context_code);
+                await dispatch('getContextBadges', context_code);
+                await dispatch('getContextQuestions', context_code);
+                await dispatch('getContextAddons', context_code);
+                console.log("products/selectContext completed",context_code)
                 resolve()
             } catch (error) {
                 console.log("products/selectContext error",error)
