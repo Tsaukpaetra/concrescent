@@ -809,6 +809,8 @@ abstract class Table
 
         if ($this->debugThrowBeforeSelect) {
             $errors[] = 'Throwing intentionally due to debugThrowBeforeSelect';
+            $errors[] = 'Params:' . $whereCodes;
+            $errors[] = $whereData;
             $this->checkAndThrowError("Error while attempting to generate select query for $this->TableName.", $errors, $sqlText);
         }
         $this->checkAndThrowError("Error while attempting to generate select query for $this->TableName.", $errors, $sqlText);
