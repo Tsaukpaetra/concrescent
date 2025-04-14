@@ -138,6 +138,8 @@ final class ListLocationEvents
 
         // Invoke the Domain with inputs and retain the result
         $data = $this->assignment->Search(new View([
+            new SelectColumn('id', JoinedTableAlias: 's', Alias:'appl_id'),
+            new SelectColumn('id', Alias:'assn_id'),
             'category_id',
             'start_time',
             'end_time',
@@ -159,7 +161,7 @@ final class ListLocationEvents
             new Join($this->response, [
                 'context_id' => new SearchTerm('id','',JoinedTableAlias:'s')
             ],'left',alias:'desc',subQSelectColumns:[
-                new SelectColumn('response', Alias:'description'),
+                new SelectColumn('response', GroupBy:true, Alias:'description', EncapsulationFunction: 'max(?)'),
                 'context_id','context_code'
                 
             ], subQSearchTerms:$questionsearch),
@@ -214,9 +216,11 @@ final class ListLocationEvents
                 ];
 
                 return [
-                    'title' => $location['real_name'],
-                    'start' => date(DATE_ISO8601, strtotime($location['start_time'])),
-                    'end' => date(DATE_ISO8601, strtotime($location['end_time'])),
+                    'handle' => $location['assn_id'],
+                    'activityID' => $location['appl_id'],
+                    'title' => $location['display_name'],
+                    'start' => date("Y-m-d\\TH:i:s", strtotime($location['start_time'])),
+                    'end' => date("Y-m-d\\TH:i:s", strtotime($location['end_time'])),
                     'resourceId' => $location['short_code'],
 
                     'activityTypeTitle' => $cat['name'],
