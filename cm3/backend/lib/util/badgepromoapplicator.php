@@ -63,8 +63,8 @@ final class badgepromoapplicator
         //Did we find that code?
         if ($foundCode !== false && count($foundCode) >0) {
             $foundCode = $foundCode[0];
-            $this->applicableIDs[$group][$code] =array_diff(explode(',', $foundCode['valid_badge_type_ids']), array(""));
-            $this->applicableAddonIDs[$group][$code] =array_diff(explode(',', $foundCode['valid_addon_ids']), array(""));
+            $this->applicableIDs[$group][$code] =array_diff(explode(',', $foundCode['valid_badge_type_ids'] ?? ''), array(""));
+            $this->applicableAddonIDs[$group][$code] =array_diff(explode(',', $foundCode['valid_addon_ids'] ?? ''), array(""));
             //Count up how many times this code has been used
             if (!empty($foundCode['quantity'])) {
                 $usedCounts = ($group ? $this->g_badge : $this->a_badge)->Search(
