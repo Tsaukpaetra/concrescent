@@ -519,6 +519,18 @@ export default {
                             'Submitted'
                         ]
                     },
+                    'Accepted': {
+                        value: 'Accepted',
+                        color: 'green',
+                        text: 'Accepted and confirmed',
+                        actionText: 'Accept',
+                        nextStatus: [
+                            'Cancelled',
+                            'Waitlisted',
+                            'Rejected',
+                            'Submitted'
+                        ]
+                    },
                     'Waitlisted': {
                         value: 'Waitlisted',
                         color: 'gray',
@@ -709,6 +721,7 @@ export default {
                 this.model = newValue;
                 //If we're being reset, just stop here
                 if (newValue.context_code == undefined) {
+                    this.newApplication_status = null;
                     return;
                 }
                 this.badgeGenInfoData.real_name = newValue.real_name;
