@@ -161,8 +161,9 @@ final class ListLocationEvents
             new Join($this->response, [
                 'context_id' => new SearchTerm('id','',JoinedTableAlias:'s')
             ],'left',alias:'desc',subQSelectColumns:[
-                new SelectColumn('response', GroupBy:true, Alias:'description', EncapsulationFunction: 'max(?)'),
-                'context_id','context_code'
+                new SelectColumn('response', GroupBy:false, Alias:'description', EncapsulationFunction: 'max(?)'),
+                new SelectColumn('context_id', GroupBy:true),
+                new SelectColumn('context_code', GroupBy:true),
                 
             ], subQSearchTerms:$questionsearch),
         ]), $terms, $order);
@@ -230,7 +231,7 @@ final class ListLocationEvents
 
 
                     'description' => $location['description'] ?? 'Description here',
-                    'roomName' => $location['name'],
+                    'roomName' => $cat['name'],
                 ];
             }, $data);
         }
