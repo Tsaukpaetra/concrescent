@@ -1150,7 +1150,7 @@ abstract class Table
         }
         if (!!$uuid) {
             if (isset($this->ColumnDefs['uuid_raw'])) {
-                $terms[] = new SearchTerm('uuid_raw', $uuid, EncapsulationFunction: 'UUID_TO_BIN(?)', EncapsulationColumnOnly: false);
+                $terms[] = new SearchTerm('uuid_raw', $uuid, EncapsulationFunction: '(UNHEX(REPLACE(?,\'-\',\'\')))', EncapsulationColumnOnly: false);
             } elseif (isset($this->ColumnDefs['uuid'])) {
                 $terms[] = new SearchTerm('uuid', $uuid);
             } else {
