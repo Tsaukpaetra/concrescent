@@ -1,8 +1,5 @@
 <?php
 
-/* Time zone PHP should use for date calculations (e.g. when badges are available). */
-date_default_timezone_set('America/Los_Angeles');
-
 /* This is the default configuration for CONcrescent. Replace all values in this file. */
 return array(
 
@@ -16,6 +13,7 @@ return array(
 
         /* Name of the MySQL database to use for this application. */
         'database' => 'cm3_db',
+        /* If on a shared host, prefix all tables to help separate them */
         'prefix' => 'cm_',
         /* Time zone MySQL should use for date calculations (e.g. when badges are available). */
         'timezone' => 'SYSTEM',
@@ -36,7 +34,9 @@ return array(
       'token_secret' => 'AReallySecureKeyThatNobodyKnows!',
       //If someone who signed in doesn't load in the site (and get their session renewed)
       //How long (in seconds) until we log them out?
-      'token_life' => 345600 //Four days is exceptionally generous, adjust to your needs
+      'token_life' => 345600, //Four days is exceptionally generous, adjust to your needs
+      /* Time zone PHP should use for date calculations (e.g. when badges are available). Should match database... */
+      'timezone' => 'America/Los_Angeles'
     ),
     'error' => array(
 

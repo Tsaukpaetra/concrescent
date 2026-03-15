@@ -28,7 +28,48 @@ use CM3_Lib\Middleware\PermCheckEventId;
 return [
     // Application settings
     'config' => function () {
-        return require __DIR__ . '/../config.php';
+        //Load legacy config
+        $config = require __DIR__ . '/../config.php';
+        //Load .env file if it exists
+        Dotenv\Dotenv::createArrayBacked(__DIR__ . '/../')->load();
+        /**
+         * Recursively apply environment variable overrides to the config array.
+         */
+        $applyOverrides = function (&$currentConfig, $prefix = '') use (&$applyOverrides) {
+            foreach ($currentConfig as $key => &$value) {
+                // Build the expected environment variable name (e.g., DATABASE_HOST)
+                $envName = strtoupper($prefix . $key);
+
+                if (is_array($value)) {
+                    // If it's a nested array, recurse deeper
+                    $applyOverrides($value, $envName . '_');
+                } elseif (isset($_ENV[$envName])) {
+                    // Only continue processing this if it is in the env    
+                    $envValue = $_ENV[$envName];
+                    if ($envValue !== false) {
+                        // Handle type casting since getenv returns strings
+                        if (strtolower($envValue) === 'true')
+                            $value = true;
+                        elseif (strtolower($envValue) === 'false')
+                            $value = false;
+                        elseif (is_numeric($envValue)) {
+                            $value = (strpos($envValue, '.') !== false) ? (float) $envValue : (int) $envValue;
+                        } else {
+                            $value = $envValue;
+                        }
+                    }
+                }
+            }
+        };
+
+        $applyOverrides($config);
+        //Special case for the token to make it binary if it's 64 characters instead of 32
+        if(strlen($config['environment']['token_secret']) == 64)
+            $config['environment']['token_secret'] = hex2bin($config['environment']['token_secret']);
+        
+        /* Apply the default timezone here */
+        date_default_timezone_set($config['environment']['timezone']);
+        return $config;
     },
 
     App::class => function (ContainerInterface $container) {
