@@ -42,7 +42,7 @@ export default {
             })
             .catch(function(error) {
                 if (typeof errorCb != "undefined")
-                    errorCb(error);
+                    errorCb(error.response.data);
             })
     },
     genericPut(token, path, data, cb, errorCb) {
@@ -56,7 +56,7 @@ export default {
             })
             .catch(function(error) {
                 if (typeof errorCb != "undefined")
-                    errorCb(response.response.data);
+                    errorCb(error.response.data);
             })
     },
     genericPatch(token, path, data, cb, errorCb) {
@@ -70,7 +70,7 @@ export default {
             })
             .catch(function(error) {
                 if (typeof errorCb != "undefined")
-                    errorCb(response.response.data);
+                    errorCb(error.response.data);
             })
     },
     genericDelete(token, path, cb, errorCb) {
@@ -84,7 +84,7 @@ export default {
             })
             .catch(function(error) {
                 if (typeof errorCb != "undefined")
-                    errorCb(response.response.data);
+                    errorCb(error.response.data);
             })
     },
     genericGetList(token, path, params, cb, errorCb) {
@@ -103,7 +103,7 @@ export default {
             })
             .catch(function(error) {
                 if (typeof errorCb != "undefined")
-                    errorCb(response.response.data);
+                    errorCb(error.response.data);
             })
     },
     badgeCheckinSearch(token, searchText, pageOptions, cb, errorCb) {
@@ -121,7 +121,7 @@ export default {
             })
             .catch(function(error) {
                 if (typeof errorCb != "undefined")
-                    errorCb(response.response.data);
+                    errorCb(error.response.data);
             })
     },
     badgeCheckinFetch(token, context, id, cb, errorCb) {
@@ -195,6 +195,22 @@ export default {
             })
     },
     //Breaking from the callback mold...
+    getEventInfo(token) {
+        return new Promise((resolve,reject) =>{
+            axios.get(global.config.apiHostURL + 'EventInfo', {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            })
+            .then(function(response) {
+                resolve(response.data);
+            })
+            .catch(function(error) {
+                if (typeof errorCb == "function")
+                    reject(error.response.data);
+            })
+        })
+    },
     getBadgeContexts(token) {
         return new Promise((resolve,reject) =>{
             axios.get(global.config.apiHostURL + 'Group?includeDefault=true', {

@@ -110,6 +110,31 @@
                 </v-card>
             </v-dialog>
         </v-tab-item>
+        <v-tab-item value="Events">
+            <simpleList apiPath="EventInfo" :AddHeaders="vAddHeaders" :footerActions="blFooterActions" :isEditingItem="vEdit" :actions="vActions"
+                @create="createEvent" @edit="editEvent">
+                <template v-slot:[`item.menu_icon`]="{ item }">
+                    <v-icon size="60">mdi-{{ item.menu_icon }}</v-icon>
+                </template>
+                <template v-slot:[`item.active`]="{ item }">
+                    <cell-toggle v-model="item.active" @input="vSetActive(item.id, $event)"></cell-toggle>
+                </template>
+            </simpleList>
+            <v-dialog v-model="vDialog" persistent scrollable>
+
+                <v-card>
+                    <v-card-title class="headline">Edit Event</v-card-title>
+                    <v-card-text>
+                        <editEventInfo v-model="vSelected" @valid="vValid = $event"/>
+                    </v-card-text>
+                    <v-card-actions>
+                        <v-spacer></v-spacer>
+                        <v-btn color="default" @click="vDialog = false">Cancel</v-btn>
+                        <v-btn color="primary" @click="saveEvent" :disabled="!vValid">Save</v-btn>
+                    </v-card-actions>
+                </v-card>
+            </v-dialog>
+        </v-tab-item>
 
         <v-dialog v-model="loading" width="200" height="200" close-delay="1200" content-class="elevation-0" persistent>
             <v-card-text class="text-center overflow-hidden">
@@ -142,6 +167,7 @@ import formQuestionEditList from '@/components/formQuestionEditList.vue';
 import editBadgeAdmin from '@/components/editBadgeAdmin.vue';
 import cellToggle from '@/components/datagridcell/toggleValue.vue';
 import editAppGroup from '@/components/editAppGroup.vue';
+import editEventInfo from '@/components/editEventInfo.vue';
 
 export default {
     components: {
@@ -151,6 +177,7 @@ export default {
         banForm,
         //editBadgeAdmin,
         editAppGroup,
+        editEventInfo,
         cellToggle
     },
     props: [
@@ -216,6 +243,32 @@ export default {
         gDialog:false,
         gEdit:false,
         gValid:true,
+
+        vAddHeaders: [{
+            text: 'Name',
+            value: 'display_name'
+        }, {
+            text: 'Short Code',
+            value: 'shortcode'
+        }, {
+            text: 'Start',
+            value: 'date_start'
+        }, {
+            text: 'End',
+            value: 'date_end'
+        }, {
+            text: 'Active',
+            value: 'active'
+        }],
+        vActions:[{
+            name: 'edit',
+            text: 'Edit',
+            icon: 'edit-pencil'
+        }],
+        vSelected: {},
+        vDialog:false,
+        vEdit:false,
+        vValid:true,
 
         loading: false,
         createError: '',
@@ -357,7 +410,7 @@ export default {
                 this.gEdit = true;
                 this.gValid = true;
                 this.loading = false;
-            }, function() {
+            }, () => {
                 this.loading = false;
             })
         },
@@ -387,6 +440,53 @@ export default {
                 
             })
         },
+
+        
+        createEvent: function() {
+            this.vDialog = true;
+            this.vEdit = true;
+            this.vSelected = {};
+            this.vValid = false;
+        },
+        editEvent: function(selectedEvent) {
+            this.loading = true;
+            admin.genericGet(this.authToken, 'EventInfo/' + selectedEvent.id, null, (editG) => {
+
+                this.vSelected = editG;
+                this.vDialog = true;
+                this.vEdit = true;
+                this.vValid = true;
+                this.loading = false;
+            }, () => {
+                this.loading = false;
+            })
+        },
+        saveEvent: function() {
+            var url = 'EventInfo';
+            if (this.vSelected.id != undefined)
+                url = url + '/' + this.vSelected.id;
+            console.log("Saving Event", JSON.parse(JSON.stringify(this.vSelected)))
+            this.loading = false;
+            admin.genericPost(this.authToken, url, this.vSelected, () => {
+
+                //that.dSelected = editBt;
+                this.loading = false;
+                this.vDialog = false;
+                this.vEdit = false;
+            }, () => {
+                this.loading = false;
+            })
+        },
+        vSetActive: function(id,active) {
+            this.vEdit = true;
+            var url = 'EventInfo/' + id;
+            console.log("Saving Event active state", id,active)
+            admin.genericPost(this.authToken, url, {active}, () => {
+                this.vEdit = false;
+            }, function() {
+                
+            })
+        },
     },
     watch: {
         $route() {
@@ -411,11 +511,10 @@ export default {
                 key: 'Groups',
                 text: 'App Groups',
                 title: 'Application Groups'
-            },
-            {
-                key: '1',
-                text: 'Permissions Info',
-                title: 'Permissions Info'
+            },{
+                key: 'Events',
+                text: 'Events',
+                title: 'Events'
             },
         ]);
     }

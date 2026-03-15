@@ -43,7 +43,7 @@ final class Read
         );
 
         // Invoke the Domain with inputs and retain the result
-        $data = $this->eventinfo->Search("*", $whereParts);
+        $data = $this->eventinfo->GetByID($params['id'],"*");
 
         // Build the HTTP response
         return $this->responder

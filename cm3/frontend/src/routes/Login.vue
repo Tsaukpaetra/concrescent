@@ -233,6 +233,17 @@ export default {
     watch: {
         $route() {
             this.$nextTick(this.completeLogin);
+        },
+        'state' : async function(newstate) {
+            if(newstate == 3) {
+                //Trigger a reload of the events and contexts in case more are available now
+                
+                await this.$store.dispatch('products/getEventInfo',true).then(async () => {
+                    console.log('got event info, loading contexts');
+                    //this.selectedEventId = this.productselectedEventId;
+                    await this.$store.dispatch('products/getBadgeContexts', true);
+                });
+            }
         }
     },
     created() {

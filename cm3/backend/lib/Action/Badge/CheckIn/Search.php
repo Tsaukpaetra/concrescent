@@ -54,7 +54,7 @@ final class Search
 
         //First, determine if this is an exact match code, for example from QR code
         $badgeMatch = array();
-        if (preg_match('/CM\*([a-zA-Z{1-5}])(\d{1,})\*([0-9A-Fa-f]{8}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{12})/m', $find, $badgeMatch)) {
+        if (preg_match('/CM\*([a-zA-Z]{1-5})(\d{1,})\*([0-9A-Fa-f]{8}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{12})/m', $find, $badgeMatch)) {
             //Yep! Let's decode and check the validity
             $shortcode = $badgeMatch[1];
             $display_id =  $badgeMatch[2];

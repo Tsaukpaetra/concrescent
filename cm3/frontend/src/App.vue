@@ -10,7 +10,26 @@
                           label="Selected event"
                           :items="events"
                           item-text="display_name"
-                          item-value="id">
+                          item-value="id">                          
+                    <template v-slot:item="{ item, on, attrs }">
+                        <v-list-item v-bind="attrs" v-on="on">
+                            <v-list-item-avatar v-if="isAdmin">
+                                <v-icon>mdi-eye{{item.active ? '' : '-off'}}</v-icon>
+                            </v-list-item-avatar>
+                            <v-list-item-content>
+                                <v-list-item-title>{{ item.display_name }}</v-list-item-title>
+                                <v-list-item-subtitle>{{ item.date_start }} - {{ item.date_end }}</v-list-item-subtitle>
+                            </v-list-item-content>
+                        </v-list-item>
+                    </template>
+                    <template v-slot:selection="{ item, on, attrs }">
+                        <v-list-item v-bind="attrs" v-on="on">
+                            <v-list-item-content>
+                                <v-list-item-title>{{ item.display_name }}</v-list-item-title>
+                                <v-list-item-subtitle>{{ item.date_start }} - {{ item.date_end }}</v-list-item-subtitle>
+                            </v-list-item-content>
+                        </v-list-item>
+                    </template>
                 </v-select>
             </v-list-item>
         </v-list>
