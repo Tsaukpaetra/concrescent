@@ -34,7 +34,7 @@
                        style="min-width: 100px; max-width: 100%;">
                     <v-text-field v-model="searchText"
                                   label="Search"
-                                  clearable
+                                  clearable persistent-clear
                                   append-outer-icon="mdi-refresh"
                                   @click:append-outer="doSearch"
                                   class="mx-4"></v-text-field>
@@ -588,7 +588,10 @@ export default {
     },
     methods: {
 
-        doSearch: function() {
+        doSearch: debounce(function() {
+            console.log('debounced doSearch')
+            //Don't search if editing an item or already loading
+            if(this.isEditingItem || this.loading) return;
             this.loading = true;
             console.log('doSearch pageOptions', this.pageOptionsForGet);
             admin.genericGetList(this.authToken, this.apiPath, this.pageOptionsForGet, (results, total) => {
@@ -619,10 +622,10 @@ export default {
                     }
                 }
             })
-        },
+        },300),
         doExport: function() {
             this.loading = true;
-            console.log('doSearch pageOptions', this.pageOptionsForGet);
+            console.log('doExport pageOptions', this.pageOptionsForGet);
             admin.genericGetList(this.authToken, this.apiPath, this.pageOptionsForGet, (results, total) => {
                 this.loading = false;
                 
@@ -705,13 +708,12 @@ export default {
     },
     watch: {
         search: function(newSearch) {
-            //this.searchText = newSearch;
+            this.searchText = newSearch;
         },
-        searchText: debounce(function(newSearch) {
+        searchText: function(newSearch) {
             this.doSearch();
-            console.log('searchText', newSearch)
-            //this.$emit('update:search', newSearch);
-        }, 500),
+            this.$emit('update:search', newSearch);
+        },
         // displayedQuestions: debounce(function(newSearch) {
         //     console.log("displayedQuestions updated", newSearch)
         //     this.doSearch();

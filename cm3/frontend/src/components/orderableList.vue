@@ -273,22 +273,22 @@ export default {
     },
     methods: {
 
-        doSearch: function() {
+        doSearch: debounce(function () {
             this.loading = true;
             admin.genericGetList(this.authToken, this.apiPath, this.pageOptionsForGet, (results, total) => {
                 this.tableResults = results;
                 this.totalResults = total;
                 this.loading = false;
-                
-                this.doEmit('update:results',results);
-                this.doEmit('update:totalcount',total);
+
+                this.doEmit('update:results', results);
+                this.doEmit('update:totalcount', total);
 
                 //If they're on a page that apparently doesn't exist
-                if(results.length == 0 && total != 0){
+                if (results.length == 0 && total != 0) {
                     this.tableOptions['page'] = 1;
                 }
             })
-        },
+        }, 300),
         doExport: function() {
             this.loading = true;
             console.log('doSearch pageOptions', this.pageOptionsForGet);
@@ -365,14 +365,14 @@ export default {
         search: function(newSearch) {
             this.searchText = newSearch;
         },
-        searchText: debounce(function(newSearch) {
+        searchText: function(newSearch) {
             this.doSearch();
             this.$emit('update:search', newSearch);
-        }, 500),
-        isEditingItem: debounce(function(newEditing) {
+        },
+        isEditingItem: function(newEditing) {
             if (!newEditing)
                 this.doSearch();
-        }, 200),
+        },
         tableOptions: {
             handler() {
                 //If server side pagination is disabled, don't ask the server for new data
