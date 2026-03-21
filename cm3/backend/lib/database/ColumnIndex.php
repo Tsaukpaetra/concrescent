@@ -31,6 +31,11 @@ class ColumnIndex
         //Column definitions
         $sqlText .= '(';
         foreach ($this->Columns as $columnName => $isDesc) {
+            //Legacy def handling
+            if(gettype($isDesc) == 'string') {
+                $columnName = $isDesc;
+                $isDesc = false;
+            }
             $sqlText .= '`' . $columnName .'` ' .
             ($isDesc ? 'DESC ' : '') . ', ';
         }
