@@ -20,48 +20,6 @@
 </template>
 
 <script>
-function getValueByPath(input, s) {
-    s = s.replace(/\[(\w+)\]/g, '.$1'); // convert indexes to properties
-    s = s.replace(/^\./, ''); // strip a leading dot
-    var a = s.split('.');
-    for (var i = 0, n = a.length; i < n; ++i) {
-        var k = a[i];
-        if (isObject(input) && k in input) {
-            input = input[k];
-        } else {
-            return;
-        }
-    }
-    return input;
-}
-
-function isObject(o) {
-    //How you acomplish this is upto you.
-    return o === Object(o);
-}
-
-//Adapted from https://stackoverflow.com/a/63108491
-function expandTpl(template, templateData) { // s0 is the link_template_input
-    //TODO: Fix this regex so it allows [index]-style?
-    const r = /\[\[([^\[\]]*)\]\]/gm;
-    let s = '';
-    let idx = 0
-    for (let a;
-        (a = r.exec(template)) !== null;) {
-        //console.log('expanding', a[0])
-        var v = getValueByPath(templateData, a[1]);
-        if (v == undefined) {
-            if(Object.keys(templateData).length) //Only complain if we obviously have data
-            console.log('object did not have this property', a[0], structuredClone(templateData))
-            //v = a[0];
-            v = '';
-        }
-        s += (template.substring(idx, r.lastIndex - a[0].length) + v)
-        idx = r.lastIndex
-    }
-    if (idx < template.length) s += template.substring(idx, template.length)
-    return s
-}
 
 export default {
     props: ['format', 'value'],
@@ -78,7 +36,7 @@ export default {
             //console.log('rendering template', this.format.text)
             //var r = expandTpl(this.format.text, this.value);
             //console.log('render result', r)
-            return expandTpl(this.format.text, this.value);
+            return this.$compileTemplate(this.format.text, this.value);
         }
     },
 

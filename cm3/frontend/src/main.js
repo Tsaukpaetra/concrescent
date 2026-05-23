@@ -37,6 +37,15 @@ import vuepressTheme from '@kangc/v-md-editor/lib/theme/vuepress.js';
 VueMarkdownEditor.use(vuepressTheme, {
     config: {
         'disabled-menus': ['save', 'toc']
+    },
+    extend(md) {
+        // Override the core highlight function
+        md.options.highlight = function (str, lang) {
+        // Returning an empty string tells markdown-it to skip formatting 
+        // and output the block as plain text using its internal safe HTML escaping.
+        return ''; 
+        };
+
     }
 });
 VMdPreview.use(vuepressTheme, {});
@@ -54,7 +63,9 @@ Vue.use(JsonEditorVue, {
 import VueInteractJs from "vue-interactjs";
 Vue.use(VueInteractJs);
 
-
+//template engine
+import { compileTemplate } from './plugins/template_engine.js';
+Vue.prototype.$compileTemplate = compileTemplate;
 
 Vue.config.productionTip = false
 Vue.filter('currency', currency)

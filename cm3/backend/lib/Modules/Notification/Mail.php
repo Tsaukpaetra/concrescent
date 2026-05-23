@@ -64,20 +64,20 @@ class Mail
             //Log the success
             $this->log->Create(array(
                 'template_id' => $loadedtemplate['id'],
-                'success'=>1,
-                'meta'=>json_encode($meta),
-                'data'=>json_encode($entity),
-                'result'=>'sent'
+                'success' => 1,
+                'meta' => json_encode($meta),
+                'data' => json_encode($entity),
+                'result' => 'sent'
             ));
             return true;
         } else {
             //Log the failure
             $this->log->Create(array(
                 'template_id' => $loadedtemplate['id'],
-                'success'=>0,
-                'meta'=>json_encode($meta),
-                'data'=>json_encode($entity),
-                'result'=>'Failed:'.$this->PHPMailer->ErrorInfo
+                'success' => 0,
+                'meta' => json_encode($meta),
+                'data' => json_encode($entity),
+                'result' => 'Failed:' . $this->PHPMailer->ErrorInfo
             ));
             return false;
         }
@@ -100,29 +100,29 @@ class Mail
         if (is_string($template) || is_int($template)) {
             $templatedata = $this->template->Search(
                 array(
-                'id',
-                'name',
-                'reply_to',
-                'from',
-                'cc',
-                'bcc',
-                'subject',
-                'format',
-                'body',
-                'attachments'
+                    'id',
+                    'name',
+                    'reply_to',
+                    'from',
+                    'cc',
+                    'bcc',
+                    'subject',
+                    'format',
+                    'body',
+                    'attachments'
                 ),
                 array(
-                $this->CurrentUserInfo->EventIdSearchTerm(),
-                new SearchTerm('active', 1),
-                new SearchTerm('', '', subSearch:array(
-                    new SearchTerm('name', $template),
-                    new SearchTerm('id', $template, 'OR')
-                ))
+                    $this->CurrentUserInfo->EventIdSearchTerm(),
+                    new SearchTerm('active', 1),
+                    new SearchTerm('', '', subSearch: array(
+                        new SearchTerm('name', $template),
+                        new SearchTerm('id', $template, 'OR')
+                    ))
 
-            ),
+                ),
                 limit: 1
             );
-            if (count($templatedata) >0) {
+            if (count($templatedata) > 0) {
                 $template = $templatedata[0];
             } else {
                 //Search the on-disk templates
@@ -149,19 +149,19 @@ class Mail
                                 $msg = 'Unknown error';
                         }
 
-                        throw new \Exception('Unable to load mail template because JSON decoding failed: '.$msg);
+                        throw new \Exception('Unable to load mail template because JSON decoding failed: ' . $msg);
                     }
                     //Make sure it knows its name
                     $template['name'] = basename($templatefile, '.json');
                     $template['id'] = 0;
                 }
                 if (is_null($template) || is_string($template)) {
-                    throw new \Exception('Unable to load mail template "' . $template .'"');
+                    throw new \Exception('Unable to load mail template "' . $template . '"');
                 }
                 //Check template is minimally valid...
-                $missingKeys = array_flip(array_diff_key( array_flip(['subject','format','body']),$template));
-                if(count($missingKeys)){                    
-                    throw new \Exception('Missing keys from on-disk template "' . basename($templatefile) .'": ' . implode(',',$missingKeys));
+                $missingKeys = array_flip(array_diff_key(array_flip(['subject', 'format', 'body']), $template));
+                if (count($missingKeys)) {
+                    throw new \Exception('Missing keys from on-disk template "' . basename($templatefile) . '": ' . implode(',', $missingKeys));
                 }
             }
         }
@@ -187,15 +187,15 @@ class Mail
                     'attachments'
                 ),
                 array(
-                        new Join(
-                            $this->templatemap,
-                            array(
-                                'id'=>'template_id',
-                                new SearchTerm('context_code', $entity['context_code'] ?? 'A'),
-                                new SearchTerm('badge_type_id', $entity['badge_type_id']??0),
-                                new SearchTerm('reason', $reason),
-                            )
+                    new Join(
+                        $this->templatemap,
+                        array(
+                            'id' => 'template_id',
+                            new SearchTerm('context_code', $entity['context_code'] ?? 'A'),
+                            new SearchTerm('badge_type_id', $entity['badge_type_id'] ?? 0),
+                            new SearchTerm('reason', $reason),
                         )
+                    )
                 )
             ),
             array(
@@ -205,11 +205,11 @@ class Mail
             ),
             limit: 1
         );
-        if (count($templatedata) >0) {
+        if (count($templatedata) > 0) {
             $template = $templatedata[0];
         } else {
             //Search the on-disk templates
-            $templatefile = __DIR__ . '/../../../config/templates/Mail/' . ($entity['context_code'] ??'A') . '-' . $reason . '.json';
+            $templatefile = __DIR__ . '/../../../config/templates/Mail/' . ($entity['context_code'] ?? 'A') . '-' . $reason . '.json';
             if (file_exists($templatefile)) {
                 //Load it up!
                 $template = json_decode(file_get_contents($templatefile), true);
@@ -218,7 +218,7 @@ class Mail
                 $template['id'] = 0;
             }
             if (is_null($template) || is_string($template)) {
-                throw new \Exception('Unable to load mail template "' . $templatename .'"');
+                throw new \Exception('Unable to load mail template "' . $templatename . '"');
             }
         }
     }
@@ -226,13 +226,12 @@ class Mail
     public function GetLastMessage(bool $includeAttachements = false)
     {
         $result = array(
-            'to'       => $this->PHPMailer->getToAddresses(),
-            'cc'       => $this->PHPMailer->getCcAddresses(),
-            'bcc'      => $this->PHPMailer->getBccAddresses(),
-            'cc'       => $this->PHPMailer->getCcAddresses(),
+            'to' => $this->PHPMailer->getToAddresses(),
+            'cc' => $this->PHPMailer->getCcAddresses(),
+            'bcc' => $this->PHPMailer->getBccAddresses(),
             'reply_to' => $this->PHPMailer->getReplyToAddresses(),
-            'subject'  => $this->PHPMailer->Subject,
-            'body'     => $this->PHPMailer->Body,
+            'subject' => $this->PHPMailer->Subject,
+            'body' => $this->PHPMailer->Body,
 
         );
         if ($includeAttachements) {
@@ -255,25 +254,25 @@ class Mail
         $this->PHPMailer->clearCustomHeaders();
 
         //Add some headers
-        $this->PHPMailer->XMailer = 'CONcrescent/3.0 PHP/' . phpversion() .' PHPMailer' . $this->PHPMailer::VERSION ;
+        $this->PHPMailer->XMailer = 'CONcrescent/3.0 PHP/' . phpversion() . ' PHPMailer' . $this->PHPMailer::VERSION;
         //Generate the message ID
         $msgId = '<ei' . $this->CurrentUserInfo->GetEventId() . '-';
         if (isset($template['name'])) {
-            $msgId .= ('tn'.$template['name'] .'-');
+            $msgId .= ('tn' . $template['name'] . '-');
         }
-        $msgId .= 'ci'.$this->CurrentUserInfo->GetContactId() . '-';
+        $msgId .= 'ci' . $this->CurrentUserInfo->GetContactId() . '-';
         if (isset($entity['badge_type_id'])) {
-            $msgId .= 'bt'.$entity['badge_type_id'] .'-';
+            $msgId .= 'bt' . $entity['badge_type_id'] . '-';
         }
         if (isset($entity['context_code'])) {
-            $msgId .= 'cx'.$entity['context_code'] .'-';
+            $msgId .= 'cx' . $entity['context_code'] . '-';
         }
         if (isset($entity['id'])) {
-            $msgId .= 'id'.$entity['id'] .'-';
+            $msgId .= 'id' . $entity['id'] . '-';
         }
         $msgId .= md5(serialize($entity));
         //TODO: Is there a better way to do this?
-        $msgId .= '@' . strtolower($_SERVER['SERVER_NAME']) .'>';
+        $msgId .= '@' . strtolower($_SERVER['SERVER_NAME']) . '>';
         //$this->PHPMailer->addCustomHeader('Message-ID', $msgId);
         $this->PHPMailer->MessageID = $msgId;
 
@@ -296,8 +295,8 @@ class Mail
         $mergeFields = $this->wrap_entity($entity);
 
         //Do the marge-able fields next
-        $this->PHPMailer->Subject = $this->merge_text($template['subject'], $mergeFields);
-        $body = $this->merge_text($template['body'], $mergeFields);
+        $this->PHPMailer->Subject = $this->compileTemplate($template['subject'], $mergeFields);
+        $body = $this->compileTemplate($template['body'], $mergeFields);
 
         switch ($template['format']) {
             case 'Text Only':
@@ -305,7 +304,7 @@ class Mail
                 break;
             case 'Markdown':
                 //parse into HTML
-                $this->PHPMailer->msgHTML((string)$this->MarkdownConverter->convert($body));
+                $this->PHPMailer->msgHTML((string) $this->MarkdownConverter->convert($body));
                 break;
             case 'Full HTML':
                 $this->PHPMailer->msgHTML($body);
@@ -323,7 +322,7 @@ class Mail
         $result = array_merge(
             $entity,
             array(
-                'event'=>$this->eventinfo->GetByID($this->CurrentUserInfo->GetEventId(), array())
+                'event' => $this->eventinfo->GetByID($this->CurrentUserInfo->GetEventId(), array())
             )
         );
 
@@ -333,60 +332,214 @@ class Mail
         )));
     }
 
-    private function merge_text($text, $entity)
+
+    function isObject($o)
     {
-        return preg_replace_callback(
-            '/\\[\\[([^[\]]*)]]/', //Searches for stuff between [[words]]
-            function ($matches) use ($entity) {
-                return $this->getValueByPath($entity, trim($matches[1]));
-            },
-            $text
-        );
+        return is_array($o) || is_object($o);
     }
 
-    //Shamelessly stolen from SO https://stackoverflow.com/a/27930060 with mods
-    /**
-    * Gets the value from input based on path.
-    * Handles objects, arrays and scalars. Nesting can be mixed.
-    * E.g.: $input.a.b.c = 'val' or $input['a']['b']['c'] = 'val' will
-    * return "val" with path "a[b][c]".
-    * @param mixed $input
-    * @param string $path
-    * @param mixed $default Optional default value to return on failure (null)
-    * @return NULL|mixed NULL on failure, or the value on success (which may also be NULL)
-    */
-    private function getValueByPath($input, $path, $default='')
+    function getValueByPath($input, $s)
     {
-        if (!(isset($input) && ($this->isIterable($input) || is_scalar($input)))) {
-            return $default; // null already or we can't deal with this, return early
+        if (!$s)
+            return null; // Using PHP null as equivalent to JS undefined here
+
+        $fallbackString = null;
+
+        // Check if a fallback pipeline exists: path || 'fallback'
+        if (strpos($s, '||') !== false) {
+            $segments = explode('||', $s);
+            $s = trim($segments[0]); // Extract the true path (e.g., "profile.firstName")
+
+            // Clean up the fallback string by stripping spaces and wrapping quotes (' or ")
+            $fallbackString = trim($segments[1]);
+            $fallbackString = preg_replace('/^[\'"]|[\'"]$/', '', $fallbackString);
         }
-        $pathArray = explode('.', $path);
-        $last = &$input;
-        foreach ($pathArray as $key) {
-            if (is_object($last) && property_exists($last, $key)) {
-                $last = &$last->$key;
-            } elseif ((is_scalar($last) || is_array($last)) && isset($last[$key])) {
-                $last = &$last[$key];
+
+        $s = preg_replace('/\[(\w+)\]/', '.$1', $s);
+        $s = ltrim($s, '.');
+        $a = explode('.', $s);
+        $current = $input;
+
+        foreach ($a as $k) {
+            if (\is_object($current) && isset($current->$k)) {
+                $current = $current->$k;
+            } elseif (\is_array($current) && \array_key_exists($k, $current)) {
+                $current = $current[$k];
             } else {
-                return $default;
+                // If the property path fails but a fallback string exists, return the fallback
+                return $fallbackString !== null ? $fallbackString : null;
             }
         }
-        return $last;
+
+        // If the path evaluates to a falsy/blank value, honor the fallback string if it exists
+        if ($current === null || $current === '') {
+            return $fallbackString !== null ? $fallbackString : $current;
+        }
+
+        return $current;
     }
 
-    /**
-     * Check if a value/object/something is iterable/traversable,
-     * e.g. can it be run through a foreach?
-     * Tests for a scalar array (is_array), an instance of Traversable, and
-     * and instance of stdClass
-     * @param mixed $value
-     * @return boolean
-     */
-    private function isIterable($value)
+    function isTruthy($value)
     {
-        return is_array($value) || $value instanceof Traversable || $value instanceof stdClass;
+        if (!$value)
+            return false;
+        if (\is_array($value) && \count($value) === 0)
+            return false;
+        return true;
     }
 
+    function compileTemplate($template, $templateData)
+    {
+        // Tokenize the string by splitting on all [[ tags ]]
+        $tagRegex = '/(\[\[[\s\S]*?\]\])/';
+        $parts = preg_split($tagRegex, $template, -1, PREG_SPLIT_DELIM_CAPTURE);
 
-    //End code theft
+        // Using an object instance variable state to track tracking mechanics uniformly in PHP 7.3
+        $state = new \stdClass();
+        $state->index = 0;
+        $state->parts = $parts;
+
+        // Global helper closure to skip sections until reaching matching boundaries
+        $swallowBlock = function () use ($state) {
+            $depth = 1;
+            while ($state->index < \count($state->parts) && $depth > 0) {
+                $p = $state->parts[$state->index++];
+                if (strpos($p, '[[') === 0) {
+                    $tag = trim(substr($p, 2, -2));
+                    if (strpos($tag, 'for ') === 0 || strpos($tag, 'if ') === 0)
+                        $depth++;
+                    if ($tag === 'end')
+                        $depth--;
+                }
+            }
+        };
+
+        $parseBlock = function ($context) use (&$parseBlock, $state, $swallowBlock) {
+            $result = '';
+
+            while ($state->index < \count($state->parts)) {
+                $part = $state->parts[$state->index++];
+
+                // Handle normal markdown and text syntax fragments
+                if (strpos($part, '[[') !== 0) {
+                    $result .= $part;
+                    continue;
+                }
+
+                $innerContent = trim(substr($part, 2, -2));
+
+                // Handle structural closing loops
+                if ($innerContent === 'end') {
+                    return $result;
+                }
+
+                // If we see a raw [[else]], it means the main branch finished executing successfully.
+                if ($innerContent === 'else') {
+                    $swallowBlock();
+                    return $result;
+                }
+
+                // Handle structural conditions: [[if path]]
+                if (strpos($innerContent, 'if ') === 0) {
+                    $path = trim(substr($innerContent, 3));
+                    $value = $this->getValueByPath($context, $path);
+
+                    if ($value === null) {
+                        //trigger_error("[Template Debug] Property not found along condition path: \"{$path}\"", E_USER_WARNING);
+                        $result .= "[[?{$path}]]";
+                        $swallowBlock();
+                        continue;
+                    }
+
+                    if ($this->isTruthy($value)) {
+                        $result .= $parseBlock($context);
+                    } else {
+                        // Search loop sequentially for a structural fallback branch
+                        $depth = 1;
+                        $foundElse = false;
+                        while ($state->index < \count($state->parts) && $depth > 0) {
+                            $p = $state->parts[$state->index++];
+                            if (strpos($p, '[[') === 0) {
+                                $tag = trim(substr($p, 2, -2));
+                                if (strpos($tag, 'for ') === 0 || strpos($tag, 'if ') === 0)
+                                    $depth++;
+                                if ($tag === 'end')
+                                    $depth--;
+                                if ($tag === 'else' && $depth === 1) {
+                                    $foundElse = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if ($foundElse) {
+                            $result .= $parseBlock($context); // Run the else branch block
+                        }
+                    }
+                    continue;
+                }
+
+                // Handle iteration loop syntax block: [[for path]]
+                if (strpos($innerContent, 'for ') === 0) {
+                    $path = trim(substr($innerContent, 4));
+                    $list = $this->getValueByPath($context, $path);
+
+                    if ($list === null) {
+                        //trigger_error("[Template Debug] Loop array target not found at path: \"{$path}\"", E_USER_WARNING);
+                        $result .= "[[?{$path}]]";
+                        $swallowBlock();
+                        continue;
+                    }
+
+                    $loopBodyStartIndex = $state->index;
+
+                    if (is_array($list) && count($list) > 0) {
+                        foreach ($list as $item) {
+                            $state->index = $loopBodyStartIndex; // Snap text reading pointer back to start of loop content
+                            $scopedContext = (is_array($item) || is_object($item)) ? (array) $item : ['value' => $item];
+                            $result .= $parseBlock($scopedContext);
+                        }
+
+                        // Once items execute, skip over the accompanying trailing [[else]] block container
+                        $state->index = $loopBodyStartIndex;
+                        $swallowBlock();
+                    } else {
+                        // Empty or falsy lists navigate straight down to the [[else]] branch
+                        $depth = 1;
+                        $foundElse = false;
+                        while ($state->index < count($state->parts) && $depth > 0) {
+                            $p = $state->parts[$state->index++];
+                            if (strpos($p, '[[') === 0) {
+                                $tag = trim(substr($p, 2, -2));
+                                if (strpos($tag, 'for ') === 0 || strpos($tag, 'if ') === 0)
+                                    $depth++;
+                                if ($tag === 'end')
+                                    $depth--;
+                                if ($tag === 'else' && $depth === 1) {
+                                    $foundElse = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if ($foundElse) {
+                            $result .= $parseBlock($context);
+                        }
+                    }
+                    continue;
+                }
+
+                // Handle standalone string output fields: [[variable]]
+                $value = $this->getValueByPath($context, $innerContent);
+                if ($value === null) {
+                    //trigger_error("[Template Debug] Variable target not found: \"[[{$innerContent}]]\"", E_USER_WARNING);
+                    $result .= "[[?{$innerContent}]]";
+                } else {
+                    $result .= (string) $value;
+                }
+            }
+
+            return $result;
+        };
+
+        return $parseBlock($templateData);
+    }
 }
