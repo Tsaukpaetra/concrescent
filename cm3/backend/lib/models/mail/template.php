@@ -10,8 +10,8 @@ class template extends \CM3_Lib\database\Table
     {
         $this->TableName = 'Mail_Templates';
         $this->ColumnDefs = array(
-            'id' 			=> new cm_Column('INT', null, false, true, false, true, null),
             'event_id'		=> new cm_Column('INT', null, false, false, false, true),
+            'context_code'	=> new cm_Column('VARCHAR', '3', false),
             'name'			=> new cm_Column('VARCHAR', 255, false),
             'active'        => new cm_Column('BOOLEAN', null, false, defaultValue: 'false'),
             'reply_to'		=> new cm_Column('VARCHAR', 300, false),
@@ -33,7 +33,7 @@ class template extends \CM3_Lib\database\Table
             'attachments'   => new cm_Column('VARCHAR', 300, true),
         );
         $this->IndexDefs = array();
-        $this->PrimaryKeys = array('id'=>false);
+        $this->PrimaryKeys = array('event_id'=>false, 'context_code','name');
         $this->DefaultSearchColumns = array('id');
     }
 }

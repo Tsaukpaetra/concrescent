@@ -1048,13 +1048,14 @@ final class PaymentBuilder
         foreach ($this->cart_items as $item) {
             $to = $this->CurrentUserInfo->GetContactEmail($item['contact_id']);
             //Get the current info, not what's in the order
-            $template = $this->cart['mail_template'] ?? ($item['context_code'] . '-payment-' .$this->cart['payment_status']);
+            $template = $this->cart['mail_template'] ?? ('payment-' .$this->cart['payment_status']);
             //If it's not an application, wire up the processor normally
             if ($item['context_code'] == 'A' || $item['context_code'] == 'S') {
                 $badgeItems = [ $this->badgeinfo->getSpecificBadge($item['id'], $item['context_code'], true)];
             } else {
                 $groupApp = $this->badgeinfo->getASpecificGroupApplication($item['id'] ?? 0, $item['context_code'], true);
-                $this->Mail->SendTemplate($to, $template, $groupApp, null);
+                $this->Mail->SendTemplate($to, $item['context_code'], $template, $groupApp, null);
+
                 // //Send the application status
                 // $template = $cartitem['context_code'] . '-application-' .$cartitem['application_status'];
                 //
@@ -1076,7 +1077,7 @@ final class PaymentBuilder
                 //Attempt to send mail(s)
                 $anyFail = false;
                 foreach ($badgeItems as $badge) {
-                    $anyFail |= !$this->Mail->SendTemplate($to, $template, $badge, $badge['notify_email'] ?? null);
+                    $anyFail |= !($this->Mail->SendTemplate($to,$item['context_code'], $template, $badge, $badge['notify_email'] ?? null)['sent']);
                 }
                 return !$anyFail;
             } catch (\Exception $e) {

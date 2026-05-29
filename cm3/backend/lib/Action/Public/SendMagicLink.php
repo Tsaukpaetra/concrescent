@@ -79,8 +79,8 @@ class SendMagicLink
             if (
                 $this->Mail->SendTemplate(
                     $data["email_address"],
-                    "login-link",
-                    $contact
+                    '',"login-link",
+                    $contact, contact_id:$contact["id"]
                 )
             ) {
                 $result = "Sent.";

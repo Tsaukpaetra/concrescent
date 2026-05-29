@@ -31,16 +31,39 @@ class Mail
         //Default connection timeout to something quick
         $PHPMailer->Timeout = 20;
     }
+    
+    //Define the fields we must have:
+    private $defaultListSchema = [
+            'active'  => 1,
+            'name'    => '',
+            'from'    => '',
+            'cc'      => '',
+            'subject' => ''
+        ];
+    private $defaultSchema = [
+            'active'  => 1,
+            'name'    => '',
+            'from'    => '',
+            'cc'      => '',
+            'subject' => '',
+            'format'  => '',
+            'body'    => '',
+            'attachments' => ''
+        ];
 
     public function getMailerErrorInfo()
     {
         return $this->PHPMailer->ErrorInfo;
     }
 
-    public function SendTemplate(string $to, string|array|int $template, array $entity, ?string $cc = null)
+    public function SendTemplate(string $to, string $context, string $template, array $entity, ?string $cc = null, int $contact_id = 0, int $sender_id = 0, bool $overrideActive = false)
     {
         //Start prepping the message
-        $loadedtemplate = $this->GetTemplate($template);
+        $loadedtemplate = $this->GetTemplate($context, $template);
+        //Short circuit if the template is not active
+        if(!$loadedtemplate['active'] && !$overrideActive){
+            return ['sent'=>false,'result'=>'Template not active'];
+        }
         $this->PrepareMessage($loadedtemplate, $entity);
 
         //Set main recipient(s)
@@ -56,38 +79,33 @@ class Mail
         unset($entity['qr_data_uri']);
 
         $meta = array(
-            'template' => $template
+            'dataMD5' => md5(serialize($entity)),
+            'To' => $to,
+            'CC' => $cc
         );
 
         //Send it
-        if ($this->PHPMailer->send()) {
-            //Log the success
-            $this->log->Create(array(
-                'template_id' => $loadedtemplate['id'],
-                'success' => 1,
-                'meta' => json_encode($meta),
-                'data' => json_encode($entity),
-                'result' => 'sent'
-            ));
-            return true;
-        } else {
-            //Log the failure
-            $this->log->Create(array(
-                'template_id' => $loadedtemplate['id'],
-                'success' => 0,
-                'meta' => json_encode($meta),
-                'data' => json_encode($entity),
-                'result' => 'Failed:' . $this->PHPMailer->ErrorInfo
-            ));
-            return false;
-        }
+        $success = $this->PHPMailer->send();
+        //Log the result
+        $this->log->Create(array(
+            'event_id' => $this->CurrentUserInfo->GetEventId(),
+            'context_code' => $context,
+            'template' => $template,
+            'success' => $success,
+            'contact_id' => $contact_id,
+            'sender_id' => $sender_id,
+            'meta' => json_encode($meta),
+            'data' => json_encode($entity),
+            'result' => $success ? 'Sent' : 'Failed:' . $this->PHPMailer->ErrorInfo
+        ));
+            return ['sent'=> $success,'result'=> $success ? 'Sent' : 'Failed:' . $this->PHPMailer->ErrorInfo];
+    
     }
 
-    public function RenderTemplate(string|array|int $template, array $entity)
+    public function RenderTemplate(string $context, string $template, array $entity)
     {
         //Start prepping the message
-        $template = $this->GetTemplate($template);
-        $this->PrepareMessage($this->GetTemplate($template), $entity);
+        $this->PrepareMessage($this->GetTemplate($context, $template, true), $entity);
 
         //Prepare to send it (but don't actually do so)
         $this->PHPMailer->preSend();
@@ -95,38 +113,23 @@ class Mail
         return $this->GetLastMessage();
     }
 
-    public function GetTemplate(string|array|int $template)
-    {
-        if (is_string($template) || is_int($template)) {
-            $templatedata = $this->template->Search(
+    public function CheckTemplateActive(string $context, string $name, bool $throwOnMissing = false){
+         $templatedata = $this->template->Search(
                 array(
-                    'id',
-                    'name',
-                    'reply_to',
-                    'from',
-                    'cc',
-                    'bcc',
-                    'subject',
-                    'format',
-                    'body',
-                    'attachments'
+                    'active',
                 ),
                 array(
                     $this->CurrentUserInfo->EventIdSearchTerm(),
-                    new SearchTerm('active', 1),
-                    new SearchTerm('', '', subSearch: array(
-                        new SearchTerm('name', $template),
-                        new SearchTerm('id', $template, 'OR')
-                    ))
-
+                    new SearchTerm('context_code', $context),
+                    new SearchTerm('name', $name)
                 ),
-                limit: 1
+                limit: 1 //Normally should only return one, but just be safe
             );
             if (count($templatedata) > 0) {
                 $template = $templatedata[0];
             } else {
                 //Search the on-disk templates
-                $templatefile = __DIR__ . '/../../../config/templates/Mail/' . $template . '.json';
+                $templatefile = __DIR__ . '/../../../config/templates/Mail/' . ($context??'') . '-' . $name . '.json';
                 if (file_exists($templatefile)) {
                     //Load it up!
                     $template = json_decode(file_get_contents($templatefile), true, flags: JSON_INVALID_UTF8_SUBSTITUTE);
@@ -151,21 +154,138 @@ class Mail
 
                         throw new \Exception('Unable to load mail template because JSON decoding failed: ' . $msg);
                     }
-                    //Make sure it knows its name
-                    $template['name'] = basename($templatefile, '.json');
-                    $template['id'] = 0;
-                }
-                if (is_null($template) || is_string($template)) {
-                    throw new \Exception('Unable to load mail template "' . $template . '"');
-                }
-                //Check template is minimally valid...
-                $missingKeys = array_flip(array_diff_key(array_flip(['subject', 'format', 'body']), $template));
-                if (count($missingKeys)) {
-                    throw new \Exception('Missing keys from on-disk template "' . basename($templatefile) . '": ' . implode(',', $missingKeys));
+                    // Merge with schema: fills missing fields with defaults, injects 'id' => null, removes the other fields
+                    // and forces the filename into the 'name' field (since that's how it will be found on disk when not in the database)
+                    if(is_array($template)){
+                        $template['name'] = $name;
+                        $template = array_merge($this->defaultSchema, array_intersect_key($template, $this->defaultSchema));
+                    }
                 }
             }
-        }
+            if (is_null($template) || is_string($template)) {
+                if($throwOnMissing) {
+                    throw new \Exception('Unable to load mail template "' . $template . '"');
+                } else {
+                    //Just return a blank template that's inactive
+                    $template = array_merge($this->defaultSchema, [
+                        'active' => 0
+                    ]);
+                }
+            }
+        return $template['active'];
+    }
+
+    public function GetTemplate(string $context, string $name, bool $throwOnMissing = false)
+    {
+            $templatedata = $this->template->Search(
+                array(
+                    'name',
+                    'active',
+                    'reply_to',
+                    'from',
+                    'cc',
+                    'bcc',
+                    'subject',
+                    'format',
+                    'body',
+                    'attachments'
+                ),
+                array(
+                    $this->CurrentUserInfo->EventIdSearchTerm(),
+                    new SearchTerm('context_code', $context),
+                    new SearchTerm('name', $name)
+                ),
+                limit: 1 //Normally should only return one, but just be safe
+            );
+            if (count($templatedata) > 0) {
+                $template = $templatedata[0];
+            } else {
+                //Search the on-disk templates
+                $templatefile = __DIR__ . '/../../../config/templates/Mail/' . ($context??'') . '-' . $name . '.json';
+                if (file_exists($templatefile)) {
+                    //Load it up!
+                    $template = json_decode(file_get_contents($templatefile), true, flags: JSON_INVALID_UTF8_SUBSTITUTE);
+
+                    if (json_last_error() != JSON_ERROR_NONE) {
+                        switch (json_last_error()) {
+                            case JSON_ERROR_DEPTH:
+                                $msg = 'Maximum stack depth exceeded';
+                                break;
+                            case JSON_ERROR_STATE_MISMATCH:
+                                $msg = 'Underflow or the modes mismatch';
+                                break;
+                            case JSON_ERROR_CTRL_CHAR:
+                                $msg = 'Unexpected control character found';
+                                break;
+                            case JSON_ERROR_UTF8:
+                                $msg = 'Malformed UTF-8 characters, possibly incorrectly encoded';
+                                break;
+                            default:
+                                $msg = 'Unknown error';
+                        }
+
+                        throw new \Exception('Unable to load mail template because JSON decoding failed: ' . $msg);
+                    }
+                    // Merge with schema: fills missing fields with defaults, injects 'id' => null, removes the other fields
+                    // and forces the filename into the 'name' field (since that's how it will be found on disk when not in the database)
+                    if(is_array($template)){
+                        $template['name'] = $name;
+                        $template = array_merge($this->defaultSchema, array_intersect_key($template, $this->defaultSchema));
+                    }
+                }
+            }
+            if (is_null($template) || is_string($template)) {
+                if($throwOnMissing) {
+                    throw new \Exception('Unable to load mail template "' . $template . '"');
+                } else {
+                    //Just return a blank template that's inactive
+                    $template = array_merge($this->defaultSchema, [
+                        'active' => 0
+                    ]);
+                }
+            }
         return $template;
+    }
+
+    /// Get context-specific templates
+    public function ListTemplates(string $context){
+        
+        $results = [];
+        //First grab on-disk templates, file name only
+        $templateglob = __DIR__ . '/../../../config/templates/Mail/' . ($context??'') . '-*.json';
+        foreach (\glob($templateglob) ?: [] as $file) {
+            
+            // Extract the name without path or .json extension to use as the key
+            $nameKey =  substr(pathinfo($file, PATHINFO_FILENAME), strlen($context)+1);
+            
+            $templateData = json_decode(file_get_contents($file), true, flags: JSON_INVALID_UTF8_SUBSTITUTE);
+            // Merge with schema: fills missing fields with defaults, injects 'id' => null, removes the other fields
+            // and forces the filename into the 'name' field (since that's how it will be found on disk when not in the database)
+            $normalizedTemplate = array_merge($this->defaultListSchema, array_intersect_key($templateData, $this->defaultListSchema));
+            $normalizedTemplate['name'] = $nameKey;
+            $results[$nameKey] = $normalizedTemplate;
+        }
+
+
+        //Fetch the db templates and merge replace the disk templates
+        foreach($this->template->Search(
+                array(
+                    'active',
+                    'name',
+                    'from',
+                    'cc',
+                    'subject',
+                ),
+                array(
+                    $this->CurrentUserInfo->EventIdSearchTerm(),
+                    new SearchTerm('context_code', $context),
+
+                )
+        ) as $template) {
+            $results[$template['name']] = $template;
+        }
+
+        return array_values($results);
     }
 
 
@@ -333,10 +453,6 @@ class Mail
     }
 
 
-    function isObject($o)
-    {
-        return is_array($o) || is_object($o);
-    }
 
     function getValueByPath($input, $s)
     {

@@ -50,13 +50,17 @@ final class Update
             //TODO: Use the notification framework for this...
             $badge = $this->badgeinfo->getSpecificBadge($data['id'], 'S', true);
             $to = $this->CurrentUserInfo->GetContactEmail($badge['contact_id']);
-            $template = 'S' . '-application-' .$badge['application_status'];
+            $template = 'application-' .$badge['application_status'];
             try {
                 //Attempt to send mail
-                $data['sentUpdate'] =  $this->Mail->SendTemplate($to, $template, $badge, $badge['notify_email']??null);
+                $sendResult =  $this->Mail->SendTemplate($to, 'S', $template, $badge, $badge['notify_email']??null,
+                    $badge['contact_id'], $this->CurrentUserInfo->GetContactId());
+                $data['sentUpdate'] = $sendResult['sent'];
+                $data['sentResult'] = $sendResult['result'];
             } catch (\Exception $e) {
                 //Oops, couldn't send. Oh well?
                 $data['sentUpdate'] = false;
+                $data['sentResult'] = $e->getMessage();
             }
         }
 

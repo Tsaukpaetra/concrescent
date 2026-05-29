@@ -52,13 +52,17 @@ final class Update
             //TODO: Use the notification framework for this...
             $badge = $this->badgeinfo->getSpecificBadge($data['id'], 'A', true);
             $to = $this->CurrentUserInfo->GetContactEmail($badge['contact_id']);
-            $template = 'A' . '-payment-' .$badge['payment_status'];
+            $template = 'payment-' .$badge['payment_status'];
             try {
                 //Attempt to send mail
-                $data['sentUpdate'] =  $this->Mail->SendTemplate($to, $template, $badge, $badge['notify_email']);
+                $sendResult=  $this->Mail->SendTemplate($to, 'A', $template, $badge, 
+                $badge['notify_email'], $badge['contact_id'], $this->CurrentUserInfo->GetContactId());
+                $data['sentUpdate'] = $sendResult['sent'];
+                $data['sentResult'] = $sendResult['result'];
             } catch (\Exception $e) {
                 //Oops, couldn't send. Oh well?
                 $data['sentUpdate'] = false;
+                $data['sentResult'] = $e->getMessage();
             }
         }
 

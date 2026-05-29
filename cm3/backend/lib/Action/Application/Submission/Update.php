@@ -56,13 +56,17 @@ final class Update
             //TODO: Use the notification framework for this...
             $badge = $this->badgeinfo->getASpecificGroupApplication($data['id'] ?? 0, $params['context_code'], true);
             $to = $this->CurrentUserInfo->GetContactEmail($badge['contact_id']);
-            $template = $params['context_code'] . '-application-' .$badge['application_status'];
+            $template =  'application-' .$badge['application_status'];
             try {
                 //Attempt to send mail
-                $data['sentUpdate'] =  $this->Mail->SendTemplate($to, $template, $badge, null);
+                $sendResult =  $this->Mail->SendTemplate($to, $params['context_code'], $template, $badge,
+                    null,$badge['contact_id'], $this->CurrentUserInfo->GetContactId());
+                $data['sentUpdate'] = $sendResult['sent'];
+                $data['sentResult'] = $sendResult['result'];
             } catch (\Exception $e) {
                 //Oops, couldn't send. Oh well?
                 $data['sentUpdate'] = false;
+                $data['sentResult'] = $e->getMessage();
             }
         }
 

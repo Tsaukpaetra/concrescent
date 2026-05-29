@@ -79,15 +79,19 @@ final class CreateBatch
                     //TODO: Use the notification framework for this...
                     $badge = $this->badgeinfo->getASpecificGroupApplication($bicart['id'] ?? 0, $bicart['context_code'], true);
                     $to = $this->CurrentUserInfo->GetContactEmail($badge['contact_id']);
-                    $template = $bicart['context_code'] . '-application-' . $badge['application_status'];
+                    $template = 'application-' . $badge['application_status'];
                     try
                     {
                         //Attempt to send mail
-                        $result['sentEmail'] = $this->Mail->SendTemplate($to, $template, $badge, null);
+                        $sendResult = $this->Mail->SendTemplate($to, $bicart['context_code'] , $template, $badge,
+                            null, $badge['contact_id'], $this->CurrentUserInfo->GetContactId());
+                        $result['sentUpdate'] = $sendResult['sent'];
+                        $result['sentResult'] = $sendResult['result'];
                     } catch (\Exception $e)
                     {
                         //Oops, couldn't send. Oh well?
                         $result['sentEmail'] = false;
+                        $result['sentResult'] = $e->getMessage();
                     }
                 }
             } else
