@@ -2,7 +2,7 @@
 
 namespace CM3_Lib\Action\Notification\Mail\Template;
 
-use CM3_Lib\models\mail\template;
+use CM3_Lib\Modules\Notification\Mail;
 use CM3_Lib\Responder\Responder;
 use Fig\Http\Message\StatusCodeInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -11,15 +11,15 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * Action.
  */
-final class Update
+final class Delete
 {
     /**
      * The constructor.
      *
      * @param Responder $responder The responder
-     * @param mail\template $mail\template The service
+     * @param Mail $Mail  The service
      */
-    public function __construct(private Responder $responder, private mail\template $mail\template)
+    public function __construct(private Responder $responder, private Mail $Mail)
     {
     }
 
@@ -34,11 +34,14 @@ final class Update
     public function __invoke(ServerRequestInterface $request, ResponseInterface $response, $id): ResponseInterface
     {
         // Extract the form data from the request body
-        $data = (array)$request->getParsedBody();
-        $data['id'] = $id['id'];
-
+        $context = $request->getAttribute('context');
+        $name    = $request->getAttribute('name');
+        
         // Invoke the Domain with inputs and retain the result
-        $data = $this->mail\template->Delete($data);
+        // TODO: Doesn't actually protect against context-less retrieval ?
+        // (i.e. putting context as empty string and then just adding the context manually as part of the name)
+        // It would only work for the on-disk templates.
+        $data = $this->Mail->ResetTemplate($context, $name);
 
         // Build the HTTP response
         return $this->responder

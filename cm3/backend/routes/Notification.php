@@ -22,6 +22,12 @@ return function (App $app, $container) {
             // ->add($generalPerm);
             $app->get('/{context}/{name}', \CM3_Lib\Action\Notification\Mail\Template\Read::class)
             ->add($generalPerm);
+            $app->put('/{context}/{name}', \CM3_Lib\Action\Notification\Mail\Template\Update::class)
+            ->add($generalPerm);
+            $app->patch('/{context}/{name}', \CM3_Lib\Action\Notification\Mail\Template\Render::class)
+            ->add($generalPerm);
+            $app->delete('/{context}/{name}', \CM3_Lib\Action\Notification\Mail\Template\Delete::class)
+            ->add($generalPerm);
         },
     );
 

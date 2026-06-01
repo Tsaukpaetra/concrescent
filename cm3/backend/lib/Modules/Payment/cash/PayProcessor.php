@@ -6,6 +6,7 @@ use CM3_Lib\util\CurrentUserInfo;
 
 class PayProcessor implements \CM3_Lib\Modules\Payment\PayProcessorInterface
 {
+    private array $config = array();
     public function __construct(
         //private CurrentUserInfo $CurrentUserInfo,
     ) {
@@ -15,15 +16,17 @@ class PayProcessor implements \CM3_Lib\Modules\Payment\PayProcessorInterface
 
     public function Init(array $config)
     {
+        $this->config = $config;
         $this->resetOrderData();
     }
 
     private function resetOrderData()
     {
         $this->orderData = array(
-            'total'     => 0.0,
             'discount'  => 0.0,
-            'tax_total' => 0.0,
+            'subtotal'=>0.0,
+            'tax'=>0.0,
+            'total'     => 0.0,
             'items'     => array(),
             'stage' => 'init',
             'handler_id' => 0
@@ -66,6 +69,8 @@ class PayProcessor implements \CM3_Lib\Modules\Payment\PayProcessorInterface
             return false;
         }
         $this->orderData['items'] = [];
+        $this->orderData['subtotal']=0.0;
+        $this->orderData['tax']=0.0;
         $this->orderData['total']=0.0;
         $this->orderData['discount']=0.0;
         return true;
@@ -80,8 +85,15 @@ class PayProcessor implements \CM3_Lib\Modules\Payment\PayProcessorInterface
             'discount'=>$discount,
             'discountReason'=>$discountReason,
         );
-        $this->orderData['total'] += ($amount - $discount) * $count;
+        $this->orderData['subtotal'] += ($amount - $discount) * $count;
         $this->orderData['discount'] += $discount * $count;
+        $this->UpdateTotal();
+    }
+    private function UpdateTotal(){
+        //Update the tax and total
+        $this->orderData['tax'] = $this->orderData['subtotal'] * $this->config['SalesTax'];
+        $this->orderData['total'] = $this->orderData['subtotal'] + $this->orderData['tax'];
+
     }
     public function ConfirmOrder(): bool
     {
@@ -92,6 +104,16 @@ class PayProcessor implements \CM3_Lib\Modules\Payment\PayProcessorInterface
     {
         $this->orderData['stage'] = 'CANCELLED';
         return true;
+    }
+    public function GetTotal(): float
+    {
+        $this->UpdateTotal();
+        return $this->orderData['total'];
+    }
+    public function GetTax(): float
+    {
+        $this->UpdateTotal();
+        return $this->orderData['tax'];
     }
     public function RetrievePaymentRedirectURL(): string
     {

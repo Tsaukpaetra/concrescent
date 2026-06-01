@@ -31,6 +31,10 @@ interface PayProcessorInterface
     public function ConfirmOrder(): bool;
     //Close order if it's in-flight to prevent possible double-charging
     public function CancelOrder(): bool;
+    //Get the total as it would be sent to the processor
+    public function GetTotal(): float;
+    //Get the tax portion of the total
+    public function GetTax(): float;
     //If processor needs the user to visit someplace, what is the URL?
     public function RetrievePaymentRedirectURL(): string;
     //The user has come back with order completion information, let's do it!

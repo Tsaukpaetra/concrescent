@@ -34,6 +34,7 @@ class payment extends \CM3_Lib\database\Table
 
             'payment_system'			=> new cm_Column('VARCHAR', '255', true),
             'payment_txn_amt'		=> new cm_Column('DECIMAL', '7,2', false),
+            'payment_tax_prt'		=> new cm_Column('DECIMAL', '7,2', false),
             'payment_date'			=> new cm_Column('TIMESTAMP', null, true),
             'payment_details'		=> new cm_Column('TEXT', null, true),
             'payment_status'	=> new cm_Column('ENUM', $this->payment_statuses, false),

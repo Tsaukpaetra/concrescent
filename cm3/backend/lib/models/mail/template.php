@@ -33,7 +33,7 @@ class template extends \CM3_Lib\database\Table
             'attachments'   => new cm_Column('VARCHAR', 300, true),
         );
         $this->IndexDefs = array();
-        $this->PrimaryKeys = array('event_id'=>false, 'context_code','name');
+        $this->PrimaryKeys = array('event_id'=>false, 'context_code'=>false,'name'=>false);
         $this->DefaultSearchColumns = array('id');
     }
 }

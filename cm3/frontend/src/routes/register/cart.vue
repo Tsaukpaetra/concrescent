@@ -26,7 +26,8 @@
                     </v-icon>
                 </template>
             </v-expansion-panel-header>
-            <v-expansion-panel-content v-if="cart">&nbsp;
+            <v-expansion-panel-content v-if="cart" class="pa-0">
+                <v-card-text>
                 <v-container fluid>
                     <v-row>
                         <v-col cols="12"
@@ -51,14 +52,14 @@
                                     <v-spacer></v-spacer>
                                     <v-tooltip bottom>
                                         <template v-slot:activator="{ on, attrs }">
-                                            <v-btn color="error"
-                                                    small
-                                                    v-bind="attrs"     
-                                                    v-on="on"                                               
-                                                    v-if="!!badgeErrorCount(cart,idx)">
-                                                    {{ badgeErrorCount(cart,idx) }} <v-icon>mdi-alert-outline</v-icon>
-                                                </v-btn>
-                                        </template> 
+                                            <div class="v-btn v-btn--contained theme--light v-size--small error"
+                                                v-bind="attrs" v-on="on" v-if="!!badgeErrorCount(cart, idx)">
+                                                <span class="v-btn__content">
+                                                    {{ badgeErrorCount(cart, idx) }}
+                                                    <v-icon>mdi-alert-outline</v-icon>
+                                                </span>
+                                            </div>
+                                        </template>
                                         <span>
                                             Problems:
                                             <ul>
@@ -124,41 +125,55 @@
                             </v-card>
                         </v-col>
                     </v-row>
-                    <v-row>
-                        <v-col cols="3"
-                               sm="2">
+                    <p v-show="itemsHaveErrors">Can't checkout now, there are problems!</p>
+                </v-container>
+                </v-card-text>
+                <div class="mx-n6 mb-n4" style="width: calc(100% + 48px);">
+                <v-toolbar height="auto"  >
+                    <v-row no-gutters class="justify-end justify-sm-end justify-center">
+
+                        <v-col cols="auto" class="pa-1">
                             <v-tooltip top>
                                 <template v-slot:activator="{ on, attrs }">
-                                    <v-btn color="red" v-bind="attrs" v-on="on" @click="showclearCartDialog(cart.id)">
+                                    <v-btn color="red" v-bind="attrs" v-on="on"
+                                        @click="showclearCartDialog(cart.id)">
                                         <v-icon>mdi-trash-can</v-icon>
                                     </v-btn>
                                 </template>
                                 Clear cart
                             </v-tooltip>
-                        </v-col>
-
-                        <v-col cols="3"
-                               sm="2">
-                            <v-btn :disabled="!cart.canEdit"
-                                   color="green"
-                                   dark
-                                   @click="showpromocodeDialog(cart.id)">
+                            <v-btn :disabled="!cart.canEdit" color="green" dark
+                                @click="showpromocodeDialog(cart.id)">
                                 <v-icon v-if="$vuetify.breakpoint.xs">mdi-sale</v-icon>
                                 <div v-else>
                                     Enter Promo Code
                                 </div>
                             </v-btn>
+
                         </v-col>
+                        <v-spacer></v-spacer>
+                        <v-col cols="auto" class="pa-1">
+                            <v-btn small plain  v-if="!cart.RequiresApproval || cart.canPay">
+                                <table style="text-align: right;">
+                                    <tr>
+                                        <td>
+                                            Sub:</td>
+                                        <td>
+                                            {{ (cart.payment_txn_amt - cart.payment_tax_prt) | currency }}
+                                        </td>
+                                    </tr>
+                                    <tr>
 
-                        <v-col cols="2"
-                               sm="3">&nbsp;
-
-                            <v-btn color="primary"
-                                   right
-                                   absolute
-                                   v-if="isLoggedIn"
-                                   :disabled="!cart.canCheckout"
-                                   @click="checkout(cart.id)">
+                                        <td>
+                                            Tax:</td>
+                                        <td>
+                                            {{ cart.payment_tax_prt | currency }}
+                                        </td>
+                                    </tr>
+                                </table>
+                            </v-btn>
+                            <v-btn color="primary" v-if="isLoggedIn" :disabled="!cart.canCheckout"
+                                @click="checkout(cart.id)">
                                 <div v-if="!cart.RequiresApproval || cart.canPay">
                                     <v-icon>mdi-credit-card-outline</v-icon>
                                     {{ cart.payment_txn_amt | currency }}
@@ -171,15 +186,16 @@
 
                                 </div>
                             </v-btn>
-                            <v-btn v-else
-                                   color="primary"
-                                   right
-                                   absolute
-                                   @click="createAccountDialog = true">Specify Contact info</v-btn>
+                            <v-btn v-else color="primary" right absolute @click="createAccountDialog = true">Specify
+                                Contact info</v-btn>
+
                         </v-col>
                     </v-row>
-                    <p v-show="itemsHaveErrors">Can't checkout now, there are problems!</p>
-                </v-container>
+                </v-toolbar>
+
+
+                </div>
+  
             </v-expansion-panel-content>
         </v-expansion-panel>
     </v-expansion-panels>

@@ -45,6 +45,8 @@ class PayProcessor implements \CM3_Lib\Modules\Payment\PayProcessorInterface
                 'transaction_id'=>'',
                 'invoice_id' => '',
                 'description'=>'',
+                'subtotal'=>0.0,
+                'tax'=>0.0,
                 'total'=>0.0,
                 'discount'=>0.0,
                 'return_urls'=>array(
@@ -121,9 +123,15 @@ class PayProcessor implements \CM3_Lib\Modules\Payment\PayProcessorInterface
         }
         $this->orderData['prep']['items'] = [];
 
-        $this->orderData['prep']['total']=0.0;
+        $this->orderData['prep']['subtotal']=0.0;
         $this->orderData['prep']['discount']=0.0;
         return true;
+    }
+    private function UpdateTotal(){
+        //Update the tax and total
+        $this->orderData['prep']['tax'] = $this->orderData['prep']['subtotal'] * $this->config['SalesTax'];
+        $this->orderData['prep']['total'] = $this->orderData['prep']['subtotal'] + $this->orderData['prep']['tax'];
+
     }
     public function AddItem(string $name, float $amount, int $count = 1, ?string $description = null, ?string $sku = null, ?float $discount = null, ?string $discountReason = null)
     {
@@ -136,13 +144,14 @@ class PayProcessor implements \CM3_Lib\Modules\Payment\PayProcessorInterface
             'sku'=>$sku
 
         );
-        //Add to the total
-        $this->orderData['prep']['total'] += $amount * $count;
+        //Add to the subtotal
+        $this->orderData['prep']['subtotal'] += $amount * $count;
         //Are we discounting?
         if (!is_null($discount)) {
-            $this->orderData['prep']['total'] -= $discount * $count;
+            $this->orderData['prep']['subtotal'] -= $discount * $count;
             $this->orderData['prep']['discount'] += $discount * $count;
         }
+        $this->UpdateTotal();
     }
     public function ConfirmOrder(): bool
     {
@@ -155,6 +164,17 @@ class PayProcessor implements \CM3_Lib\Modules\Payment\PayProcessorInterface
         $this->orderData['stage'] = $this->orderData['inflight_data']['status'];
 
         return true;
+    }
+    
+    public function GetTotal(): float
+    {
+        $this->UpdateTotal();
+        return $this->orderData['prep']['total'];
+    }
+    public function GetTax(): float
+    {
+        $this->UpdateTotal();
+        return $this->orderData['prep']['tax'];
     }
     public function CancelOrder(): bool
     {
@@ -349,6 +369,9 @@ class PayProcessor implements \CM3_Lib\Modules\Payment\PayProcessorInterface
 
     private function generateOrderData()
     {
+        //Update the tax and total, just in case
+        $this->UpdateTotal();
+
         return array(
             'intent' =>'CAPTURE',
             'payer'=>array('payment_method'=>'paypal'),
@@ -358,8 +381,9 @@ class PayProcessor implements \CM3_Lib\Modules\Payment\PayProcessorInterface
                     'amount'=>array_merge(
                         $this->makeMoney($this->orderData['prep']['total']),
                         array('breakdown'=>array(
-                            'item_total' => $this->makeMoney($this->orderData['prep']['total'] + $this->orderData['prep']['discount']),
-                            'discount' => $this->makeMoney($this->orderData['prep']['discount'])
+                            'item_total' => $this->makeMoney($this->orderData['prep']['subtotal'] + $this->orderData['prep']['discount']),
+                            'discount' => $this->makeMoney($this->orderData['prep']['discount']),
+                            'tax_total' => $this->makeMoney($this->orderData['prep']['tax'])
                         ))
                     ),
                     'description' =>$this->orderData['prep']['description'] ?? '',

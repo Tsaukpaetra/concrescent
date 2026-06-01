@@ -57,6 +57,7 @@ final class PaymentBuilder
             'payment_system' => 'Cash',
             'payment_details' => '',
             'payment_txn_amt' => -1,
+            'payment_tax_prt' => -1,
             'date_created' =>'',
             'date_modified' =>'',
             'notes' =>'',
@@ -90,11 +91,11 @@ final class PaymentBuilder
         return $this->loadCart($badge['payment_id']);
     }
 
-    public function loadCart(int $cart_id, string $cart_uuid = null, $expectedEventId = null, $expectedContactId = null)
+    public function loadCart(int $cart_id, ?string $cart_uuid = null, $expectedEventId = null, $expectedContactId = null)
     {
         $cart = $this->payment->GetByIDorUUID($cart_id, $cart_uuid, array(
             'id', 'uuid', 'event_id','contact_id',
-            'payment_status','payment_system','payment_txn_amt',
+            'payment_status','payment_system','payment_txn_amt','payment_tax_prt',
             'items','payment_details','requested_by' ,
             'date_created' ,'date_modified' ,'notes'
         ));
@@ -227,6 +228,7 @@ final class PaymentBuilder
             'requested_by' => $this->cart['requested_by'],
             'payment_system' => $this->cart['payment_system'],
             'payment_txn_amt' =>$this->cart['payment_txn_amt'],
+            'payment_tax_prt' =>$this->cart['payment_tax_prt'],
             'date_created' => $this->cart['date_created'],
             'date_modified' => $this->cart['date_modified'],
             'notes' => $this->cart['notes'] ??'',
@@ -382,13 +384,12 @@ final class PaymentBuilder
         if ($refresh) {
             $this->stageItems();
         }
-
         return $this->cart['payment_txn_amt'];
     }
 
     public function refreshCartMeta()
     {
-        $this->canPay = true;
+        $this->CanPay = true;
 
         $this->getCartTotal(true);
 
@@ -611,7 +612,16 @@ final class PaymentBuilder
                 }
             }
         }
-        $this->cart['payment_txn_amt'] = $this->cart_payment_txn_amt;
+        
+        if(!empty($this->cart['payment_system'])){
+            $totals = $this->simPayForTotalCalculation($this->cart['payment_system']);
+            $this->cart['payment_txn_amt'] = $totals['total'];
+            $this->cart['payment_tax_prt'] = $totals['tax'];
+            
+        } else {
+            $this->cart['payment_txn_amt'] = $this->cart_payment_txn_amt;
+            $this->cart['payment_tax_prt'] = 0;
+        }
         //$this->saveCart();
     }
 
@@ -746,6 +756,16 @@ final class PaymentBuilder
             ]);
     }
 
+    function simPayForTotalCalculation(string $payment_system){
+        //Instantiates the payment processor, sets the items, and gets the total
+        $pp = $this->PaymentModuleFactory->Create($payment_system);
+        
+        foreach ($this->stagedItems as $sitem) {
+            call_user_func_array(array($pp,'AddItem'), $sitem);
+        }
+        return ['total' => $pp->GetTotal(), 'tax'=> $pp->GetTax()];
+    }
+
     public function resetPayment()
     {
         $this->stagedItems = array();
@@ -791,7 +811,8 @@ final class PaymentBuilder
         }
 
         //TODO: Real sanity check please
-        $this->cart['payment_txn_amt'] = $this->cart_payment_txn_amt;
+        $this->cart['payment_txn_amt'] = $this->pp->GetTotal();
+        $this->cart['payment_tax_prt'] = $this->pp->GetTax();
 
         $this->saveCart();
 

@@ -34,22 +34,33 @@ class Mail
     
     //Define the fields we must have:
     private $defaultListSchema = [
-            'active'  => 1,
-            'name'    => '',
-            'from'    => '',
-            'cc'      => '',
-            'subject' => ''
-        ];
+        'active' => 1,
+        'name' => '',
+        'from' => '',
+        'cc' => '',
+        'subject' => ''
+    ];
     private $defaultSchema = [
-            'active'  => 1,
-            'name'    => '',
-            'from'    => '',
-            'cc'      => '',
-            'subject' => '',
-            'format'  => '',
-            'body'    => '',
-            'attachments' => ''
-        ];
+        'event_id' => 0,
+        'context_code' => '',
+        'name' => '',
+        'active' => 1,
+        'reply_to' => '',
+        'from' => '',
+        'cc' => '',
+        'subject' => '',
+        'format' => '',
+        'body' => '',
+        'attachments' => ''
+    ];
+    private $schemaSizes = [
+        'name' => 255,
+        'from' => 300,
+        'cc' => 2000,
+        'subject' => 1000,
+        'body' => 65535,
+        'attachments' => 300
+    ];
 
     public function getMailerErrorInfo()
     {
@@ -102,7 +113,7 @@ class Mail
     
     }
 
-    public function RenderTemplate(string $context, string $template, array $entity)
+    public function RenderTemplate(string $context, string $template, array $entity, bool $includeAttachements = false)
     {
         //Start prepping the message
         $this->PrepareMessage($this->GetTemplate($context, $template, true), $entity);
@@ -110,7 +121,7 @@ class Mail
         //Prepare to send it (but don't actually do so)
         $this->PHPMailer->preSend();
         //Get what we would have sent
-        return $this->GetLastMessage();
+        return $this->GetLastMessage($includeAttachements);
     }
 
     public function CheckTemplateActive(string $context, string $name, bool $throwOnMissing = false){
@@ -240,11 +251,79 @@ class Mail
                 } else {
                     //Just return a blank template that's inactive
                     $template = array_merge($this->defaultSchema, [
+                        'event_id' => $this->CurrentUserInfo->GetEventId(),
+                        'context_code' => $context,
+                        'name' => $name,
                         'active' => 0
                     ]);
                 }
             }
         return $template;
+    }
+
+    public function SetTemplate(string $context, string $name, array $templateData)
+    {
+        //Ensure some things aren't sneaky
+        $templateData = array_replace($this->defaultSchema, $templateData,
+        array_map(
+            function($value, $key) {
+                if(array_key_exists($key, $this->schemaSizes))
+                    return substr((string)$value, 0, $this->schemaSizes[$key]);
+                else
+                    switch ($key) {
+                        case 'active':
+                            return $value ? 1 :0;
+                        case 'format':
+                            //Default to Markdown if not right
+                            return in_array($value, ['Text Only','Markdown','Full HTML']) ? $value : 'Markdown';
+                        default:
+                            //Eh, whatever. If it's something else it will be filtered out anyways
+                            return $value;
+                    }
+            },
+            $templateData,
+            array_keys($templateData) // Passes keys to the map callback
+        ),
+        [
+            //Force these values, no sideloading through the post data!
+            'event_id' => $this->CurrentUserInfo->GetEventId(),
+            'context_code' => $context,
+            'name' => $name
+        ]);
+        $action = $this->template->Exists($templateData) ? 'Update' :'Create';
+        //Execute the action
+        return call_user_func_array(array($this->template,$action), [$templateData ]);
+
+    }
+    public function ResetTemplate(string $context, string $name)
+    {
+        $templateData = [
+            'event_id' => $this->CurrentUserInfo->GetEventId(),
+            'context_code' => $context,
+            'name' => $name
+        ];
+        if($this->template->Exists($templateData)){
+            return $this->template->Delete($templateData);
+        }
+        return true;
+    }
+    
+    public function SetTemplateActive(string $context, string $name, bool $active)
+    {
+        $templateData = [
+            'event_id' => $this->CurrentUserInfo->GetEventId(),
+            'context_code' => $context,
+            'name' => $name,
+            'active' => $active ? 1 : 0
+        ];
+        $action = $this->template->Exists($templateData) ? 'Update' :'Create';
+        if($action == 'Create') {
+            //Oh, it doesn't exist. Slice in a default form
+            $templateData = array_replace($this->defaultSchema,$templateData);
+        }
+        //Execute the action
+        return call_user_func_array(array($this->template,$action), [$templateData ]);
+
     }
 
     /// Get context-specific templates
@@ -288,60 +367,6 @@ class Mail
         return array_values($results);
     }
 
-
-    public function GetTemplateByBadge(string $reason, array $entity)
-    {
-        $template = null;
-        $templatedata = $this->template->Search(
-            new View(
-                array(
-                    'id',
-                    'name',
-                    'reply_to',
-                    'from',
-                    'cc',
-                    'bcc',
-                    'subject',
-                    'format',
-                    'body',
-                    'attachments'
-                ),
-                array(
-                    new Join(
-                        $this->templatemap,
-                        array(
-                            'id' => 'template_id',
-                            new SearchTerm('context_code', $entity['context_code'] ?? 'A'),
-                            new SearchTerm('badge_type_id', $entity['badge_type_id'] ?? 0),
-                            new SearchTerm('reason', $reason),
-                        )
-                    )
-                )
-            ),
-            array(
-                $this->CurrentUserInfo->EventIdSearchTerm(),
-                new SearchTerm('active', 1),
-                new SearchTerm('name', $templatename)
-            ),
-            limit: 1
-        );
-        if (count($templatedata) > 0) {
-            $template = $templatedata[0];
-        } else {
-            //Search the on-disk templates
-            $templatefile = __DIR__ . '/../../../config/templates/Mail/' . ($entity['context_code'] ?? 'A') . '-' . $reason . '.json';
-            if (file_exists($templatefile)) {
-                //Load it up!
-                $template = json_decode(file_get_contents($templatefile), true);
-                //Make sure it knows its name
-                $template['name'] = basename($templatefile, '.json');
-                $template['id'] = 0;
-            }
-            if (is_null($template) || is_string($template)) {
-                throw new \Exception('Unable to load mail template "' . $templatename . '"');
-            }
-        }
-    }
 
     public function GetLastMessage(bool $includeAttachements = false)
     {
