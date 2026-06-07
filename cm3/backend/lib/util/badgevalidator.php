@@ -250,7 +250,10 @@ final class badgevalidator
     function genFormQuestionRule($question) :Validatable
     {
         
-        return $question['required'] ? v::notEmpty() : v::AlwaysValid();
+        return $question['required'] ? v::oneOf(
+            v::notEmpty(),//PHP's  empty() function treates 0 and '0' as "empty"
+            v::equals(0)
+        ) : v::AlwaysValid();
     }
 
     //Copied from badgeinfo
