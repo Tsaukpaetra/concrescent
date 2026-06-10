@@ -15,6 +15,9 @@ jobs:
     # 1. Download your repository files into the GitHub runner environment
     - name: Checkout Code
       uses: actions/checkout@v4
+        
+    - name: Enable Corepack
+      run: corepack enable
 
     # 2. Set up Node.js environment safely
     - name: Set up Node.js
@@ -23,9 +26,6 @@ jobs:
         node-version: 24
         cache: 'yarn'
         cache-dependency-path: cm3/frontend/yarn.lock
-        
-    - name: Enable Corepack
-      run: corepack enable
 
     # 3. Compile your custom Vue/Vuetify frontend architecture
     - name: Build Frontend
