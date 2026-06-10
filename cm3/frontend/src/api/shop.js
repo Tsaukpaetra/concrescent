@@ -3,7 +3,7 @@ const axios = require('axios').default;
 export default {
 
     getEventInfo(cb, errorCb) {
-        axios.get(global.config.apiHostURL + "public")
+        axios.get(window.CM3_CONFIG.apiHostURL + "public")
             .then(function (response) {
                 cb(response.data);
             })
@@ -14,7 +14,7 @@ export default {
             })
     },
     getBadgeContexts(event_id, cb, errorCb) {
-        axios.get(global.config.apiHostURL + "public/" + event_id + '/badges')
+        axios.get(window.CM3_CONFIG.apiHostURL + "public/" + event_id + '/badges')
             .then(function (response) {
                 cb(response.data);
             })
@@ -25,7 +25,7 @@ export default {
             })
     },
     getLocations(event_id, cb, errorCb) {
-        axios.get(global.config.apiHostURL + "public/" + event_id + '/locations')
+        axios.get(window.CM3_CONFIG.apiHostURL + "public/" + event_id + '/locations')
             .then(function (response) {
                 cb(response.data);
             })
@@ -36,7 +36,7 @@ export default {
             })
     },
     getLocationCategories(event_id, cb, errorCb) {
-        axios.get(global.config.apiHostURL + "public/" + event_id + '/locationcategories')
+        axios.get(window.CM3_CONFIG.apiHostURL + "public/" + event_id + '/locationcategories')
             .then(function (response) {
                 cb(response.data);
             })
@@ -47,7 +47,7 @@ export default {
             })
     },
     getLocationEvents(event_id, cb, errorCb) {
-        axios.get(global.config.apiHostURL + "public/" + event_id + '/locationevents')
+        axios.get(window.CM3_CONFIG.apiHostURL + "public/" + event_id + '/locationevents')
             .then(function (response) {
                 cb(response.data);
             })
@@ -60,7 +60,7 @@ export default {
     getBadges(event_id, context, override_code, cb, errorCb) {
         const override = (override_code ?? '').replace(/[^a-z0-9]/gi, '').toUpperCase();
         var query = override != '' ? '?override=' + override : '';
-        axios.get(global.config.apiHostURL + "public/" + event_id + '/badges/' + context + query)
+        axios.get(window.CM3_CONFIG.apiHostURL + "public/" + event_id + '/badges/' + context + query)
             .then(function (response) {
                 cb(response.data);
             })
@@ -72,7 +72,7 @@ export default {
     },
 
     getQuestions(event_id, context, cb, errorCb) {
-        axios.get(global.config.apiHostURL + "public/" + event_id + '/questions/' + context)
+        axios.get(window.CM3_CONFIG.apiHostURL + "public/" + event_id + '/questions/' + context)
             .then(function (response) {
                 cb(response.data);
             })
@@ -86,7 +86,7 @@ export default {
     getAddons(event_id, context, override_code, cb, errorCb) {
         const override = (override_code ?? '').replace(/[^a-z0-9]/gi, '').toUpperCase();
         var query = override != '' ? '?override=' + override : '';
-        axios.get(global.config.apiHostURL + "public/" + event_id + '/badges/' + context + '/addons' + query)
+        axios.get(window.CM3_CONFIG.apiHostURL + "public/" + event_id + '/badges/' + context + '/addons' + query)
             .then(function (response) {
                 cb(response.data);
             })
@@ -98,7 +98,7 @@ export default {
     },
 
     getCarts(token, include_all, cb, errorCb) {
-        axios.get(global.config.apiHostURL + "account/cart?include_all=" + include_all, {
+        axios.get(window.CM3_CONFIG.apiHostURL + "account/cart?include_all=" + include_all, {
             headers: {
                 Authorization: `Bearer ${token}`
             }
@@ -118,7 +118,7 @@ export default {
         if (token) {
             headers['Authorization'] = `Bearer ${token}`;
         }
-        axios.post(global.config.apiHostURL + "public/checkemail", { email_address: email_address }, {
+        axios.post(window.CM3_CONFIG.apiHostURL + "public/checkemail", { email_address: email_address }, {
             headers: headers
         })
             .then(function (response) {
@@ -131,7 +131,7 @@ export default {
     },
     //Response should be a token
     createAccount(accountInfo, cb, errorCb) {
-        axios.post(global.config.apiHostURL + "public/createaccount", accountInfo)
+        axios.post(window.CM3_CONFIG.apiHostURL + "public/createaccount", accountInfo)
             .then(function (response) {
                 cb(response.data);
             })
@@ -141,7 +141,7 @@ export default {
             });
     },
     loginAccount(accountCreds, cb, errorCb) {
-        axios.post(global.config.apiHostURL + "public/login", accountCreds)
+        axios.post(window.CM3_CONFIG.apiHostURL + "public/login", accountCreds)
             .then(function (response) {
                 cb(response.data);
             })
@@ -151,7 +151,7 @@ export default {
             });
     },
     getContactInfo(token, cb, errorCb) {
-        axios.get(global.config.apiHostURL + "account", {
+        axios.get(window.CM3_CONFIG.apiHostURL + "account", {
             headers: {
                 Authorization: `Bearer ${token}`
             }
@@ -165,7 +165,7 @@ export default {
             });
     },
     setContactInfo(token, data, cb, errorCb) {
-        axios.post(global.config.apiHostURL + "account", data, {
+        axios.post(window.CM3_CONFIG.apiHostURL + "account", data, {
             headers: {
                 Authorization: `Bearer ${token}`
             }
@@ -179,7 +179,7 @@ export default {
             });
     },
     switchEvent(token, event_id, cb, errorCb) {
-        axios.post(global.config.apiHostURL + "account/switchevent", {
+        axios.post(window.CM3_CONFIG.apiHostURL + "account/switchevent", {
             "event_id": event_id
         }, {
             headers: {
@@ -195,7 +195,7 @@ export default {
             });
     },
     setAccountSettings(token, settings, cb, errorCb) {
-        axios.post(global.config.apiHostURL + "account/settings", settings, {
+        axios.post(window.CM3_CONFIG.apiHostURL + "account/settings", settings, {
             headers: {
                 Authorization: `Bearer ${token}`
             }
@@ -210,7 +210,7 @@ export default {
     },
 
     loadCart(token, cartId, cb, errorCb) {
-        axios.get(global.config.apiHostURL + "account/cart/" + cartId, {
+        axios.get(window.CM3_CONFIG.apiHostURL + "account/cart/" + cartId, {
             headers: {
                 Authorization: `Bearer ${token}`
             }
@@ -224,7 +224,7 @@ export default {
             });
     },
     saveCart(token, cart, cb, errorCb) {
-        axios.post(global.config.apiHostURL + "account/cart", cart, {
+        axios.post(window.CM3_CONFIG.apiHostURL + "account/cart", cart, {
             headers: {
                 Authorization: `Bearer ${token}`
             }
@@ -239,7 +239,7 @@ export default {
     },
     deleteCart(token, cartId, cb, errorCb) {
         console.log("yo delete dis", cartId)
-        axios.delete(global.config.apiHostURL + "account/cart/" + cartId, {
+        axios.delete(window.CM3_CONFIG.apiHostURL + "account/cart/" + cartId, {
             headers: {
                 Authorization: `Bearer ${token}`
             }
@@ -253,7 +253,7 @@ export default {
             });
     },
     buyProducts(token, cartId, payment_system, cb, errorCb) {
-        axios.post(global.config.apiHostURL + `account/cart/${cartId}/checkout`, {
+        axios.post(window.CM3_CONFIG.apiHostURL + `account/cart/${cartId}/checkout`, {
             payment_system: payment_system
         }, {
             headers: {
@@ -269,7 +269,7 @@ export default {
             });
     },
     checkoutCartUUID(cartUUID, cb, errorCb) {
-        axios.post(global.config.apiHostURL + `public/checkoutcartuuid`, {
+        axios.post(window.CM3_CONFIG.apiHostURL + `public/checkoutcartuuid`, {
             uuid: cartUUID
         })
             .then(function (response) {
@@ -282,7 +282,7 @@ export default {
     },
 
     applyPromo(products, promo, cb, errorCb) {
-        axios.post(global.config.apiHostURL + "cart.php", {
+        axios.post(window.CM3_CONFIG.apiHostURL + "cart.php", {
             action: 'applypromo',
             code: promo,
             badges: products
@@ -297,7 +297,7 @@ export default {
     },
 
     getMyBadgesByTransaction(gid, tid, cb, errorCb) {
-        axios.post(global.config.apiHostURL + "mybadges.php", {
+        axios.post(window.CM3_CONFIG.apiHostURL + "mybadges.php", {
             gid: gid,
             tid: tid
         })
@@ -310,7 +310,7 @@ export default {
             })
     },
     getMyBadges(token, cb, errorCb) {
-        axios.get(global.config.apiHostURL + "account/badges", {
+        axios.get(window.CM3_CONFIG.apiHostURL + "account/badges", {
             headers: {
                 Authorization: `Bearer ${token}`
             }
@@ -324,7 +324,7 @@ export default {
             })
     },
     getSpecificBadge(context_code, id, uuid, cb, errorCb) {
-        axios.get(global.config.apiHostURL + "public/getspecificbadge?context_code=" +
+        axios.get(window.CM3_CONFIG.apiHostURL + "public/getspecificbadge?context_code=" +
             context_code + "&id=" + id + "&uuid=" + uuid)
             .then(function (response) {
                 cb(response.data);
@@ -335,7 +335,7 @@ export default {
             })
     },
     getMyApplications(token, cb, errorCb) {
-        axios.get(global.config.apiHostURL + "account/applications", {
+        axios.get(window.CM3_CONFIG.apiHostURL + "account/applications", {
             headers: {
                 Authorization: `Bearer ${token}`
             }
@@ -353,7 +353,7 @@ export default {
             email_data = {
                 email_address: email_data
             };
-        axios.post(global.config.apiHostURL + "public/requestmagic", email_data)
+        axios.post(window.CM3_CONFIG.apiHostURL + "public/requestmagic", email_data)
             .then(function (response) {
                 cb(response.data);
             })

@@ -1,4 +1,3 @@
-module.exports = global.config = {
   AppName: "Registration",
   AppNameAdmin: "ConCrescent",
   GoogleAutoCompleteAPIKey: 'YourKeyHere',
@@ -9,3 +8,5 @@ module.exports = global.config = {
       backgroundcolor: '#eef'
       }
 }
+window.CM3_CONFIG = {
+    hashMode: true,

@@ -58,7 +58,7 @@
     </v-navigation-drawer>
 
     <v-app-bar app class="hideIfPrintHeaderHidden"
-               color="appbar"
+               :color="'appbar' + (adminMode ? 'admin' : '')"
                dark>
         <v-app-bar-nav-icon @click.stop="drawer = !drawer"></v-app-bar-nav-icon>
         <v-toolbar-title>{{appHead}}</v-toolbar-title>
@@ -145,7 +145,6 @@
 
 
 <script>
-const config = require("../customization/config.js");
 import {
     mapState,
     mapGetters
@@ -458,7 +457,7 @@ export default {
             }
         },
         AppName: function() {
-            return this.adminMode ? config.AppNameAdmin : config.AppName;
+            return this.adminMode ? window.CM3_CONFIG.AppNameAdmin : window.CM3_CONFIG.AppName;
         },
         eventDates: function() {
             return this.productselectedEvent.date_start + "-" + this.productselectedEvent.date_end;

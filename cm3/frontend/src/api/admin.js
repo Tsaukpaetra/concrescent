@@ -17,7 +17,7 @@ export default {
         }).toString();
         if (qparams.length > 0)
             qparams = '?' + qparams
-        axios.get(global.config.apiHostURL + path + qparams, {
+        axios.get(window.CM3_CONFIG.apiHostURL + path + qparams, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -32,7 +32,7 @@ export default {
     },
 
     genericPost(token, path, data, cb, errorCb) {
-        axios.post(global.config.apiHostURL + path, data, {
+        axios.post(window.CM3_CONFIG.apiHostURL + path, data, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -46,7 +46,7 @@ export default {
             })
     },
     genericPut(token, path, data, cb, errorCb) {
-        axios.put(global.config.apiHostURL + path, data, {
+        axios.put(window.CM3_CONFIG.apiHostURL + path, data, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -60,7 +60,7 @@ export default {
             })
     },
     genericPatch(token, path, data, cb, errorCb) {
-        axios.patch(global.config.apiHostURL + path, data, {
+        axios.patch(window.CM3_CONFIG.apiHostURL + path, data, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -74,7 +74,7 @@ export default {
             })
     },
     genericDelete(token, path, cb, errorCb) {
-        axios.delete(global.config.apiHostURL + path, {
+        axios.delete(window.CM3_CONFIG.apiHostURL + path, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -93,7 +93,7 @@ export default {
         }).toString();
         if (qparams.length > 0)
             qparams = '?' + qparams
-        axios.get(global.config.apiHostURL + path + qparams, {
+        axios.get(window.CM3_CONFIG.apiHostURL + path + qparams, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -111,7 +111,7 @@ export default {
             "find": searchText,
             ...pageOptions
         }).toString();
-        axios.get(global.config.apiHostURL + "Badge/CheckIn?" + params, {
+        axios.get(window.CM3_CONFIG.apiHostURL + "Badge/CheckIn?" + params, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -125,7 +125,7 @@ export default {
             })
     },
     badgeCheckinFetch(token, context, id, cb, errorCb) {
-        axios.get(global.config.apiHostURL + "Badge/CheckIn/" + context + "/" + id, {
+        axios.get(window.CM3_CONFIG.apiHostURL + "Badge/CheckIn/" + context + "/" + id, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -139,7 +139,7 @@ export default {
             })
     },
     badgeCheckinSave(token, badgeData, cb, errorCb) {
-        axios.post(global.config.apiHostURL + "Badge/CheckIn/" + badgeData.context_code + "/" + badgeData.id + "/Update", badgeData, {
+        axios.post(window.CM3_CONFIG.apiHostURL + "Badge/CheckIn/" + badgeData.context_code + "/" + badgeData.id + "/Update", badgeData, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -153,7 +153,7 @@ export default {
             })
     },
     badgeCheckinGetPayment(token, context, id, cb, errorCb) {
-        axios.get(global.config.apiHostURL + "Badge/CheckIn/" + context + "/" + id + "/GetPayment", {
+        axios.get(window.CM3_CONFIG.apiHostURL + "Badge/CheckIn/" + context + "/" + id + "/GetPayment", {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -167,7 +167,7 @@ export default {
             })
     },
     badgeCheckinConfirmPayment(token, context, id, payData, cb, errorCb) {
-        axios.post(global.config.apiHostURL + "Badge/CheckIn/" + context + "/" + id + "/PostPayment", payData, {
+        axios.post(window.CM3_CONFIG.apiHostURL + "Badge/CheckIn/" + context + "/" + id + "/PostPayment", payData, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -181,7 +181,7 @@ export default {
             })
     },
     badgeCheckinFinish(token, context, id, cb, errorCb) {
-        axios.post(global.config.apiHostURL + "Badge/CheckIn/" + context + "/" + id + "/Finish", null, {
+        axios.post(window.CM3_CONFIG.apiHostURL + "Badge/CheckIn/" + context + "/" + id + "/Finish", null, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -197,7 +197,7 @@ export default {
     //Breaking from the callback mold...
     getEventInfo(token) {
         return new Promise((resolve,reject) =>{
-            axios.get(global.config.apiHostURL + 'EventInfo', {
+            axios.get(window.CM3_CONFIG.apiHostURL + 'EventInfo', {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -213,7 +213,7 @@ export default {
     },
     getBadgeContexts(token) {
         return new Promise((resolve,reject) =>{
-            axios.get(global.config.apiHostURL + 'Group?includeDefault=true', {
+            axios.get(window.CM3_CONFIG.apiHostURL + 'Group?includeDefault=true', {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -229,7 +229,7 @@ export default {
     },
     getLocations(token) {
         return new Promise((resolve,reject) =>{
-            axios.get(global.config.apiHostURL + 'Location', {
+            axios.get(window.CM3_CONFIG.apiHostURL + 'Location', {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -244,7 +244,7 @@ export default {
     },
     getLocationCategories(token) {
         return new Promise((resolve,reject) =>{
-            axios.get(global.config.apiHostURL + 'LocationCategory', {
+            axios.get(window.CM3_CONFIG.apiHostURL + 'LocationCategory', {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -259,7 +259,7 @@ export default {
     },
     getLocationEvents(token) {
         return new Promise((resolve,reject) =>{
-            axios.get(global.config.apiHostURL + 'Location/Assignments', {
+            axios.get(window.CM3_CONFIG.apiHostURL + 'Location/Assignments', {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
