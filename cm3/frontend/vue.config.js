@@ -1,4 +1,5 @@
 const path = require('path'); 
+const fs = require('fs');
 const webpack = require('webpack');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 
@@ -29,20 +30,6 @@ module.exports = {
         ],
       }),
     ],
-    optimization: {
-        minimizer: [
-            (compiler) => {
-                const TerserPlugin = require('terser-webpack-plugin');
-                new TerserPlugin({
-                    // Tells Terser to skip files in the customization folder
-                    exclude: /[\\/]customization[\\/]/, 
-                    terserOptions: {
-                        compress: true,
-                    },
-                }).apply(compiler);
-            },
-        ],
-    },
   },
   chainWebpack: (config) => {
     config
@@ -55,6 +42,28 @@ module.exports = {
     config
       .plugin('define')
       .tap((args) => args);
+    if (process.env.NODE_ENV === 'production') {
+        const customizationDir = path.join(__dirname, 'customization');
+        let excludedJsRegex = null;
+
+        if (fs.existsSync(customizationDir)) {
+        // Read all files, filter down to just JavaScript, and escape special characters like dots
+        const jsFiles = fs.readdirSync(customizationDir)
+            .filter(file => file.endsWith('.js'))
+            .map(file => file.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')); // Clean escape regex
+
+        if (jsFiles.length > 0) {
+            // Stitch files together into a pattern matching their output state (e.g., /(config\.js|theme\.js)$/)
+            excludedJsRegex = new RegExp(`(${jsFiles.join('|')})$`);
+            console.log(`\n Webpack Optimizer: Excluded raw text assets: [${jsFiles.join(', ')}]\n`);
+            config.optimization.minimizer('terser').tap((args) => {
+                // exclude them via regEx
+                args[0].exclude = excludedJsRegex;
+                return args;
+            });
+        }
+}
+    }
   },
   transpileDependencies: [
     // can be string or regex
