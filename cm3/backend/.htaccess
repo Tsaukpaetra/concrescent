@@ -1,0 +1,19 @@
+# Disable directory browsing completely
+Options -Indexes
+
+# Clear out any default server indexes in the off-hand chance something else was sideloaded
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # 1. SECURITY RULE: Block direct access to everything except index.php
+    RewriteCond %{REQUEST_FILENAME} !index\.php$
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^.*$ - [F,L]
+
+    # 2. ROUTING RULE: If the request is a virtual path, hand it to Slim
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>

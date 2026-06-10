@@ -1,0 +1,69 @@
+name: Build CM3 Production Release from Master
+
+on:
+  push:
+    branches: [ master ] # Triggers automatically every time you push code to master
+
+jobs:
+  compile-and-package:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Download your repository files into the GitHub runner environment
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    # 2. Set up Node.js environment safely
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'yarn'
+        cache-dependency-path: cm3/frontend/yarn.lock
+
+    # 3. Compile your custom Vue/Vuetify frontend architecture
+    - name: Build Frontend
+      run: |
+        cd cm3/frontend
+        yarn install --frozen-lockfile
+        yarn build
+
+    # 4. Set up PHP environment for your backend dependencies
+    - name: Set up PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        tools: composer:v2
+
+    # 5. Compile your PHP backend map
+    - name: Build Backend Vendor Maps
+      run: |
+        cd cm3/backend
+        composer install --no-dev --optimize-autoloader
+
+    # 6. Restructure folders for production: Merge backend into frontend dist/api
+    - name: Assemble Unified Web Root Layout
+      run: |
+        # Create the nested api directory inside your compiled frontend
+        mkdir -p cm3/frontend/dist/api
+        
+        # Move the entire backend (including vendor/) into that nested api folder
+        mv cm3/backend/* cm3/frontend/dist/api/
+        
+        # Move hidden files like .htaccess if your backend uses them for routing
+        mv cm3/backend/.[!.]* cm3/frontend/dist/api/ 2>/dev/null || true
+
+    # 7. Compress only the clean production-ready web root folder
+    - name: Compress Release Tarball
+      run: |
+        # Change name to web-root to keep things explicit, archiving only the contents of dist/
+        cd cm3/frontend/dist
+        tar -czf ../../../cm3-release.tar.gz .
+
+    # 8. Save the cleanly packaged bundle to your GitHub dashboard
+    - name: Save Release Asset to GitHub Actions Dashboard
+      uses: actions/upload-artifact@v4
+      with:
+        name: production-web-root-package
+        path: cm3-release.tar.gz
+        retention-days: 7
