@@ -4,6 +4,9 @@ on:
   push:
     branches: [ master ] # Triggers automatically every time you push code to master
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   compile-and-package:
     runs-on: ubuntu-latest
@@ -17,9 +20,12 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: 20
+        node-version: 24
         cache: 'yarn'
         cache-dependency-path: cm3/frontend/yarn.lock
+        
+    - name: Enable Corepack
+      run: corepack enable
 
     # 3. Compile your custom Vue/Vuetify frontend architecture
     - name: Build Frontend
