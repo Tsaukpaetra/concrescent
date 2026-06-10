@@ -28,7 +28,21 @@ module.exports = {
           { from: './customization', to: '.' }
         ],
       }),
-    ]
+    ],
+    optimization: {
+        minimizer: [
+            (compiler) => {
+                const TerserPlugin = require('terser-webpack-plugin');
+                new TerserPlugin({
+                    // Tells Terser to skip files in the customization folder
+                    exclude: /[\\/]customization[\\/]/, 
+                    terserOptions: {
+                        compress: true,
+                    },
+                }).apply(compiler);
+            },
+        ],
+    },
   },
   chainWebpack: (config) => {
     config
