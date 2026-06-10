@@ -31,7 +31,7 @@ jobs:
     - name: Build Frontend
       run: |
         cd cm3/frontend
-        yarn install --frozen-lockfile
+        yarn install --immutable
         yarn build
 
     # 4. Set up PHP environment for your backend dependencies
