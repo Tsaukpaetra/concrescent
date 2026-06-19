@@ -38,9 +38,15 @@ final class Update
 
         $context = $request->getAttribute('context');
         $name    = $request->getAttribute('name');
+
+        //Special case: Are we literally only setting the Active state?
+        if(count($data) == 1 && array_keys($data)[0] == 'active') {    
+            $data = $this->Mail->SetTemplateActive($context, $name, $data['active']);
+        } else {
+            // Invoke the Domain with inputs and retain the result
+            $data = $this->Mail->SetTemplate($context, $name, $data);
+        }
         
-        // Invoke the Domain with inputs and retain the result
-        $data = $this->Mail->SetTemplate($context, $name, $data);
         // Build the HTTP response
         return $this->responder
             ->withJson($response, $data);
