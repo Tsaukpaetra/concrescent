@@ -49,7 +49,7 @@ class Mail
         'from' => '',
         'cc' => '',
         'subject' => '',
-        'format' => '',
+        'format' => 'Markdown',
         'body' => '',
         'attachments' => ''
     ];
@@ -67,15 +67,15 @@ class Mail
         return $this->PHPMailer->ErrorInfo;
     }
 
-    public function SendTemplate(string $to, string $context, string $template, array $entity, ?string $cc = null, int $contact_id = 0, int $sender_id = 0, bool $overrideActive = false)
+    public function SendTemplate(string $to, string $context, string $template, array $entity, ?string $cc = null, int $contact_id = 0, int $sender_id = 0, bool $overrideActive = false, bool $renderMissingVariables = false)
     {
         //Start prepping the message
         $loadedtemplate = $this->GetTemplate($context, $template);
         //Short circuit if the template is not active
         if(!$loadedtemplate['active'] && !$overrideActive){
-            return ['sent'=>false,'result'=>'Template not active'];
+            return ['sent'=>false,'result'=>'Template [' . $context .'-'. $template . '] not active'];
         }
-        $this->PrepareMessage($loadedtemplate, $entity);
+        $this->PrepareMessage($loadedtemplate, $entity, $renderMissingVariables);
 
         //Set main recipient(s)
         $this->addAddress('Address', $to);
@@ -116,7 +116,7 @@ class Mail
     public function RenderTemplate(string $context, string $template, array $entity, bool $includeAttachements = false)
     {
         //Start prepping the message
-        $this->PrepareMessage($this->GetTemplate($context, $template, true), $entity);
+        $this->PrepareMessage($this->GetTemplate($context, $template, true), $entity, true);
 
         //Prepare to send it (but don't actually do so)
         $this->PHPMailer->preSend();
@@ -319,7 +319,7 @@ class Mail
         $action = $this->template->Exists($templateData) ? 'Update' :'Create';
         if($action == 'Create') {
             //Oh, it doesn't exist. Slice in a default form
-            $templateData = array_replace($this->defaultSchema,$templateData);
+            $templateData = array_replace($this->GetTemplate($context, $name),$templateData);
         }
         //Execute the action
         return call_user_func_array(array($this->template,$action), [$templateData ]);
@@ -389,7 +389,7 @@ class Mail
 
         return $result;
     }
-    private function PrepareMessage(array $template, array $entity)
+    private function PrepareMessage(array $template, array $entity, bool $renderMissingVariables = false)
     {
         $this->PHPMailer->clearAllRecipients();
         $this->PHPMailer->clearReplyTos();
@@ -440,8 +440,8 @@ class Mail
         $mergeFields = $this->wrap_entity($entity);
 
         //Do the marge-able fields next
-        $this->PHPMailer->Subject = $this->compileTemplate($template['subject'], $mergeFields);
-        $body = $this->compileTemplate($template['body'], $mergeFields);
+        $this->PHPMailer->Subject = $this->compileTemplate($template['subject'], $mergeFields, $renderMissingVariables);
+        $body = $this->compileTemplate($template['body'], $mergeFields, $renderMissingVariables);
 
         switch ($template['format']) {
             case 'Text Only':
@@ -529,7 +529,7 @@ class Mail
         return true;
     }
 
-    function compileTemplate($template, $templateData)
+    function compileTemplate($template, $templateData, bool $renderMissingVariables = false)
     {
         // Tokenize the string by splitting on all [[ tags ]]
         $tagRegex = '/(\[\[[\s\S]*?\]\])/';
@@ -555,7 +555,7 @@ class Mail
             }
         };
 
-        $parseBlock = function ($context) use (&$parseBlock, $state, $swallowBlock) {
+        $parseBlock = function ($context) use (&$parseBlock, $state, $swallowBlock, $renderMissingVariables) {
             $result = '';
 
             while ($state->index < \count($state->parts)) {
@@ -672,7 +672,7 @@ class Mail
                 $value = $this->getValueByPath($context, $innerContent);
                 if ($value === null) {
                     //trigger_error("[Template Debug] Variable target not found: \"[[{$innerContent}]]\"", E_USER_WARNING);
-                    $result .= "[[?{$innerContent}]]";
+                    if($renderMissingVariables) $result .= "[[?{$innerContent}]]";
                 } else {
                     $result .= (string) $value;
                 }
