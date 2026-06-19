@@ -27,31 +27,98 @@
                       class="mx-4"></v-text-field>
     </template>
     <template v-slot:[`item.__actions`]="{ item }">
-    <v-btn-toggle dense v-model="actionToggles" multiple>
-        
-            <v-btn v-if="!isSorting" @click="doMove(item,true)">
-                <v-icon>mdi-arrow-up</v-icon>
-            </v-btn>
-            <v-btn v-if="!isSorting" @click="doMove(item,false)">
-                <v-icon>mdi-arrow-down</v-icon>
-            </v-btn>
-        <v-btn v-for="action in actions"
-               :key="action.name"
-               @click="doEmit(action.name, item)">{{action.text}}</v-btn>
-    </v-btn-toggle>
+        <div class="d-inline-flex">
+            <v-tooltip v-for="(action, index) in actionsWithSorting" :key="action.name" top
+                :disabled="!action.text || ($vuetify.breakpoint.mdAndUp && !action.iconOnly)">
+                <template v-slot:activator="{ on, attrs }">
+                    <v-btn dense depressed v-bind="attrs" v-on="on" :color="action.color || 'default'"
+                        :icon="!!action.icon && (action.iconOnly || $vuetify.breakpoint.smAndDown || !action.text)"
+                        :class="{
+                            'rounded-r-0': index < actionsWithSorting.length - 1,
+                            'rounded-l-0': index > 0
+                        }" :style="{
+                            border: '1px solid rgba(0, 0, 0, 0.12)',
+                            marginLeft: '-1px',
+                            borderRadius: (index === 0 ? (actionsWithSorting.length == 1 ? '4px 4px 4px 4px' : '4px 0 0 4px') : index === actionsWithSorting.length - 1 ? '0 4px 4px 0' : '0') + ' !important'
+                        }" @click="doEmit(action.name, item)">
+                        <v-icon
+                            v-if="!!action.icon && (action.iconOnly || !action.text || $vuetify.breakpoint.smAndDown)"
+                            :color="action.color || ''">
+                            mdi-{{ action.icon }}
+                        </v-icon>
+
+                        <span v-else-if="!!action.text">
+                            {{ action.text }}
+                        </span>
+                    </v-btn>
+                </template>
+
+                <span>{{ action.text }}</span>
+            </v-tooltip>
+        </div>
     </template>
     <template v-slot:[`footer.prepend`]>
-        <v-btn v-for="action in footerActions"
-               :key="action.name"
-               :color="action.color"
-               @click="doEmit(action.name)"
-               class="ma-2">{{action.text}}</v-btn>
+        <div class="d-inline-flex">
+            <v-tooltip v-for="(action, index) in footerActions" :key="action.name" top
+                :disabled="!action.text || ($vuetify.breakpoint.mdAndUp && !action.iconOnly)">
+                <template v-slot:activator="{ on, attrs }">
+                    <v-btn dense depressed v-bind="attrs" v-on="on" :color="action.color || 'default'"
+                        :icon="!!action.icon && (action.iconOnly || $vuetify.breakpoint.smAndDown || !action.text)"
+                        :class="{
+                            'ma-2': true,
+                            'rounded-r-0': index < footerActions.length - 1,
+                            'rounded-l-0': index > 0
+                        }" :style="{
+                            border: '1px solid rgba(0, 0, 0, 0.12)',
+                            marginLeft: '-1px',
+                            borderRadius: (index === 0 ? (footerActions.length == 1 ? '4px 4px 4px 4px' : '4px 0 0 4px') : index === footerActions.length - 1 ? '0 4px 4px 0' : '0') + ' !important'
+                        }" @click="doEmit(action.name, item)">
+                        <v-icon
+                            v-if="!!action.icon && (action.iconOnly || !action.text || $vuetify.breakpoint.smAndDown)"
+                            :color="action.color || ''">
+                            mdi-{{ action.icon }}
+                        </v-icon>
+
+                        <span v-else-if="!!action.text">
+                            {{ action.text }}
+                        </span>
+                    </v-btn>
+                </template>
+
+                <span>{{ action.text }}</span>
+            </v-tooltip>
+        </div>
         <v-spacer/>
-        <v-btn v-for="action in footerActionsRight"
-               :key="action.name"
-               :color="action.color"
-               @click="doEmit(action.name)"
-               class="ma-2">{{action.text}}</v-btn>
+        <div class="d-inline-flex">
+            <v-tooltip v-for="(action, index) in footerActionsRight" :key="action.name" top
+                :disabled="!action.text || ($vuetify.breakpoint.mdAndUp && !action.iconOnly)">
+                <template v-slot:activator="{ on, attrs }">
+                    <v-btn dense depressed v-bind="attrs" v-on="on" :color="action.color || 'default'"
+                        :icon="!!action.icon && (action.iconOnly || $vuetify.breakpoint.smAndDown || !action.text)"
+                        :class="{
+                            'ma-2': true,
+                            'rounded-r-0': index < footerActionsRight.length - 1,
+                            'rounded-l-0': index > 0
+                        }" :style="{
+                            border: '1px solid rgba(0, 0, 0, 0.12)',
+                            marginLeft: '-1px',
+                            borderRadius: (index === 0 ? (footerActionsRight.length == 1 ? '4px 4px 4px 4px' : '4px 0 0 4px') : index === footerActionsRight.length - 1 ? '0 4px 4px 0' : '0') + ' !important'
+                        }" @click="doEmit(action.name, item)">
+                        <v-icon
+                            v-if="!!action.icon && (action.iconOnly || !action.text || $vuetify.breakpoint.smAndDown)"
+                            :color="action.color || ''">
+                            mdi-{{ action.icon }}
+                        </v-icon>
+
+                        <span v-else-if="!!action.text">
+                            {{ action.text }}
+                        </span>
+                    </v-btn>
+                </template>
+
+                <span>{{ action.text }}</span>
+            </v-tooltip>
+        </div>
         <v-dialog
             v-model="isExporting"
             scrollable
@@ -226,7 +293,6 @@ export default {
             tableOptions: {},
             tableResults: [],
             totalResults: 0,
-            actionToggles:[],
             optionExportFormat:'csv',
             optionExportRawHeaders: false,
         };
@@ -269,6 +335,21 @@ export default {
         },
         isSorting() {
             return this.tableOptions.sortBy.length > 0;
+        },
+        actionsWithSorting() {
+            if(!this.isSorting)
+            return this.actions.toSpliced(0,0,{
+                name: "__MoveUp",
+                text: "Move Up",
+                icon: "arrow-up",
+                iconOnly: true,
+            },{
+                name: "__MoveDn",
+                text: "Move Down",
+                icon: "arrow-down",
+                iconOnly: true,
+            });
+            return this.actions;
         },
     },
     methods: {
@@ -315,7 +396,17 @@ export default {
             })            
         },
         doEmit: function(eventName, item) {
-            this.$emit(eventName, item);
+            switch (eventName) {
+                case '__MoveUp':
+                    this.doMove(item, true);
+                    break;
+                case '__MoveDn':
+                    this.doMove(item, false);
+                    break;
+                default:
+                    this.$emit(eventName, item);
+                    break;
+            }
         },
         doMove: function(item, upwards) {
             this.loading = true;
@@ -390,10 +481,6 @@ export default {
             },
             deep: true,
         },
-        actionToggles(){
-            if(this.actionToggles && this.actionToggles.length >0)
-            this.actionToggles = [];
-        }
     }
 };
 </script>

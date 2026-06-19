@@ -204,25 +204,94 @@
 
     </template>
     <template v-slot:[`item.__actions`]="{ item }">
-        <v-btn-toggle dense v-model="actionToggles" multiple>
-        <v-btn v-for="action in actions"
-               :small="dense"
-               :key="action.name"
-               @click="doEmit(action.name, item)">{{action.text}}</v-btn>
-        </v-btn-toggle>
+        <div class="d-inline-flex">
+            <v-tooltip v-for="(action, index) in actions" :key="action.name" top
+                :disabled="!action.text || ($vuetify.breakpoint.mdAndUp && !action.iconOnly)">
+                <template v-slot:activator="{ on, attrs }">
+                    <v-btn dense depressed v-bind="attrs" v-on="on" :color="action.color || 'default'"
+                        :icon="!!action.icon && (action.iconOnly || $vuetify.breakpoint.smAndDown || !action.text)"
+                        :class="{
+                            'rounded-r-0': index < actions.length - 1,
+                            'rounded-l-0': index > 0
+                        }" :style="{
+                            border: '1px solid rgba(0, 0, 0, 0.12)',
+                            marginLeft: '-1px',
+                            borderRadius: (index === 0 ? (actions.length == 1 ? '4px 4px 4px 4px' : '4px 0 0 4px') : index === actions.length - 1 ? '0 4px 4px 0' : '0') + ' !important'
+                        }" @click="doEmit(action.name, item)">
+                        <v-icon
+                            v-if="!!action.icon && (action.iconOnly || !action.text || $vuetify.breakpoint.smAndDown)"
+                            :color="action.color || ''">
+                            mdi-{{ action.icon }}
+                        </v-icon>
+
+                        <span v-else-if="!!action.text">
+                            {{ action.text }}
+                        </span>
+                    </v-btn>
+                </template>
+
+                <span>{{ action.text }}</span>
+            </v-tooltip>
+        </div>
     </template>
     <template v-slot:[`footer.prepend`]>
-        <v-btn v-for="action in footerActions"
-               :key="action.name"
-               :color="action.color"
-               @click="doEmit(action.name)"
-               class="ma-2">{{action.text}}</v-btn>
+        <v-tooltip v-for="(action, index) in footerActions" :key="action.name" top
+            :disabled="!action.text || ($vuetify.breakpoint.mdAndUp && !action.iconOnly)">
+            <template v-slot:activator="{ on, attrs }">
+                <v-btn dense depressed v-bind="attrs" v-on="on" :color="action.color || 'default'"
+                    :icon="!!action.icon && (action.iconOnly || $vuetify.breakpoint.smAndDown || !action.text)"
+                    :class="{
+                        'ma-2': true,
+                        'rounded-r-0': index < footerActions.length - 1,
+                        'rounded-l-0': index > 0
+                    }" :style="{
+                        border: '1px solid rgba(0, 0, 0, 0.12)',
+                        marginLeft: '-1px',
+                        borderRadius: (index === 0 ? (footerActions.length == 1 ? '4px 4px 4px 4px' : '4px 0 0 4px') : index === footerActions.length - 1 ? '0 4px 4px 0' : '0') + ' !important'
+                    }" @click="doEmit(action.name, item)">
+                    <v-icon
+                        v-if="!!action.icon && (action.iconOnly || !action.text || $vuetify.breakpoint.smAndDown)"
+                        :color="action.color || ''">
+                        mdi-{{ action.icon }}
+                    </v-icon>
+
+                    <span v-else-if="!!action.text">
+                        {{ action.text }}
+                    </span>
+                </v-btn>
+            </template>
+
+            <span>{{ action.text }}</span>
+        </v-tooltip>
         <v-spacer/>
-        <v-btn v-for="action in footerActionsRight"
-               :key="action.name"
-               :color="action.color"
-               @click="doEmit(action.name)"
-               class="ma-2">{{action.text}}</v-btn>
+        <v-tooltip v-for="(action, index) in footerActionsRight" :key="action.name" top
+            :disabled="!action.text || ($vuetify.breakpoint.mdAndUp && !action.iconOnly)">
+            <template v-slot:activator="{ on, attrs }">
+                <v-btn dense depressed v-bind="attrs" v-on="on" :color="action.color || 'default'"
+                    :icon="!!action.icon && (action.iconOnly || $vuetify.breakpoint.smAndDown || !action.text)"
+                    :class="{
+                        'ma-2': true,
+                        'rounded-r-0': index < footerActionsRight.length - 1,
+                        'rounded-l-0': index > 0
+                    }" :style="{
+                        border: '1px solid rgba(0, 0, 0, 0.12)',
+                        marginLeft: '-1px',
+                        borderRadius: (index === 0 ? (footerActionsRight.length == 1 ? '4px 4px 4px 4px' : '4px 0 0 4px') : index === footerActionsRight.length - 1 ? '0 4px 4px 0' : '0') + ' !important'
+                    }" @click="doEmit(action.name, item)">
+                    <v-icon
+                        v-if="!!action.icon && (action.iconOnly || !action.text || $vuetify.breakpoint.smAndDown)"
+                        :color="action.color || ''">
+                        mdi-{{ action.icon }}
+                    </v-icon>
+
+                    <span v-else-if="!!action.text">
+                        {{ action.text }}
+                    </span>
+                </v-btn>
+            </template>
+
+            <span>{{ action.text }}</span>
+        </v-tooltip>
             <v-dialog
                 v-model="isExporting"
                 scrollable
@@ -432,7 +501,6 @@ export default {
             questions: [],
             discoveredHeaders:[],
             displayedHeaders:[],
-            actionToggles:[],
             displayedQuestionsIx: [],
             columnFilters:[],
             columnFiltersEdit:[],
@@ -621,6 +689,9 @@ export default {
                         this.$emit('qrmatch', r);
                     }
                 }
+            }, (error) => {
+                console.log('bsl failed load',error);
+                this.loading = false;
             })
         },300),
         doExport: function() {
@@ -757,10 +828,6 @@ export default {
             },
             deep: true,
         },
-        actionToggles(){
-            if(this.actionToggles && this.actionToggles.length >0)
-            this.actionToggles = [];
-        }
     },
     mounted() {
         
