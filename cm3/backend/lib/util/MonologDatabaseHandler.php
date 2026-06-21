@@ -24,7 +24,7 @@ class MonologDatabaseHandler extends \Monolog\Handler\AbstractProcessingHandler
             'message'     => $record['message'],
             'level'       => $record['level_name'],
             'channel'     => $record['channel'],
-            'data'        =>  $this->getFormatter()->format($record['context'])
+            'data'        => mb_strcut( $this->getFormatter()->format($record['context']), 0, 65535, 'UTF-8')
         );
         //Get contact_id
         //die(print_r($record['context'], true));
