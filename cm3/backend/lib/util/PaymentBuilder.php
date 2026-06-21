@@ -912,7 +912,7 @@ final class PaymentBuilder
 
         //If a free-ride we don't do anything
         if ($this->isFreeride()) {
-            $this->cart['payment_system']='Freeride';
+            $this->cart['payment_system']='Cash';
             return true;
         }
 
