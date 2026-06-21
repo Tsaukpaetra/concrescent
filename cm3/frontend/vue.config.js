@@ -5,7 +5,7 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = {
   productionSourceMap: false,
-  publicPath: '',
+  publicPath: '/',
 
   devServer: {
     historyApiFallback: true,

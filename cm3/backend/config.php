@@ -21,7 +21,7 @@ return array(
     'environment' => array(
       //If not installed in the web root, specify it here.
       //No trailing slash!
-      'base_path' => '',
+      'base_path' => '/api',
       //For the purposes of generating links back to ConCrescent Frontend, where is the front-end hosted?
       //Include trailing slash!
       'frontend_host' => 'https://tsaukpaetra.com/concrescent/cm3/frontend/dist/',
