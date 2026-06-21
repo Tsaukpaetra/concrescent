@@ -511,7 +511,7 @@ export default {
                         value: 'PendingAcceptance',
                         color: 'yellow',
                         text: 'Accepted, waiting for them to confirm',
-                        actionText: 'Accept',
+                        actionText: 'Accept, waiting for confirmation',
                         nextStatus: [
                             'Cancelled',
                             'Waitlisted',
@@ -523,7 +523,7 @@ export default {
                         value: 'Accepted',
                         color: 'green',
                         text: 'Accepted and confirmed',
-                        actionText: 'Accept',
+                        actionText: 'Accept and confirm',
                         nextStatus: [
                             'Cancelled',
                             'Waitlisted',

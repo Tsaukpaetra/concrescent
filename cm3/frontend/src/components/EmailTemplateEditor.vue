@@ -1,5 +1,23 @@
 <template>
   <v-form ref="form" lazy-validation>
+    <!-- Name field -->
+   <v-combobox v-model="nameData" :items="formattedSuggestions" :multiple="false" :readonly="!allowSetName"
+      :rules="fileNameRules" :return-object="true" item-value="value" item-text="text" :messages="selectedNameTip"
+      label="Template Name" placeholder="Enter or select a template name" prepend-icon="mdi-file-edit-outline" required
+      @input="handleName">
+      <template v-slot:item="{ item }">
+        <v-list-item-content>
+          <v-list-item-title>{{ item.text }}</v-list-item-title>
+          <v-list-item-subtitle class="text--secondary">
+            {{ item.tip }}
+          </v-list-item-subtitle>
+        </v-list-item-content>
+      </template></v-combobox>
+
+    <!-- Active toggle -->
+    <v-switch v-model="emailData.active" :true-value="1" :false-value="0" @change="emitChanges" label="Enable Template"
+      hide-details class="mb-3"></v-switch>
+
     <!-- FROM FIELD -->
     <v-text-field v-model="emailData.from" label="From" prepend-icon="mdi-account-arrow-right" :rules="[rules.email]"
       placeholder="(Default)" persistent-placeholder @input="emitChanges"></v-text-field>
@@ -7,7 +25,7 @@
     <v-combobox v-if="showTo" v-model="emailData.to" :search-input.sync="searchTO" label="To"
       hint="Press Enter or comma to add multiple recipients" multiple chips small-chips deletable-chips disable-lookup
       append-icon="" append-outer-icon="mdi-close" @click:append-outer="clearAndHide('to')"
-      prepend-icon="mdi-account-arrow-left" :rules="[rules.required, rules.emailArray]"
+      prepend-icon="mdi-account-arrow-left" :rules="[rules.required, rules.email]"
       @change="processAddressInput('to')" @paste.native="processAddressPastedText('to', $event)">
       <template #selection="{ item, selected, disabled, parent }">
         <v-chip small :input-value="selected" :disabled="disabled"
@@ -21,8 +39,8 @@
     <v-combobox v-if="showREPLY_TO" v-model="emailData.reply_to" :search-input.sync="searchREPLY_TO" label="Reply To"
       hint="Press Enter or comma to add multiple recipients" multiple chips small-chips deletable-chips disable-lookup
       append-icon="" append-outer-icon="mdi-close" @click:append-outer="clearAndHide('reply_to')"
-      prepend-icon="mdi-comment-account" :rules="[rules.required, rules.emailArray]"
-      @change="processAddressInput('reply_to')" @paste.native="processAddressPastedText('to', $event)">
+      prepend-icon="mdi-comment-account" :rules="[rules.emailArray]"
+      @change="processAddressInput('reply_to')" @paste.native="processAddressPastedText('reply_to', $event)">
       <template #selection="{ item, selected, disabled, parent }">
         <v-chip small :input-value="selected" :disabled="disabled"
           :color="isValidEmailFormat(item) ? 'light-grey' : 'error'"
@@ -78,7 +96,7 @@
 
     <!-- SUBJECT FIELD -->
     <v-text-field v-model="emailData.subject" label="Subject" prepend-icon="mdi-format-title" :rules="[rules.required]"
-      @input="emitChanges"></v-text-field>
+      @input="emitChanges" :messages="filteredSubject"></v-text-field>
 
     <!-- BODY COMPOSITION AREA -->
     <div class="mt-6">
@@ -89,24 +107,24 @@
         </div>
         <v-spacer></v-spacer>
 
-        <v-btn-toggle v-model="emailData.mode" mandatory dense color="primary" @change="emitChanges">
-          <v-btn value="text" small>
+        <v-btn-toggle v-model="emailData.format" mandatory dense color="primary" @change="emitChanges">
+          <v-btn value="Text Only" small>
             <v-icon left small>mdi-text</v-icon> Text Only
           </v-btn>
-          <v-btn value="markdown" small>
+          <v-btn value="Markdown" small>
             <v-icon left small>mdi-language-markdown</v-icon> Markdown
           </v-btn>
-          <v-btn value="html" small>
+          <v-btn value="Full HTML" small>
             <v-icon left small>mdi-xml</v-icon> Raw HTML
           </v-btn>
         </v-btn-toggle>
       </v-row>
 
       <!-- DYNAMIC INPUT & PREVIEW PANELS -->
-      <v-window v-model="emailData.mode" touchless>
+      <v-window v-model="emailData.format" touchless>
 
         <!-- TEXT ONLY MODE (Split View) -->
-        <v-window-item value="text">
+        <v-window-item value="Text Only">
           <v-row>
             <v-col cols="12" md="6">
               <div class="preview-label font-weight-medium mb-1">Edit:</div>
@@ -123,7 +141,7 @@
         </v-window-item>
 
         <!-- MARKDOWN MODE (v-md-editor has built-in preview) -->
-        <v-window-item value="markdown">
+        <v-window-item value="Markdown">
           <v-row>
             <v-col cols="12" md="6">
               <div class="preview-label font-weight-medium mb-1">Edit:</div>
@@ -140,7 +158,7 @@
         </v-window-item>
 
         <!-- RAW HTML MODE (Split View) -->
-        <v-window-item value="html">
+        <v-window-item value="Full HTML">
           <v-row>
             <v-col cols="12" md="6">
               <div class="preview-label font-weight-medium mb-1">Edit:</div>
@@ -169,18 +187,32 @@ export default {
     value: {
       type: Object,
       default: () => ({
+        name: '',
+        active: 1,
         from: '',
-        to: [],
-        cc: [],
-        bcc: [],
+        to: '',
+        cc: '',
+        bcc: '',
         subject: '',
         body: '',
-        mode: 'markdown'
+        format: 'Markdown'
       })
     },
     templateData: {
       type: Object,
       default: () => ({})
+    },
+    suggestedNames: {
+      type: Object,
+      default: () => ({})
+    },    
+    allowSetName: {
+      type: Boolean,
+      default: () => false
+    },
+    existingNames: {
+      type: Array,
+      default: () => []
     },
     showTo: {
       type: Boolean,
@@ -189,10 +221,13 @@ export default {
   },
   data() {
     return {
+      nameData:{},
       showREPLY_TO: false,
       showCC: false,
       showBCC: false,
       emailData: {
+        name: '',
+        active: 1,
         from: '',
         to: [],
         reply_to: [],
@@ -200,7 +235,7 @@ export default {
         bcc: [],
         subject: '',
         body: '',
-        mode: 'markdown'
+        format: 'Markdown'
       },
       searchTO: '',
       searchREPLY_TO: '',
@@ -217,9 +252,24 @@ export default {
         },
         email: v => {
           if (!v || v.length === 0) return true;
-          this.isValidEmailFormat(v) || 'Valid email required'
+          return this.isValidEmailFormat(v) || 'Valid email required'
         }
-      }
+      },
+      fileNameRules: [
+        v => {
+          return !!v || 'Template name is required.';
+        },
+        v => {
+          const val = typeof v === 'object' && v !== null ? v.value : v;
+          return (val && val.length <= 255) || 'Template name must be 255 characters or less.';
+        },
+        v => {
+          //Don't validate if we can't set the name anyways
+          if(!this.allowSetName) {console.log('no eval exist',this.allowSetName); return true; }
+          const val = typeof v === 'object' && v !== null ? v.value : v;
+          return (val && !this.existingNames.includes(val)) || 'Template already exists.';
+        }
+      ]
     };
   },
   computed: {
@@ -228,7 +278,23 @@ export default {
       if (!this.emailData.body) return '';
 
       return this.$compileTemplate(this.emailData.body, this.templateData);
-    }
+    },
+    filteredSubject(){
+      if (!this.emailData.subject) return '';
+      return this.$compileTemplate(this.emailData.subject, this.templateData);
+    },
+    formattedSuggestions() {
+      return Object.keys(this.suggestedNames).map(key => ({
+        value: key,
+        text: this.suggestedNames[key].text,
+        tip: this.suggestedNames[key].tip,
+        disabled: this.existingNames.includes(key)
+      }));
+    },
+    selectedNameTip(){
+      if (typeof this.nameData == 'String') return [];
+      return this.nameData?.tip;
+    },
   },
   watch: {
     value: {
@@ -242,19 +308,53 @@ export default {
   methods: {
     syncIncomingData(source) {
       this.emailData = {
-        from: source.from || null,
-        to: Array.isArray(source.to) ? [...source.to] : [],
-        cc: Array.isArray(source.cc) ? [...source.cc] : [],
-        bcc: Array.isArray(source.bcc) ? [...source.bcc] : [],
+        name: source.name || '',
+        active: source.active ? 1 : 0,
+        from: source.from || '',
+        to: Array.isArray(source.to) ? [...source.to] : this.parseEmailString(source.to, true),
+        reply_to: Array.isArray(source.reply_to) ? [...source.reply_to] : this.parseEmailString(source.reply_to, true),
+        cc: Array.isArray(source.cc) ? [...source.cc] : this.parseEmailString(source.cc, true),
+        bcc: Array.isArray(source.bcc) ? [...source.bcc] : this.parseEmailString(source.bcc, true),
         subject: source.subject || '',
         body: source.body || '',
-        mode: source.mode || 'markdown'
+        format: source.format || 'Markdown'
       };
+      this.nameData = this.formattedSuggestions.find((item) => item.value == source.name) || source.name 
+      this.showREPLY_TO = this.emailData.reply_to.length > 0;
+      this.showCC = this.emailData.cc.length > 0;
+      this.showBCC = this.emailData.bcc.length > 0;
     },
     emitChanges() {
-      const payload = JSON.parse(JSON.stringify(this.emailData));
+      const payload = JSON.parse(JSON.stringify({
+        ...this.emailData,
+        //name: this.nameData?.value || this.nameData,
+        to: this.emailData.to.join(", "),
+        reply_to: this.emailData.reply_to.join(", "),
+        cc: this.emailData.cc.join(", "),
+        bcc: this.emailData.bcc.join(", "),
+    }));
+    console.log('emit payload', payload)
       this.$emit('input', payload);
       this.$emit('change', payload);
+    },
+    handleName(newvalue){
+
+      if (!newvalue) {
+        this.emailData.name = '';
+      } else if (typeof newvalue === 'string') {
+        //If the name actally matches an item despite being manually typed, use that
+        let inList = this.formattedSuggestions.find((item) => item.value == newvalue);
+        if(inList){
+          this.nameData = inList 
+          console.log('in list', inList)
+        }
+        // User typed a brand new custom string
+        this.emailData.name = newvalue;
+      } else if (typeof newvalue === 'object') {
+        // User picked an existing suggestion item
+        this.emailData.name = newvalue.value; 
+      }
+      this.emitChanges();
     },
     clearAndHide(fieldName) {
       console.log(fieldName)
@@ -270,6 +370,43 @@ export default {
     isValidEmailFormat(item) {
       return this.emailValidationRegex.test(item.trim());
     },
+    parseEmailString(textString, ensureArray){
+      //Check if textString is a string
+      if(typeof textString != 'string'){
+        return ensureArray? [] : textString;
+      }
+
+      // 1. Regex to match EITHER a full RFC822 structure OR a standard standalone email.
+      // Match 1: "Display Name" <email@domain.com> (handles quotes, names, and brackets)
+      // Match 2: Standalone email@domain.com
+      const fullEmailRegex = /(?:(?:"[^"]*"|[^<,;\r\n\t]+)\s*<[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}>|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g;
+
+      // Find all matches in the raw string directly, ignoring delimiter splitting completely.
+      // This stops commas inside quotes (e.g. "Smith, John") from breaking the string.
+      const matches = textString.match(fullEmailRegex);
+
+      if (matches) {
+        var result = [];
+        matches.forEach(match => {
+          // 1. Trim outer spaces
+          // 2. Remove trailing semicolons/commas at the very end of the match
+          // 3. Condense internal multi-spaces into a single space
+          const cleanItem = match.trim().replace(/^[;,] +/, '').replace(/\s+/g, ' ');
+
+          // Add to selections if not already there
+          if (cleanItem && !result.includes(cleanItem)) {
+            result.push(cleanItem);
+          }
+
+        });
+        return result;
+      } else {
+        //Fallback, just return the input
+        if(ensureArray)
+        return Array.isArray(textString) ? textString : textString.length ? [textString] : [];
+        return ensureArray;
+      }
+    },
 
     processAddressInput(fieldName) {
       // If there's text typed and the user presses enter or tab
@@ -277,6 +414,10 @@ export default {
       console.log('processAddinput', fieldName, fieldtext, this.searchTO)
       if (fieldtext && fieldtext.trim() !== '') {
         this.extractAndAddEmails(fieldName, fieldtext);
+      } else {        
+        // Trigger emit because some other change happened
+        console.log('aske edmit anetae')
+        this.emitChanges();
       }
     },
     processAddressPastedText(fieldName, event) {
@@ -288,34 +429,21 @@ export default {
     extractAndAddEmails(fieldName, textString) {
       console.log('processing', textString)
       let field = this.emailData[fieldName];
-      // 1. Regex to match EITHER a full RFC822 structure OR a standard standalone email.
-      // Match 1: "Display Name" <email@domain.com> (handles quotes, names, and brackets)
-      // Match 2: Standalone email@domain.com
-      const fullEmailRegex = /(?:(?:"[^"]*"|[^<,;\r\n\t]+)\s*<[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}>|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g;
-
-      // Find all matches in the raw string directly, ignoring delimiter splitting completely.
-      // This stops commas inside quotes (e.g. "Smith, John") from breaking the string.
-      const matches = textString.match(fullEmailRegex);
-
-      if (matches) {
-        matches.forEach(match => {
-          // 1. Trim outer spaces
-          // 2. Remove trailing semicolons/commas at the very end of the match
-          // 3. Condense internal multi-spaces into a single space
-          const cleanItem = match.trim().replace(/^[;,] +/, '').replace(/\s+/g, ' ');
-
+      let processed = this.parseEmailString(textString);
+      if(Array.isArray(processed)) {        
+        processed.forEach(item => {
           // Add to selections if not already there
-          if (cleanItem && !field.includes(cleanItem)) {
-            field.push(cleanItem);
+          if (item && !field.includes(item)) {
+            field.push(item);
           }
-
         });
-        // Trigger emit
-        this.emitChanges();
       } else {
         //Didn't match, let natural processing occur
         this['search' + fieldName.toUpperCase()] = textString;
       }
+      
+        // Trigger emit
+        this.emitChanges();
     },
   }
 };

@@ -303,6 +303,125 @@
                 </v-card>
             </v-dialog>
         </v-tab-item>
+        <v-tab-item value="6">
+
+        <simpleList :apiPath="'Mail/Template/' + context_code"
+                    :isEditingItem="eEdit"
+                    :headerKey="{text:'Name',align:'start',value:'name'}"                    
+                    internalKey="name"
+                    :AddHeaders="eAddHeaders"
+                    :actions="eActions"
+                    :footerActions="btFooterActions"
+                    @edit="editEmailTemplate"
+                    @create="createEmailTemplate"
+                    @delete="deleteEmailTemplate"
+                    @update:results="eExistingTemplates = $event">
+
+            <template v-slot:[`item.name`]="{ item }">
+                <v-tooltip right>
+                        <template v-slot:activator="{ on, attrs }">
+                            <span v-bind="attrs" v-on="on">
+                            {{  eNameTranslation[item.name]?.text ?? item.name }}</span>
+
+                        </template>
+                        {{ eNameTranslation[item.name]?.tip ?? 'Custom email' }}
+                    </v-tooltip>
+                </template>
+                <template v-slot:[`item.active`]="{ item }">
+                <cell-toggle v-model="item.active" @input="eSetActive(item.name, $event)"></cell-toggle>
+            </template>
+        </simpleList>
+        <v-dialog v-model="eEdit"
+                  scrollable>
+
+            <v-card>
+                <v-card-title class="headline">Edit Email template</v-card-title>
+                <v-divider></v-divider>
+                <v-card-text>
+                    <EmailTemplateEditor v-model="eSelected"
+                                   :suggestedNames="eNameTranslation" 
+                                   :allowSetName="eIsNew" 
+                                   :existingNames="eExistingTemplateNames"
+                                   :templateData="bSelected"/>
+                </v-card-text>
+                <v-divider></v-divider>
+                <v-card-actions>
+                    <v-btn color="error"
+                           @click="deleteEmailTemplate">Reset</v-btn>
+                    <v-spacer></v-spacer>
+                    <v-tooltip top>
+                        <template v-slot:activator="{ on, attrs }">
+                            <v-btn color="primary"
+                                v-bind="attrs"
+                                v-on="on"
+                                @click="eloadBadgeDataDialog = true">
+                                <v-icon>mdi-briefcase-upload</v-icon>
+                            </v-btn>
+                        </template>
+                        <span>Load Preview Data</span>
+                    </v-tooltip>
+                    <v-spacer></v-spacer>
+                    <v-btn color="default"
+                           @click="eEdit = false">Cancel</v-btn>
+                    <v-btn color="primary"
+                           @click="saveEmailTemplate">Save</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+        <v-dialog v-model="eDelete" max-width="500" persistent>
+            <v-card>
+                <v-card-title class="headline"> Confirm Reset Action </v-card-title>
+
+                <v-card-text>
+                    <v-alert type="warning" prominent class="mb-4">
+                        Resetting does not delete prior messages based on the selected
+                        template, but will impact the re-rendering of the recorded message
+                        data.
+                    </v-alert>
+                    Are you sure you want to proceed with the reset?
+                </v-card-text>
+
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn color="darken-1" @click="eDelete = false"> Cancel </v-btn>
+                    <v-btn color="warning darken-1" @click="eDeleteConfirmed">
+                        Proceed
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+        <v-dialog v-model="eloadBadgeDataDialog">
+            <v-card>
+                <v-card-title>Load Preview Data</v-card-title>
+                <v-divider></v-divider>
+                <v-card-text>
+
+                    <v-row>
+                        <v-col cols="12"
+                            sm="6"
+                            md="3">
+                            <v-text-field label="ID"
+                                        v-model="eloadBadgeDataID"></v-text-field>
+                        </v-col>
+                    </v-row>
+                </v-card-text>
+                <v-divider></v-divider>
+                <v-card-actions>
+                    <v-spacer />
+                    <v-btn color="blue darken-1"
+                        @click="eloadBadgeDataDialog = false">
+                        Cancel
+                    </v-btn>
+                    <v-btn color="blue darken-1"
+                        @click="eloadBadgeData">
+                        Load
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+
+    </v-tab-item>
 
         <v-dialog v-model="loading" width="200" height="200" close-delay="1200" content-class="elevation-0" persistent>
             <v-card-text class="text-center overflow-hidden">
@@ -339,6 +458,7 @@ import editBadgeAdmin from '@/components/editBadgeAdmin.vue';
 import importWizard from '@/components/importWizard.vue';
 import cellAssignments from '@/components/datagridcell/cellAssignments.vue';
 import cellToggle from '@/components/datagridcell/toggleValue.vue';
+import EmailTemplateEditor from '../../components/EmailTemplateEditor.vue';
 
 export default {
     components: {
@@ -353,6 +473,7 @@ export default {
         importWizard,
         cellAssignments,
         cellToggle,
+        EmailTemplateEditor,
     },
     props: [
         'subTabIx'
@@ -484,6 +605,69 @@ export default {
             value: 'payment_status',
         }, ],
 
+        eAddHeaders: [{
+            text: 'From',
+            value: 'from'
+        }, {
+            text: 'CC',
+            value: 'cc'
+        }, {
+            text: 'Subject',
+            value: 'subject'
+        }, {
+            text: 'Active',
+            value: 'active'
+        }],
+        eSelected: {},
+        eEdit: false,
+        eDelete: false,
+        eIsNew: false,
+        eExistingTemplates:[],
+        eNameTranslation: {
+            'payment-Completed': {
+                text: 'Cart payment completed',
+                tip: 'Transaction confirmation email'
+            },
+            'payment-Incomplete': {
+                text: 'Cart payment incomplete',
+                tip: 'Transaction reminder email'
+            },
+            'payment-AwaitingApproval': {
+                text: 'Cart payment awaiting approval',
+                tip: 'Sent when application submits the application and it needs to be approved to continue'
+            },
+            'application-InProgress': {
+                text: 'Application saved but not submitted',
+                tip: 'Should not happen but it\'s here just in case...'
+            },
+            'application-Submitted': {
+                text: 'Application submitted for review',
+                tip: 'Reminder for when application is still just submitted'
+            },
+            'application-Cancelled': {
+                text: 'Application Cancelled',
+                tip: 'Sent when application is cancelled'
+            },
+            'application-Rejected': {
+                text: 'Application Rejected',
+                tip: 'Sent when application is rejected'
+            },
+            'application-PendingAcceptance': {
+                text: 'Cart payment incomplete',
+                tip: 'Sent when application needs to confirm acceptance'
+            },
+            'application-Accepted': {
+                text: 'Application Completed',
+                tip: 'Sent when application confirms their acceptance'
+            },
+            'application-Waitlisted': {
+                text: 'Application Waitlisted',
+                tip: 'Sent when application is waitlisted'
+            },
+        },
+        eloadBadgeDataDialog: false,
+        eloadBadgeDataID: 0,
+
         loading: false,
         createError: '',
     }),
@@ -542,6 +726,18 @@ export default {
                 text: 'Edit submission',
                 icon: 'edit-pencil'
             });
+            return result;
+        },
+        eExistingTemplateNames() {
+            return this.eExistingTemplates.map(item => item.name);
+        },
+        eActions: function() {
+            var result = [];
+            result.push({
+                name: 'edit',
+                text: 'Edit',
+                icon: 'pencil'
+            },);
             return result;
         },
         isCreateError: {
@@ -815,6 +1011,75 @@ export default {
                 that.loading = false;
             })
         },
+
+        editEmailTemplate: function(selectedEmailTemplate) {
+            console.log(selectedEmailTemplate);
+            this.loading = false;
+            admin.genericGet(this.authToken, 'Mail/Template/' + this.context_code + '/' + selectedEmailTemplate.name, null, (editEmailTemplate) => {
+                console.log('loaded EmailTemplate', editEmailTemplate)
+                this.eSelected = editEmailTemplate;
+                this.loading = false;
+                this.eEdit = true;
+                this.eIsNew = false;
+            }, () => {
+                this.loading = false;
+            })
+        },
+        saveEmailTemplate: function() {
+            var url = 'Mail/Template/' + this.context_code + '/' + this.eSelected.name;
+            
+            console.log("Saving Email Template", this.eSelected)
+            admin.genericPut(this.authToken, url, this.eSelected, (editET) => {
+
+                this.eSelected = editET;
+                this.loading = false;
+                this.eEdit = false;
+            }, () => {
+                this.loading = false;
+            })
+        },
+        createEmailTemplate: function() {
+            this.eEdit = true;
+            this.eIsNew = true;
+            this.eSelected = {};
+        },
+        eSetActive: function (name, active) {
+            this.loading = true;
+            var url = 'Mail/Template/' + this.context_code + '/' + name;
+            console.log("Saving EmailTemplate active state", name, active)
+            admin.genericPut(this.authToken, url, { active }, (result) => {
+                this.eEdit = false;
+                this.loading = false;
+            }, () => {
+
+            })
+        },
+        deleteEmailTemplate: function() {
+            this.eDelete = true;
+        },
+        eDeleteConfirmed: function () {
+            this.loading = true;
+            var url = 'Mail/Template/' + this.context_code + '/' + this.eSelected.name;
+            console.log("Deleting EmailTemplate", this.eSelected.name)
+            admin.genericDelete(this.authToken, url, (result) => {
+                this.eDelete = false;
+                this.loading = false;
+                this.eEdit = false;
+            }, () => {
+
+            })
+        },
+        eloadBadgeData() {
+
+            admin.genericGet(this.authToken, 'Badge/CheckIn/' + this.context_code + '/' + this.eloadBadgeDataID, null, (badgeData) => {
+                //Merge in the event info
+                badgeData['event'] = this.$store.state.products.selectedEvent
+                this.bSelected = badgeData;
+                this.eloadBadgeDataDialog = false;
+            }, function() {
+                //Whoops
+            })
+        },
     },
     watch: {
         async $route() {
@@ -879,6 +1144,11 @@ export default {
                 key: '5',
                 text: 'Addons',
                 title: 'Addons'
+            },
+            {
+                key: '6',
+                text: 'Notifications',
+                title: 'Notifications'
             }
 
         ]);
