@@ -31,7 +31,7 @@ return [
         //Load legacy config
         $config = require __DIR__ . '/../config.php';
         //Load .env file if it exists
-        Dotenv\Dotenv::createArrayBacked(__DIR__ . '/../')->load();
+        Dotenv\Dotenv::createArrayBacked(__DIR__ . '/../')->safeLoad();
         /**
          * Recursively apply environment variable overrides to the config array.
          */
