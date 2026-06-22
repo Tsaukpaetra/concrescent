@@ -64,7 +64,7 @@
                                             Problems:
                                             <ul>
                                                 <li v-for="(er, i) in cart.errors[idx]" :key="i">
-                                                    {{ badgeError(er) }}
+                                                    {{ badgeError(er, cart.items[idx]) }}
                                                 </li>
                                             </ul>
                                         </span>
@@ -560,6 +560,11 @@ export default {
             needsave: 'isDirty',
             canPayCart: 'canPay',
         }),
+        ...mapGetters('products', {
+            products: 'contextBadges',
+            questions: 'questions',
+            addonsAvailable: 'contextAddons',
+        }),
         selectedCart: function() {
             if (this.activeCarts)
                 return this.activeCarts.find(cart => cart.id == this.cartIdSelected) || {
@@ -626,7 +631,7 @@ export default {
             if (cart.errors.length < ix) return 0;
             return Object.keys(cart.errors[ix]).length;
         },
-        badgeError: function(er){
+        badgeError: function(er, badgeData){
             var msgAr = er.split(' ');
             var preText = '';
             switch (msgAr[0]) {
@@ -637,7 +642,14 @@ export default {
                     preText = 'This';
                 break;
                 default:
-                    preText = 'Question ' + msgAr[0];
+                    var qText = this.questions[badgeData.context_code][badgeData.badge_type_id].find(q => q.id == msgAr[0])?.title;
+                    if(qText){
+                        preText = 'Response to question "' + qText + '"'
+                    } else {
+
+                        preText = 'Question ' + msgAr[0];
+                    }
+
                     break;
             }
             msgAr.splice(0,1,preText);

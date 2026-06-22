@@ -59,17 +59,10 @@ jobs:
         # Move hidden files like .htaccess if your backend uses them for routing
         mv cm3/backend/.[!.]* cm3/frontend/dist/api/ 2>/dev/null || true
 
-    # 7. Compress only the clean production-ready web root folder
-    - name: Compress Release Tarball
-      run: |
-        # Change name to web-root to keep things explicit, archiving only the contents of dist/
-        cd cm3/frontend/dist
-        tar -czf ../../../cm3-release.tar.gz .
-
-    # 8. Save the cleanly packaged bundle to your GitHub dashboard
+    # 7. Save the cleanly packaged bundle to your GitHub dashboard
     - name: Save Release Asset to GitHub Actions Dashboard
       uses: actions/upload-artifact@v4
       with:
         name: production-web-root-package
-        path: cm3-release.tar.gz
+        path: cm3/frontend/dist
         retention-days: 7

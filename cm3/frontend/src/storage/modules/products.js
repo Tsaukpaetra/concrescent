@@ -71,6 +71,9 @@ const getters = {
         if (state.badgecontextselected == undefined) return [];
         return state.addons[state.badgecontextselected.context_code] || [];
     },
+    questions: (state) => {
+        return state.questions || [];
+    },
     locations: (state) => {
         return state.locations || [];
     },
@@ -104,22 +107,43 @@ const actions = {
     },
     getEventInfo({
         commit,
-        state
-    }) {
+        state,
+        rootState
+    }, force) {
 
         return new Promise((resolve) => {
             //Load only if necessary
-            if (!state.gotEventInfo) {
-                shop.getEventInfo(eventinfo => {
-                    commit('setEventInfo', eventinfo);
-                    console.log('event stored info id', state.selectedEventId);
-                    if (state.selectedEventId == null)
-                        commit('selectEvent', eventinfo[0].id);
-                    else {
-                        commit('selectEvent', state.selectedEventId);
-                    }
-                    resolve();
-                })
+            if (!state.gotEventInfo || force) {
+                //Hack: Ask the mydata if we're an admin and use that to load contexts
+                // console.log('root state',rootState.mydata.permissions != null, rootState.mydata.permissions != undefined,rootState.mydata.adminMode)
+                if(rootState.mydata.permissions != null 
+                    && rootState.mydata.permissions != undefined
+                    && rootState.mydata.adminMode == true){
+                    admin.getEventInfo(rootState.mydata.token)
+                    .then(eventinfo => {
+                        commit('setEventInfo', eventinfo);
+                        console.log('event stored info id', state.selectedEventId);
+                        if (state.selectedEventId == null)
+                            commit('selectEvent', eventinfo[0].id);
+                        else {
+                            commit('selectEvent', state.selectedEventId);
+                        }
+                        resolve();
+                    }).catch(err =>{
+                        reject(err)
+                    });
+                } else {
+                    shop.getEventInfo(eventinfo => {
+                        commit('setEventInfo', eventinfo);
+                        console.log('event stored info id', state.selectedEventId);
+                        if (state.selectedEventId == null)
+                            commit('selectEvent', eventinfo[0].id);
+                        else {
+                            commit('selectEvent', state.selectedEventId);
+                        }
+                        resolve();
+                    })
+                }
             } else {
                 resolve();
             }
@@ -132,12 +156,12 @@ const actions = {
         commit,
         state,
         rootState
-    }) {
+    }, force) {
         return new Promise((resolve, reject) => {
             if (state.selectedEventId == null)
                 return reject('Unable to get context if the event ID is not known');
             //Load only if necessary
-            if (!state.gotBadgeContexts) {
+            if (!state.gotBadgeContexts || force) {
                 //Hack: Ask the mydata if we're an admin and use that to load contexts
                 // console.log('root state',rootState.mydata.permissions != null, rootState.mydata.permissions != undefined,rootState.mydata.adminMode)
                 if(rootState.mydata.permissions != null 
