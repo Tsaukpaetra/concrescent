@@ -528,7 +528,7 @@ export default {
             'confirm': 'Confirming payment...',
         },
         cartStateColor: {
-            'NotReady': 'purple',
+            'NotReady': 'purple lighten-4',
             'AwaitingApproval': 'yellow',
             'NotStarted': 'gray',
             'Incomplete': 'lime',

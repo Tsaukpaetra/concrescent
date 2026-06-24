@@ -47,7 +47,6 @@
                       :hide_dob="isGroupApp" />
         <badgeTypeSelector v-model="selectedBadge_ix"
                            :badges="badges"
-                           @valid="setValidBadgeType"
                            :no-data-text="isGroupApp ? 'Applications currently closed!' : 'No Badges available!'"
                            :editBadgePriorBadgeId="editBadgePriorBadgeId"
                            @click.native="affirmBadgeType" />
@@ -357,7 +356,6 @@ export default {
                 date_of_birth: "",
             },
             selectedBadge_ix: null,
-            validBadgeType: false,
             context_code: '',
             badge_type_id: -1,
             menuBDay: false,
@@ -551,6 +549,22 @@ export default {
                 }),
                 subbadges: this.subbadges,
             };
+        },
+        validBadgeType(){
+            
+            const oldBadge = this.badges.find((badge) => badge.id == this.editBadgePriorBadgeId);
+
+            var alreadyHaveBadge = typeof oldBadge !== 'undefined' &&
+                oldBadge.id == this.selectedBadge.id;
+            var isValid = !(this.badges[this.selectedBadge_ix]?.disabled || false);
+            console.log('setValidBadgeType result', {
+                isValid,
+                alreadyHaveBadge,
+                oldBadge: oldBadge ? oldBadge.id : null,
+                selectedBadge: this.selectedBadge.id
+            })
+
+            return isValid || alreadyHaveBadge;
         },
         badgeOk() {
             return this.validGenInfo &&
@@ -890,10 +904,9 @@ export default {
                     badge = 0;
                 }
 
-                this.validBadgeType = true;
                 this.selectedBadge_ix = badge;
             } else {
-                this.validBadgeType = false;
+                //this.validBadgeType = false;
                 // this.reachedStep = Math.max(0,this.reachedStep);
                 // this.step = Math.max(0,this.step);
                 console.log('No badges for context, go back to step 0', this.context_code)
@@ -933,19 +946,6 @@ export default {
             console.log('setValidGenInfo', isValid);
             this.validGenInfo = isValid;
         },
-        setValidBadgeType(isValid) {
-            const oldBadge = this.badges.find((badge) => badge.id == this.editBadgePriorBadgeId);
-
-            var alreadyHaveBadge = typeof oldBadge !== 'undefined' &&
-                oldBadge.id == this.selectedBadge.id;
-            console.log('setValidBadgeType result', {
-                isValid,
-                alreadyHaveBadge,
-                oldBadge: oldBadge ? oldBadge.id : null,
-                selectedBadge: this.selectedBadge.id
-            })
-            this.validBadgeType = isValid || alreadyHaveBadge;
-        }
     },
     components: {
         badgeGenInfo,

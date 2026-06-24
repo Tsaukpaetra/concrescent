@@ -69,6 +69,8 @@ final class PaymentBuilder
         $this->RequiresApproval = false;
         $this->pp = null;
         $this->stagedItems = array();
+        $this->badgevalidator->Set_Payment_Id(0);
+        $this->badgevalidator->Set_IgnoreBadgeTypeAvailability(false);
     }
 
     public function createCart($contact_id = null, $requested_by = '[self]')
@@ -134,7 +136,7 @@ final class PaymentBuilder
 
         //Tell the badge validator the cart id
         $this->badgevalidator->Set_Payment_Id($this->getCartId());
-
+        $this->badgevalidator->Set_IgnoreBadgeTypeAvailability(false);
         //Load cart meta
         $this->refreshCartMeta();
         return true;
@@ -249,8 +251,6 @@ final class PaymentBuilder
         foreach ($items as $key => $badge) {
             $errors[$key] = $this->setCartItem($key, $badge, $promocode, $promoApplied);
         }
-        //Do we have errors?
-        $this->cart['payment_status'] = count($errors) ? 'NotStarted' : 'NotReady';
 
         //Did we try a promo code and fail?
         if (!$promoApplied && !empty($data['promocode'])) {
@@ -436,16 +436,16 @@ final class PaymentBuilder
                     }
                     //Sync down said status into the cart
                     $item['application_status'] = $bi['application_status'];
+
+                    //If they're already submitted skip some interfering checks
+                    if ($this->is_submitted_status($item['application_status'])) {
+                        //die($item['application_status']);
+                        $this->SetIgnoreBadgeTypeAvailability(true);
+                    }
                 } else {
                     $this->CanPay = false;
                 }
             }
-        }
-        //If they're already attempting to pay, and this badge type is one that needs to be approved first,
-        // skip some interfering checks
-
-        if ($this->cart['payment_status'] == 'Incomplete' && $this->CanPay && $this->AllowPay && (!empty($bt['payment_deferred']) && $bt['payment_deferred'])) {
-            $this->SetIgnoreBadgeTypeAvailability(true);
         }
         if ($this->cart['payment_status'] == 'AwaitingApproval' && $this->CanPay && $this->AllowPay) {
             //They must now meet the criteria to pay, switch them to NotStarted
@@ -457,8 +457,10 @@ final class PaymentBuilder
         foreach ($this->cart_items as $key => $badge) {
             $this->cart_errors[$key] = $this->badgevalidator->ValdateCartBadge($badge);
         }
-        if ($this->cart['payment_status'] == 'NotStarted') {
-            $this->cart['payment_status'] = count($this->cart_errors) ? 'NotStarted' : 'NotReady';
+        //Update the ready status
+        if ($this->cart['payment_status'] == 'NotStarted' ||
+            $this->cart['payment_status'] == 'NotReady' ) {
+            $this->cart['payment_status'] = $this->cartErrorCount() ? 'NotReady' : 'NotStarted';
         }
     }
 
