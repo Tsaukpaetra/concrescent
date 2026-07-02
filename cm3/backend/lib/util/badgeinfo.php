@@ -770,10 +770,11 @@ final class badgeinfo
             $wherePartsSimpler[] = new SearchTerm('', '', subSearch: $filter);
         }
 
-        $result = $this->SearchBadges($context, $whereParts, $order, $limit, $offset, $totalRows, false, $includeFormQuestions);
+        //$this->s_badge->debugThrowBeforeSelect = true;
+        $result =  $this->SearchBadges($context, $wherePartsSimpler, $order, $limit, $offset, $totalRows, false, $includeFormQuestions);
         //If we got nothing, switch to a simpler search
         if (count($result) == 0) {
-            $result =  $this->SearchBadges($context, $wherePartsSimpler, $order, $limit, $offset, $totalRows, false, $includeFormQuestions);
+            $result = $this->SearchBadges($context, $whereParts, $order, $limit, $offset, $totalRows, false, $includeFormQuestions);
         }
         return $result;
     }

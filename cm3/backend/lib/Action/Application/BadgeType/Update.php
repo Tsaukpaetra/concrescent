@@ -44,10 +44,10 @@ final class Update
         unset($data['dates_available']);
 
         $consideredNull = date_create('1971-01-01');
-        if (empty($data['start_date']) || (date_create($data['start_date']) < $consideredNull)) {
+        if (isset($data['start_date']) && (empty($data['start_date']) || (date_create($data['start_date']) < $consideredNull))) {
             $data['start_date'] = null;
         }
-        if (empty($data['end_date']) || (date_create($data['end_date']) < $consideredNull)) {
+        if (isset($data['end_date']) && (empty($data['end_date']) || (date_create($data['end_date']) < $consideredNull))) {
             $data['end_date'] =null;
         }
 
