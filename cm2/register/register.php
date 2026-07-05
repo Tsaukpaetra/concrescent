@@ -1,20 +1,24 @@
 <?php
 
+use JetBrains\PhpStorm\NoReturn;
+
 session_name('PHPSESSID_CMREG');
 session_start();
 
-require_once dirname(__FILE__).'/../config/config.php';
-require_once dirname(__FILE__).'/../lib/database/database.php';
-require_once dirname(__FILE__).'/../lib/database/attendee.php';
-require_once dirname(__FILE__).'/../lib/database/forms.php';
-require_once dirname(__FILE__).'/../lib/database/mail.php';
-require_once dirname(__FILE__).'/../lib/util/res.php';
-require_once dirname(__FILE__).'/../lib/util/util.php';
+require_once __DIR__ .'/../config/config.php';
+require_once __DIR__ .'/../lib/database/database.php';
+require_once __DIR__ .'/../lib/database/attendee.php';
+require_once __DIR__ .'/../lib/database/forms.php';
+require_once __DIR__ .'/../lib/database/mail.php';
+require_once __DIR__ .'/../lib/util/res.php';
+require_once __DIR__ .'/../lib/util/util.php';
+
+global $cm_config;
 
 $event_name = $cm_config['event']['name'];
 
 $onsite_only = isset($_COOKIE['onsite_only']) && $_COOKIE['onsite_only'];
-$override_code = isset($_GET['override_code']) ? $_GET['override_code'] : (isset($_POST['override_code']) ? $_POST['override_code'] :'') ;
+$override_code = $_GET['override_code'] ?? ($_POST['override_code'] ?? '');
 
 $db = new cm_db();
 
@@ -102,6 +106,7 @@ function cm_reg_item_update_from_post(&$item, $post)
 
 	$item['payment-status'] = 'Incomplete';
 	$item['payment-badge-price'] = $found_badge_type ? $found_badge_type['price'] : 0;
+	$item['sales-tax'] = $found_badge_type ? $found_badge_type['sales-tax'] : 0;
 	$item['payment-promo-code'] = null;
 	$item['payment-promo-price'] = $found_badge_type ? $found_badge_type['price'] : 0;
 
@@ -117,8 +122,8 @@ function cm_reg_item_update_from_post(&$item, $post)
 	}
 
 	//If they're editing their badge...
-	$item['editing-badge'] = (int)$post['editing-badge'];
-	$item['uuid'] = trim($post['uuid']);
+	$item['editing-badge'] = (int)($post['editing-badge'] ?? 0);
+	$item['uuid'] = trim($post['uuid'] ?? '');
 	if($item['editing-badge'] > 0 )
 	{
 		//First, find them in the attendees table
@@ -167,7 +172,7 @@ function cm_reg_item_update_from_post(&$item, $post)
 	return $errors;
 }
 
-function cm_reg_cart_count($include_addons = false) {
+function cm_reg_cart_count($include_addons = false): int {
 	if (!isset($_SESSION['cart'])) $_SESSION['cart'] = array();
 	$count = count($_SESSION['cart']);
 	if ($include_addons) {
@@ -213,8 +218,8 @@ function cm_reg_apply_promo_code($code) {
 	for ($i = 0, $n = cm_reg_cart_count(); $i < $n; $i++) {
 		$item = cm_reg_cart_get($i);
 		$item['index'] = $i;
-		$item['payment-promo-code'] = isset($item['payment-promo-code']) ? $item['payment-promo-code'] : null;
-		$item['payment-promo-price'] = isset($item['payment-promo-price']) ? $item['payment-promo-price'] : $item['payment-badge-price'];
+		$item['payment-promo-code'] = $item['payment-promo-code'] ?? null;
+		$item['payment-promo-price'] = $item['payment-promo-price'] ?? $item['payment-badge-price'];
 		$items[] = $item;
 	}
 	usort($items, function($a, $b) {
@@ -294,14 +299,22 @@ function cm_reg_cart_verify_availability($payment_method)
 }
 
 function cm_reg_cart_total() {
+    global $cm_config;
+
 	if (!isset($_SESSION['cart'])) $_SESSION['cart'] = array();
+    $salesTax = ($cm_config['payment']['sales_tax'] ?? 0);
 	$total = 0;
 	foreach ($_SESSION['cart'] as $item) {
-		$total += (float)$item['payment-promo-price'];
+        $itemPart = (float)$item['payment-promo-price'];
+        $salesTaxPart = $item['sales-tax'] ? $itemPart * $salesTax : 0;
+		$total += $itemPart + $salesTaxPart;
 		if (isset($item['addons']) && $item['addons']) {
 			foreach ($item['addons'] as $addon) {
-				if($addon['payment-status'] == 'Incomplete')
-					$total += (float)$addon['price'];
+				if($addon['payment-status'] === 'Incomplete') {
+                    $itemPart = (float)$addon['price'];
+                    $salesTaxPart = $addon['sales-tax'] ? $itemPart * $salesTax : 0;
+                    $total += $itemPart + $salesTaxPart;
+                }
 			}
 		}
 	}
@@ -333,43 +346,53 @@ function cm_reg_cart_destroy($close_session = true) {
 }
 
 function cm_reg_post_edit_get() {
-	if (isset($_SESSION['post_edit'])) {
-		return $_SESSION['post_edit'];
-	} else {
-		return null;
-	}
+	return $_SESSION['post_edit'] ?? null;
 }
 
-function cm_reg_post_edit_set($item) {
+function cm_reg_post_edit_set($item): void {
 	$_SESSION['post_edit'] = $item;
 }
 
-function cm_reg_post_edit_total() {
-	$total = 0;
+class PostEditSubTotal {
+    /** @var float Gross total */
+    public float $total = 0;
+    public float $tax = 0;
+}
+
+function cm_reg_post_edit_total(): PostEditSubTotal {
+    global $cm_config;
+    $salesTax = ($cm_config['payment']['sales_tax'] ?? 0);
+
+	$total = new PostEditSubTotal();
+
 	if (isset($_SESSION['post_edit'])) {
 		$item = $_SESSION['post_edit'];
 		if (isset($item['new-badge-type'])) {
 			$bt = $item['new-badge-type'];
 			if (isset($bt['price-diff'])) {
-				$total += (float)$bt['price-diff'];
+                $taxPart = $bt['sales-tax'] ? (float)$bt['price-diff'] * $salesTax : 0;
+                $total->total += (float)$bt['price-diff'] + $taxPart;
+                $total->tax += $taxPart;
 			}
 		}
 		if (isset($item['new-addons'])) {
 			foreach ($item['new-addons'] as $addon) {
-				$total += (float)$addon['price'];
+                $taxPart = $addon['sales-tax'] ? (float)$addon['price'] * $salesTax : 0;
+				$total->total += (float)$addon['price'] + $taxPart;
+                $total->tax += $taxPart;
 			}
 		}
 	}
 	return $total;
 }
 
-function cm_reg_post_edit_set_state($state) {
+function cm_reg_post_edit_set_state(string $state): void {
 	if (!isset($_SESSION['post_edit'])) $_SESSION['post_edit'] = array();
 	$_SESSION['post_edit_hash'] = md5(serialize($_SESSION['post_edit']));
 	$_SESSION['post_edit_state'] = $state;
 }
 
-function cm_reg_post_edit_check_state($expected_state) {
+function cm_reg_post_edit_check_state(string $expected_state): bool {
 	if (!isset($_SESSION['post_edit'])) return false;
 	if (!isset($_SESSION['post_edit_hash'])) return false;
 	if (!isset($_SESSION['post_edit_state'])) return false;
@@ -379,51 +402,75 @@ function cm_reg_post_edit_check_state($expected_state) {
 	return true;
 }
 
-function cm_reg_post_edit_destroy($close_session = true) {
-	unset($_SESSION['post_edit']);
-	unset($_SESSION['post_edit_hash']);
-	unset($_SESSION['post_edit_state']);
-	if($close_session)
-		session_destroy();
+function cm_reg_post_edit_destroy(): void {
+    unset(
+        $_SESSION['post_edit'],
+        $_SESSION['post_edit_hash'],
+        $_SESSION['post_edit_state']
+    );
+    session_destroy();
 }
 
-function cm_reg_head($title) {
-	echo '<!DOCTYPE HTML>';
-	echo '<html>';
-	echo '<head>';
-	echo '<meta http-equiv="Content-Type" content="text/html; charset=utf-8">';
-	echo '<title>Register - ' . htmlspecialchars($title) . '</title>';
-	echo '<link rel="shortcut icon" href="' . htmlspecialchars(theme_file_url('favicon.ico', false)) . '">';
-	echo '<link rel="stylesheet" href="' . htmlspecialchars(resource_file_url('cm.css', false)) . '">';
-	echo '<link rel="stylesheet" href="' . htmlspecialchars(theme_file_url('theme.css', false)) . '">';
-	echo '<script type="text/javascript" src="' . htmlspecialchars(resource_file_url('jquery.js', false)) . '"></script>';
-	echo '<script type="text/javascript" src="' . htmlspecialchars(resource_file_url('cmui.js', false)) . '"></script>';
+function cm_reg_head(string $title): void {
+    global $twig;
+
+    $template = $twig->createTemplate(<<<HEREDOC
+        <!DOCTYPE HTML>
+            <html lang="en">
+            <head>
+                <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+                <title>Register {{ title|e }} </title>
+                <link rel="shortcut icon" href="{{ theme_file_url('favicon.ico', false)|e }}">
+                <link rel="stylesheet" href="{{ resource_file_url('cm.css', false)|e }}">
+                <link rel="stylesheet" href="{{ theme_file_url('theme.css', false)|e }}">
+                <script type="text/javascript" src="{{ resource_file_url('jquery.js', false)|e }}"></script>
+                <script type="text/javascript" src="{{ resource_file_url('cmui.js', false)|e }}"></script>
+        HEREDOC
+    );
+    echo $template->render([
+        'title' => $title,
+    ]);
 }
 
-function cm_reg_body($title, $show_cart = true) {
-	echo '</head>';
-	echo '<body class="cm-reg">';
-	echo '<header>';
-		echo '<div class="pagename">' . htmlspecialchars($title) . '</div>';
-		if ($show_cart) {
-			echo '<div class="header-items">';
-				echo '<div class="header-item">';
-					$url = get_site_url(false) . '/register/cart.php';
-					$count = cm_reg_cart_count(true);
-					$count .= ($count == 1) ? ' item' : ' items';
-					echo '<a href="' . htmlspecialchars($url) . '">Shopping Cart: ' . $count . '</a>';
-				echo '</div>';
-			echo '</div>';
-		}
-	echo '</header>';
+function cm_reg_body(string $title, bool $show_cart = true): void {
+    global $twig;
+
+    $template = $twig->createTemplate(<<<HEREDOC
+        </head>
+        <body class="cm-reg">
+          <header>
+            <div class="pagename"> {{ title|e }}</div>
+            {% if show_cart == true %}
+            <div class="header-items">
+              <div class="header-item">
+              <a href="{{ get_site_url(false) ~ '/register/cart.php'}}">Shopping Cart: {{ count }} item{{ count == 1 ? '' : 's' }}</a>
+              </div>
+            </div>
+            {% endif %}
+          </header>
+        HEREDOC
+    );
+    echo $template->render([
+        'title' => $title,
+        'show_cart' => $show_cart,
+        'count' => cm_reg_cart_count(true),
+    ]);
 }
 
-function cm_reg_tail() {
-	echo '</body>';
-	echo '</html>';
+function cm_reg_tail(): void {
+    global $twig;
+
+    $template = $twig->createTemplate(<<<HEREDOC
+            </body>
+        </html>
+        HEREDOC
+    );
+    echo $template->render();
 }
 
-function cm_reg_closed() {
+#[NoReturn]
+function cm_reg_closed(?DateTimeImmutable $datetime = null): never
+{
 	global $event_name, $contact_address;
 	cm_reg_head('Registration Closed');
 	cm_reg_body('Registration Closed', false);
@@ -431,9 +478,14 @@ function cm_reg_closed() {
 	echo '<div class="card">';
 	echo '<div class="card-content">';
 	echo '<p>';
-	echo 'Registration for <b>';
+	echo 'Registrations for <b>';
 	echo htmlspecialchars($event_name);
-	echo '</b> is currently closed.';
+	echo '</b>';
+	if ($datetime) {
+		echo " will open on {$datetime->format('F d, Y')}.";
+	} else {
+		echo ' are currently closed.';
+	}
 	if ($contact_address) {
 		echo ' Please <b><a href="mailto:';
 		echo htmlspecialchars($contact_address);
@@ -447,7 +499,8 @@ function cm_reg_closed() {
 	exit(0);
 }
 
-function cm_reg_message($title, $custom_text_name, $default_text, $fields = null) {
+#[NoReturn]
+function cm_reg_message(string $title, string $custom_text_name, string $default_text, array|false|null $fields = null): never {
 	global $event_name, $fdb, $contact_address;
 	cm_reg_head($title);
 	cm_reg_body($title, false);

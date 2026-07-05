@@ -1,10 +1,10 @@
 <?php
 
-require_once dirname(__FILE__).'/../lib/database/attendee.php';
-require_once dirname(__FILE__).'/../lib/util/util.php';
-require_once dirname(__FILE__).'/../lib/util/cmforms.php';
-require_once dirname(__FILE__).'/../lib/util/slack.php';
-require_once dirname(__FILE__).'/apply.php';
+require_once __DIR__ .'/../lib/database/attendee.php';
+require_once __DIR__ .'/../lib/util/util.php';
+require_once __DIR__ .'/../lib/util/cmforms.php';
+require_once __DIR__ .'/../lib/util/slack.php';
+require_once __DIR__ .'/apply.php';
 
 function applicant_form($apdb, $i, $applicant, $errors) {
 	$out = '<tbody class="applicant-rows applicant-rows-'.$i.'">';
@@ -62,7 +62,7 @@ function applicant_form($apdb, $i, $applicant, $errors) {
 			if ($error) $out .= '<span class="error">' . $error . '</span>'; $out .= '</td>';
 		$out .= '</tr>';
 		$out .= '<tr>';
-			$value = isset($applicant['subscribed']) ? $applicant['subscribed'] : true;
+			$value = $applicant['subscribed'] ?? true;
 			$out .= '<th></th><td><label>';
 				$out .= '<input type="checkbox" name="subscribed-'.$i.'" value="1"' . ($value ? ' checked>' : '>');
 				$out .= 'You may contact me with promotional emails.';
@@ -76,7 +76,7 @@ function applicant_form($apdb, $i, $applicant, $errors) {
 			if ($error) $out .= '<span class="error">' . $error . '</span>'; $out .= '</td>';
 		$out .= '</tr>';
 		$out .= '<tr>';
-			$value = isset($applicant['attendee-id']) ? $applicant['attendee-id'] : false;
+			$value = $applicant['attendee-id'] ?? false;
 			$error = isset($errors['already-registered-'.$i]) ? htmlspecialchars($errors['already-registered-'.$i]) : '';
 			$out .= '<th><label for="already-registered-'.$i.'">Already Registered</label></th>';
 			$out .= '<td>';
@@ -93,9 +93,18 @@ function applicant_form($apdb, $i, $applicant, $errors) {
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-$active_badge_types = $apdb->list_badge_types(true, false);
 $sellable_badge_types = $apdb->list_badge_types(true, true);
-if (!$sellable_badge_types) cm_app_closed();
+if (!$sellable_badge_types) {
+	$futureBadges = $apdb->list_badge_types(true, true, true);
+	$startDates = array_map(static fn(array $badge): string => ($badge['start-date'] ?? ''), $futureBadges);
+	sort($startDates, SORT_STRING);
+
+	$datetime = null;
+	if ($startDates[0] ?? false) {
+		$datetime = new DateTimeImmutable($startDates[0]);
+	}
+	cm_app_closed($datetime);
+}
 
 $item = array();
 $errors = array();
@@ -353,7 +362,7 @@ echo '<article>';
 					echo '</tr>';
 
 					echo '<tr>';
-						$value = isset($item['contact-subscribed']) ? $item['contact-subscribed'] : true;
+						$value = $item['contact-subscribed'] ?? true;
 						echo '<th></th><td><label>';
 							echo '<input type="checkbox" name="contact-subscribed" value="1"' . ($value ? ' checked>' : '>');
 							echo 'You may contact me with promotional emails.';
@@ -458,14 +467,10 @@ echo '<article>';
 					foreach ($questions as $question) {
 						if ($question['active']) {
 							$answer = (
-								isset($item['form-answers']) &&
-								isset($item['form-answers'][$question['question-id']]) ?
-								$item['form-answers'][$question['question-id']] :
-								array()
+								$item['form-answers'][$question['question-id']] ?? array()
 							);
 							$error = (
-								isset($errors['form-answer-'.$question['question-id']]) ?
-								$errors['form-answer-'.$question['question-id']] : null
+								$errors['form-answer-' . $question['question-id']] ?? null
 							);
 							echo cm_form_row($question, $answer, $error);
 						}

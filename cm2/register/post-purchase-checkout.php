@@ -1,8 +1,8 @@
 <?php
 
-require_once dirname(__FILE__).'/../lib/util/util.php';
-require_once dirname(__FILE__).'/../lib/util/paypal.php';
-require_once dirname(__FILE__).'/register.php';
+require_once __DIR__ .'/../lib/util/util.php';
+require_once __DIR__ .'/../lib/util/paypal.php';
+require_once __DIR__ .'/register.php';
 
 function merge_post_purchase_changes(
 	&$old_item, &$new_item, $payment_status, $payment_uuid, $payment_type,
@@ -49,18 +49,23 @@ function merge_post_purchase_changes(
 }
 
 function create_post_purchase_paypal_items(&$paypal, &$new_item) {
+    global $cm_config;
+    $salesTax = ($cm_config['payment']['sales_tax'] ?? 0);
+
 	$items = array();
 
 	if (isset($new_item['new-badge-type'])) {
 		$bt = $new_item['new-badge-type'];
 		if (isset($bt['price-diff'])) {
-			$items[] = $paypal->create_item($bt['name'], $bt['price-diff']);
+            $taxPart = $bt['sales-tax'] ? (float)$bt['price-diff'] * $salesTax : 0;
+			$items[] = $paypal->create_item($bt['name'], $bt['price-diff'], $taxPart);
 		}
 	}
 
 	if (isset($new_item['new-addons'])) {
 		foreach ($new_item['new-addons'] as $addon) {
-			$items[] = $paypal->create_item($addon['name'], $addon['price']);
+            $taxPart = $addon['sales-tax'] ? (float)$addon['price'] * $salesTax : 0;
+			$items[] = $paypal->create_item($addon['name'], $addon['price'], $taxPart);
 		}
 	}
 
@@ -78,8 +83,8 @@ if (!$_GET) {
 	$item = cm_reg_post_edit_get();
 	$total_price = cm_reg_post_edit_total();
 
-	if ($total_price <= 0) {
-		$group_uuid = $db->uuid();
+	$group_uuid = $db->uuid();
+	if ($total_price->total <= 0) {
 		$payment_date = $db->now();
 
 		$attendee = $atdb->get_attendee($item['id'], false, $name_map, $fdb);
@@ -109,8 +114,8 @@ if (!$_GET) {
 		$token = $paypal->get_token();
 
 		$items = create_post_purchase_paypal_items($paypal, $item);
-		$total = $paypal->create_total($total_price);
-		$txn = $paypal->create_transaction($items, $total);
+		$total = $paypal->create_total($total_price->total, $total_price->tax);
+		$txn = $paypal->create_transaction($items, $total, $group_uuid."::".$db->uuid());
 
 		$payment = $paypal->create_payment_pp(
 			$site_url.'/register/post-purchase-checkout.php?return',
@@ -153,7 +158,7 @@ if (isset($_GET['return'])) {
 	$paypal = new cm_paypal($token);
 
 	$payment_id = $_SESSION['payment_id'];
-	$payer_id = isset($_GET['PayerID']) ? $_GET['PayerID'] : null;
+	$payer_id = $_GET['PayerID'] ?? null;
 	$sale = $paypal->execute_payment($payment_id, $payer_id);
 	$transaction_id = $paypal->get_transaction_id($sale);
 	$details = json_encode($sale);
@@ -167,7 +172,7 @@ if (isset($_GET['return'])) {
 		$attendee = $atdb->get_attendee($item['id'], false, $name_map, $fdb);
 		merge_post_purchase_changes(
 			$attendee, $item, 'Completed', $group_uuid, 'PayPal',
-			$transaction_id, $total_price, $payment_date, $details
+			$transaction_id, $total_price->total, $payment_date, $details
 		);
 		$atdb->update_attendee($attendee);
 

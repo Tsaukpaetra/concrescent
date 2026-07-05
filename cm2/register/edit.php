@@ -1,14 +1,24 @@
 <?php
 
-require_once dirname(__FILE__).'/../lib/util/util.php';
-require_once dirname(__FILE__).'/../lib/util/cmforms.php';
-require_once dirname(__FILE__).'/register.php';
+require_once __DIR__ .'/../lib/util/util.php';
+require_once __DIR__ .'/../lib/util/cmforms.php';
+require_once __DIR__ .'/register.php';
 
 $onsite_only = isset($_COOKIE['onsite_only']) && $_COOKIE['onsite_only'];
-$override_code = isset($_GET['override_code']) ? $_GET['override_code'] : (isset($_POST['override_code']) ? $_POST['override_code'] :'') ;
+$override_code = $_GET['override_code'] ?? ($_POST['override_code'] ?? '');
 $active_badge_types = $atdb->list_badge_types(true, false, $onsite_only, $override_code);
 $sellable_badge_types = $atdb->list_badge_types(true, true, $onsite_only, $override_code);
-if (!$sellable_badge_types) cm_reg_closed();
+if (!$sellable_badge_types) {
+	$futureBadges = $atdb->list_badge_types(true, true, $onsite_only, $override_code, true);
+	$startDates = array_map(static fn(array $badge): string => ($badge['start-date'] ?? ''), $futureBadges);
+	sort($startDates, SORT_STRING);
+
+	$datetime = null;
+	if ($startDates[0] ?? false) {
+		$datetime = new DateTimeImmutable($startDates[0]);
+	}
+	cm_reg_closed($datetime);
+}
 
 //$active_addons = $atdb->list_addons(true, false, $onsite_only, $name_map);
 $sellable_addons = $atdb->list_addons(true, true, $onsite_only, $name_map);
@@ -248,7 +258,7 @@ echo '<article>';
 				echo '</tr>';
 
 				echo '<tr>';
-					$value = isset($item['subscribed']) ? $item['subscribed'] : true;
+					$value = $item['subscribed'] ?? true;
 					echo '<th></th><td><label>';
 						echo '<input type="checkbox" name="subscribed" value="1"' . ($value ? ' checked>' : '>');
 						echo 'You may contact me with promotional emails.';
@@ -320,14 +330,10 @@ echo '<article>';
 							echo '<tr><td colspan="2"><h2>Additional Information</h2></td></tr>';
 						}
 						$answer = (
-							isset($item['form-answers']) &&
-							isset($item['form-answers'][$question['question-id']]) ?
-							$item['form-answers'][$question['question-id']] :
-							array()
+							$item['form-answers'][$question['question-id']] ?? array()
 						);
 						$error = (
-							isset($errors['form-answer-'.$question['question-id']]) ?
-							$errors['form-answer-'.$question['question-id']] : null
+							$errors['form-answer-' . $question['question-id']] ?? null
 						);
 						echo cm_form_row($question, $answer, $error);
 						$first = false;

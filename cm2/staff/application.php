@@ -1,14 +1,23 @@
 <?php
 
-require_once dirname(__FILE__).'/../lib/database/attendee.php';
-require_once dirname(__FILE__).'/../lib/util/util.php';
-require_once dirname(__FILE__).'/../lib/util/cmforms.php';
-require_once dirname(__FILE__).'/../lib/util/slack.php';
-require_once dirname(__FILE__).'/staff.php';
+require_once __DIR__ .'/../lib/database/attendee.php';
+require_once __DIR__ .'/../lib/util/util.php';
+require_once __DIR__ .'/../lib/util/cmforms.php';
+require_once __DIR__ .'/../lib/util/slack.php';
+require_once __DIR__ .'/staff.php';
 
-$active_badge_types = $sdb->list_badge_types(true, false);
 $sellable_badge_types = $sdb->list_badge_types(true, true);
-if (!$sellable_badge_types) cm_app_closed();
+if (!$sellable_badge_types) {
+	$futureBadges = $sdb->list_badge_types(true, true, true);
+	$startDates = array_map(static fn(array $badge): string => ($badge['start-date'] ?? ''), $futureBadges);
+	sort($startDates, SORT_STRING);
+
+	$datetime = null;
+	if ($startDates[0] ?? false) {
+		$datetime = new DateTimeImmutable($startDates[0]);
+	}
+	cm_app_closed($datetime);
+}
 
 $item = array();
 $errors = array();
@@ -50,10 +59,8 @@ if (isset($_POST['submit'])) {
 	else if (strlen($item['phone-number']) < 7) $errors['phone-number'] = 'Phone number is too short.';
 
 	$item['address-1'] = trim($_POST['address-1']);
-	if (!$item['address-1']) $errors['address-1'] = 'Address is required.';
 	$item['address-2'] = trim($_POST['address-2']);
 	$item['city'] = trim($_POST['city']);
-	if (!$item['city']) $errors['city'] = 'City is required.';
 	$item['state'] = trim($_POST['state']);
 	$item['zip-code'] = trim($_POST['zip-code']);
 	$item['country'] = trim($_POST['country']);
@@ -273,7 +280,7 @@ echo '<article>';
 				echo '</tr>';
 
 				echo '<tr>';
-					$value = isset($item['subscribed']) ? $item['subscribed'] : true;
+					$value = $item['subscribed'] ?? true;
 					echo '<th></th><td><label>';
 						echo '<input type="checkbox" name="subscribed" value="1"' . ($value ? ' checked>' : '>');
 						echo 'You may contact me with promotional emails.';
@@ -345,14 +352,10 @@ echo '<article>';
 							echo '<tr><td colspan="2"><h2>Staff Information</h2></td></tr>';
 						}
 						$answer = (
-							isset($item['form-answers']) &&
-							isset($item['form-answers'][$question['question-id']]) ?
-							$item['form-answers'][$question['question-id']] :
-							array()
+							$item['form-answers'][$question['question-id']] ?? array()
 						);
 						$error = (
-							isset($errors['form-answer-'.$question['question-id']]) ?
-							$errors['form-answer-'.$question['question-id']] : null
+							$errors['form-answer-' . $question['question-id']] ?? null
 						);
 						echo cm_form_row($question, $answer, $error);
 						$first = false;

@@ -1,7 +1,7 @@
 <?php
 
-require_once dirname(__FILE__).'/../config/config.php';
-require_once dirname(__FILE__).'/admin.php';
+require_once __DIR__ .'/../config/config.php';
+require_once __DIR__ .'/admin.php';
 
 cm_admin_check_permission('timecheck', '*');
 
@@ -46,10 +46,6 @@ echo '<article>';
 				echo '<p>';
 					echo '<b>MySQL Time Zone (Configured):</b> ';
 					echo $cm_config['database']['timezone'];
-				echo '</p>';
-				echo '<p>';
-					echo '<br><b>MySQLi Character Set:</b> ';
-					echo $db->connection->character_set_name();
 				echo '</p>';
 				echo '<p><b>MySQL Character Sets:</b></p>';
 				$charsets = $db->characterset();

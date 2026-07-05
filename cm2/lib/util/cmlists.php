@@ -1,7 +1,7 @@
 <?php
 
-require_once dirname(__FILE__).'/res.php';
-require_once dirname(__FILE__).'/util.php';
+require_once __DIR__ .'/res.php';
+require_once __DIR__ .'/util.php';
 
 function cm_form_questions_to_list_columns($questions) {
 	$columns = array();
@@ -319,7 +319,7 @@ function cm_list_dialogs(&$list_def) {
 }
 
 function cm_list_make_row(&$list_def, &$entity) {
-	$search = isset($entity['search-content']) ? $entity['search-content'] : null;
+	$search = $entity['search-content'] ?? null;
 	return array(
 		'entity' => $entity,
 		'html' => cm_list_row($list_def, $entity),

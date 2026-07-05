@@ -1,35 +1,42 @@
 <?php
 
-require_once dirname(__FILE__).'/../../config/config.php';
+require_once 'util.php';
+require_once __DIR__ .'/../../config/config.php';
 error_reporting(0);
-header('Content-Type: text/plain');
 
-$connection = new mysqli(
-	$cm_config['database']['host'], $cm_config['database']['username'],
-	$cm_config['database']['password'], $cm_config['database']['database']
-);
-if (!$connection) {
-	echo 'NG Could not connect to database. Check database configuration.';
-	exit(0);
+try {
+	$host = $cm_config['database']['host'];
+	$dbname = $cm_config['database']['database'];
+	$connection = new PDO(
+		"mysql:host=$host;dbname=$dbname",
+		$cm_config['database']['username'],
+		$cm_config['database']['password']
+	);
+} catch (PDOException $e) {
+	$message = 'Could not connect to database: ' . $e->getMessage();
+	if ($e->getCode() === 2002) {
+		$message .= '. Check if the service is running.';
+	}
+	failed('database1', $message);
+	die();
 }
 
 $query = $connection->query('SELECT 6*7');
 if (!$query) {
-	echo 'NG Connection to database is not working. Check database configuration.';
-	exit(0);
+	failed('database1', 'Connection to database is not working. Check database configuration.');
+	die();
 }
 
-$row = $query->fetch_row();
+$row = $query->fetch(PDO::FETCH_NUM);
 if (!$row) {
-	echo 'NG Connection to database is not working. Check database configuration.';
-	exit(0);
+	failed('database1', 'Connection to database is not working. Check database configuration.');
+	die();
 }
 
 $answer = $row[0];
 if ($answer != 42) {
-	echo 'NG Connection to database is not working. Check database configuration.';
-	exit(0);
+	failed('database1', 'Connection to database is not working. Check database configuration.');
+	die();
 }
 
-$query->close();
-echo 'OK Successfully connected to database.';
+passed('database1', 'Successfully connected to database.');

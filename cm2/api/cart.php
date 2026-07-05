@@ -1,8 +1,8 @@
 <?php
 
-require_once dirname(__FILE__).'/../lib/util/util.php';
-require_once dirname(__FILE__).'/../lib/util/cmforms.php';
-require_once dirname(__FILE__).'/../register/register.php';
+require_once __DIR__ .'/../lib/util/util.php';
+require_once __DIR__ .'/../lib/util/cmforms.php';
+require_once __DIR__ .'/../register/register.php';
 
 //Assume we got something
 $json = json_decode(file_get_contents("php://input"), true);
@@ -22,9 +22,9 @@ if(isset($json['badges']))
   $errors = array();
   foreach ($json['badges'] as $key => $badge) {
     $newitem = array();
-    $errors[isset($badge['index']) ? $badge['index'] : ($key .'')] = cm_reg_item_update_from_post($newitem,$badge);
+    $errors[$badge['index'] ?? ($key . '')] = cm_reg_item_update_from_post($newitem,$badge);
     //Ensure there is an index associated
-    $newitem['index'] = isset($badge['index']) ? $badge['index'] : ($key .'');
+    $newitem['index'] = $badge['index'] ?? ($key . '');
     cm_reg_cart_add($newitem);
   }
   //Count up the errors
@@ -84,5 +84,5 @@ if(isset($json['action']))
 switch ($_GET['action']) {
   case 'checkout':
     unset($_GET['action']);
-    require dirname(__FILE__).'/../register/checkout.php';
+    require __DIR__ .'/../register/checkout.php';
 }

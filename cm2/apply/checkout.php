@@ -1,8 +1,8 @@
 <?php
 
-require_once dirname(__FILE__).'/../lib/util/util.php';
-require_once dirname(__FILE__).'/../lib/util/paypal.php';
-require_once dirname(__FILE__).'/apply.php';
+require_once __DIR__ .'/../lib/util/util.php';
+require_once __DIR__ .'/../lib/util/paypal.php';
+require_once __DIR__ .'/apply.php';
 
 $site_url = get_site_url(true);
 
@@ -12,10 +12,16 @@ if (count($_GET) == 1) {
 		exit(0);
 	}
 
+    /** @var float $salesTax */
+    $salesTax = ($cm_config['payment']['sales_tax'] ?? 0);
+    $salesTaxSubTotal = 0;
+
 	$total_price = 0;
 	$app_id_map = array();
 	foreach ($_SESSION['cart'] as $item) {
-		$total_price += $item['price'];
+        $salesTaxPart = $item['sales-tax'] ? ($item['price'] * $salesTax) : 0;
+        $salesTaxSubTotal += $salesTaxPart;
+		$total_price += $item['price'] + $salesTaxPart;
 		if (isset($app_id_map[$item['application-id']])) {
 			$app_id_map[$item['application-id']] += $item['price'];
 		} else {
@@ -23,8 +29,8 @@ if (count($_GET) == 1) {
 		}
 	}
 
+	$group_uuid = $db->uuid();
 	if ($total_price <= 0) {
-		$group_uuid = $db->uuid();
 		$payment_date = $db->now();
 		foreach ($app_id_map as $id => $payment_price) {
 			$apdb->update_payment_status($id, 'Completed', 'Free Ride', $group_uuid, $payment_price, $payment_date, 'Free Ride');
@@ -52,10 +58,15 @@ if (count($_GET) == 1) {
 
 		$items = array();
 		foreach ($_SESSION['cart'] as $item) {
-			$items[] = $paypal->create_item($item['name'].' - '.$item['details'], $item['price']);
+            $salesTaxPart = $item['sales-tax'] ? ($item['price'] * $salesTax) : 0;
+			$items[] = $paypal->create_item(
+                $item['name'].' - '.$item['details'],
+                $item['price'],
+                $salesTaxPart,
+            );
 		}
-		$total = $paypal->create_total($total_price);
-		$txn = $paypal->create_transaction($items, $total);
+		$total = $paypal->create_total($total_price, $salesTaxSubTotal);
+		$txn = $paypal->create_transaction($items, $total, $group_uuid."::".$db->uuid());
 
 		$payment = $paypal->create_payment_pp(
 			$site_url.'/apply/checkout.php?c='.$ctx_lc.'&return',
@@ -102,7 +113,7 @@ if (isset($_GET['return'])) {
 	$paypal = new cm_paypal($token);
 
 	$payment_id = $_SESSION['payment_id'];
-	$payer_id = isset($_GET['PayerID']) ? $_GET['PayerID'] : null;
+	$payer_id = $_GET['PayerID'] ?? null;
 	$sale = $paypal->execute_payment($payment_id, $payer_id);
 	$transaction_id = $paypal->get_transaction_id($sale);
 	$details = json_encode($sale);

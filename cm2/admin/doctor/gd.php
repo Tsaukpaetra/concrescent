@@ -1,19 +1,19 @@
 <?php
 
+require_once 'util.php';
 error_reporting(0);
-header('Content-Type: text/plain');
 
 $success = false;
 
 function print_success() {
 	if ($GLOBALS['success']) {
-		echo 'OK The GD library is installed and working.';
+        passed('gd', 'The GD library is installed and working.');
 	} else {
-		echo 'NG The GD library is not installed or is not working. Please reinstall the GD library.';
+        failed('gd', 'The GD library is not installed or is not working. Please reinstall the GD library.');
 	}
 }
 
-register_shutdown_function('print_success');
+register_shutdown_function(print_success(...));
 
 $image = @imagecreate(200, 200);
 if (!$image) exit(0);

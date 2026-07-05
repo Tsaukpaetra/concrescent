@@ -1,15 +1,15 @@
 <?php
 
-require_once dirname(__FILE__).'/../../config/config.php';
-require_once dirname(__FILE__).'/../util/util.php';
-require_once dirname(__FILE__).'/database.php';
+require_once __DIR__ .'/../../config/config.php';
+require_once __DIR__ .'/../util/util.php';
+require_once __DIR__ .'/database.php';
 
 class cm_mail_db {
 
-	public $event_info;
-	public $cm_db;
+	public mixed $event_info;
+	public cm_db $cm_db;
 
-	public function __construct($cm_db) {
+	public function __construct(cm_db $cm_db) {
 		$this->event_info = $GLOBALS['cm_config']['event'];
 		$this->cm_db = $cm_db;
 		$this->cm_db->table_def('mail_templates', (
@@ -215,31 +215,30 @@ class cm_mail_db {
 
 	public function get_contact_address($name) {
 		if (!$name) return false;
-		$stmt = $this->cm_db->connection->prepare(
+		$stmt = $this->cm_db->prepare(
 			'SELECT `contact_address`'.
-			' FROM '.$this->cm_db->table_name('mail_templates').
+			' FROM `mail_templates`' .
 			' WHERE `name` = ? LIMIT 1'
 		);
 		$stmt->bind_param('s', $name);
 		$stmt->execute();
 		$stmt->bind_result($contact_address);
 		$result = $stmt->fetch() ? $contact_address : false;
-		$stmt->close();
 		return $result;
 	}
 
 	public function get_mail_template($name) {
 		if (!$name) return false;
-		$stmt = $this->cm_db->connection->prepare(
+		$stmt = $this->cm_db->prepare(
 			'SELECT `name`, `contact_address`, `from`, `bcc`, `subject`, `type`, `body`'.
-			' FROM '.$this->cm_db->table_name('mail_templates').
+			' FROM `mail_templates`' .
 			' WHERE `name` = ? LIMIT 1'
 		);
 		$stmt->bind_param('s', $name);
 		$stmt->execute();
 		$stmt->bind_result($name, $contact_address, $from, $bcc, $subject, $type, $body);
 		if ($stmt->fetch()) {
-			$result = array(
+			return [
 				'name' => $name,
 				'contact-address' => $contact_address,
 				'from' => $from,
@@ -248,19 +247,16 @@ class cm_mail_db {
 				'type' => $type,
 				'body' => $body,
 				'search-content' => array($name, $contact_address, $from, $bcc, $subject)
-			);
-			$stmt->close();
-			return $result;
+			];
 		}
-		$stmt->close();
 		return false;
 	}
 
 	public function list_mail_templates() {
 		$templates = array();
-		$stmt = $this->cm_db->connection->prepare(
+		$stmt = $this->cm_db->prepare(
 			'SELECT `name`, `contact_address`, `from`, `bcc`, `subject`, `type`, `body`'.
-			' FROM '.$this->cm_db->table_name('mail_templates').
+			' FROM `mail_templates`' .
 			' ORDER BY `name`'
 		);
 		$stmt->execute();
@@ -277,14 +273,13 @@ class cm_mail_db {
 				'search-content' => array($name, $contact_address, $from, $bcc, $subject)
 			);
 		}
-		$stmt->close();
 		return $templates;
 	}
 
 	public function set_mail_template($template) {
 		if (!$template || !isset($template['name']) || !$template['name']) return false;
-		$stmt = $this->cm_db->connection->prepare(
-			'INSERT INTO '.$this->cm_db->table_name('mail_templates').' SET '.
+		$stmt = $this->cm_db->prepare(
+			'INSERT INTO `mail_templates` SET '.
 			'`name` = ?, `contact_address` = ?, `from` = ?, `bcc` = ?, `subject` = ?, `type` = ?, `body` = ?'.
 			' ON DUPLICATE KEY UPDATE '.
 			'`name` = ?, `contact_address` = ?, `from` = ?, `bcc` = ?, `subject` = ?, `type` = ?, `body` = ?'
@@ -295,19 +290,17 @@ class cm_mail_db {
 			$template['name'], $template['contact-address'], $template['from'], $template['bcc'], $template['subject'], $template['type'], $template['body']
 		);
 		$success = $stmt->execute();
-		$stmt->close();
 		return $success;
 	}
 
 	public function clear_mail_template($name) {
 		if (!$name) return false;
-		$stmt = $this->cm_db->connection->prepare(
-			'DELETE FROM '.$this->cm_db->table_name('mail_templates').
+		$stmt = $this->cm_db->prepare(
+			'DELETE FROM `mail_templates`' .
 			' WHERE `name` = ? LIMIT 1'
 		);
 		$stmt->bind_param('s', $name);
 		$success = $stmt->execute();
-		$stmt->close();
 		return $success;
 	}
 

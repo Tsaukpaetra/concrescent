@@ -1,10 +1,10 @@
 <?php
 
-require_once dirname(__FILE__).'/../../config/config.php';
-require_once dirname(__FILE__).'/../../lib/database/application.php';
-require_once dirname(__FILE__).'/../../lib/util/util.php';
-require_once dirname(__FILE__).'/../../lib/util/cmlists.php';
-require_once dirname(__FILE__).'/../admin.php';
+require_once __DIR__ .'/../../config/config.php';
+require_once __DIR__ .'/../../lib/database/application.php';
+require_once __DIR__ .'/../../lib/util/util.php';
+require_once __DIR__ .'/../../lib/util/cmlists.php';
+require_once __DIR__ .'/../admin.php';
 
 $context = (isset($_GET['c']) ? trim($_GET['c']) : null);
 if (!$context) {
@@ -14,8 +14,7 @@ if (!$context) {
 $ctx_lc = strtolower($context);
 $ctx_uc = strtoupper($context);
 $ctx_info = (
-	isset($cm_config['application_types'][$ctx_uc]) ?
-	$cm_config['application_types'][$ctx_uc] : null
+	$cm_config['application_types'][$ctx_uc] ?? null
 );
 if (!$ctx_info) {
 	header('Location: ../');
@@ -120,10 +119,13 @@ $list_def['edit-clear-function'] = <<<END
 		$('#ea-max-applicant-count').val('');
 		$('#ea-max-assignment-count').val('');
 		$('#ea-base-price').val('0.00');
+		$('#ea-base-price-sales-tax').val('0.00');
 		$('#ea-base-applicant-count').val(0);
 		$('#ea-base-assignment-count').val(0);
 		$('#ea-price-per-applicant').val('0.00');
+		$('#ea-price-per-applicant-sales-tax').prop('checked', false);
 		$('#ea-price-per-assignment').val('0.00');
+		$('#ea-price-per-assignment-sales-tax').prop('checked', false);
 		$('#ea-max-prereg-discount').val('No Discount');
 		$('#ea-use-permit').prop('checked', false);
 		$('#ea-require-permit').prop('checked', false);
@@ -146,10 +148,13 @@ $list_def['edit-load-function'] = <<<END
 		$('#ea-max-applicant-count').val(e['max-applicant-count'] || '');
 		$('#ea-max-assignment-count').val(e['max-assignment-count'] || '');
 		$('#ea-base-price').val(e['base-price']);
+		$('#ea-base-price-sales-tax').prop('checked', !!e['base-price-sales-tax']);
 		$('#ea-base-applicant-count').val(e['base-applicant-count']);
 		$('#ea-base-assignment-count').val(e['base-assignment-count']);
 		$('#ea-price-per-applicant').val(e['price-per-applicant']);
+		$('#ea-price-per-applicant-sales-tax').prop('checked', !!e['price-per-applicant-sales-tax']);
 		$('#ea-price-per-assignment').val(e['price-per-assignment']);
+		$('#ea-price-per-assignment-sales-tax').prop('checked', !!e['price-per-assignment-sales-tax']);
 		$('#ea-max-prereg-discount').val(e['max-prereg-discount']);
 		$('#ea-use-permit').prop('checked', !!e['use-permit']);
 		$('#ea-require-permit').prop('checked', !!e['require-permit']);
@@ -178,10 +183,13 @@ $list_def['edit-save-function'] = <<<END
 			'max-applicant-count': $('#ea-max-applicant-count').val() || null,
 			'max-assignment-count': $('#ea-max-assignment-count').val() || null,
 			'base-price': $('#ea-base-price').val(),
+			'base-price-sales-tax': $('#ea-base-price-sales-tax').is(':checked'),
 			'base-applicant-count': $('#ea-base-applicant-count').val(),
 			'base-assignment-count': $('#ea-base-assignment-count').val(),
 			'price-per-applicant': $('#ea-price-per-applicant').val(),
+			'price-per-applicant-sales-tax': $('#ea-price-per-applicant-sales-tax').is(':checked'),
 			'price-per-assignment': $('#ea-price-per-assignment').val(),
+			'price-per-assignment-sales-tax': $('#ea-price-per-assignment-sales-tax').is(':checked'),
 			'max-prereg-discount': $('#ea-max-prereg-discount').val(),
 			'use-permit': $('#ea-use-permit').is(':checked'),
 			'require-permit': $('#ea-require-permit').is(':checked'),
@@ -310,7 +318,9 @@ echo '<table border="0" cellpadding="0" cellspacing="0" class="cm-form-table">';
 	echo '</tr>';
 	echo '<tr>';
 		echo '<th><label for="ea-base-price">Base Price:</label></th>';
-		echo '<td><input type="number" name="ea-base-price" id="ea-base-price" min="0" step="0.01"></td>';
+		echo '<td><input type="number" name="ea-base-price" id="ea-base-price" min="0" step="0.01">';
+        echo '<input type="checkbox" name="ea-base-price-sales-tax" id="ea-base-price-sales-tax"><label for="ea-base-price-sales-tax">apply sales tax ?</label>';
+        echo '</td>';
 	echo '</tr>';
 	echo '<tr>';
 		echo '<th><label for="ea-base-assignment-count">' . $ctx_info['assignment_term'][1] . ' Included<br> in Base Price:</label></th>';
@@ -322,11 +332,15 @@ echo '<table border="0" cellpadding="0" cellspacing="0" class="cm-form-table">';
 	echo '</tr>';
 	echo '<tr>';
 		echo '<th><label for="ea-price-per-assignment">Price Per ' . $ctx_info['assignment_term'][0] . ':</label></th>';
-		echo '<td><input type="number" name="ea-price-per-assignment" id="ea-price-per-assignment" min="0" step="0.01"></td>';
+		echo '<td><input type="number" name="ea-price-per-assignment" id="ea-price-per-assignment" min="0" step="0.01">';
+        echo '<input type="checkbox" name="ea-price-per-assignment-sales-tax" id="ea-price-per-assignment-sales-tax"><label for="ea-price-per-assignment-sales-tax">apply sales tax ?</label>';
+        echo '</td>';
 	echo '</tr>';
 	echo '<tr>';
 		echo '<th><label for="ea-price-per-applicant">Price Per Badge:</label></th>';
-		echo '<td><input type="number" name="ea-price-per-applicant" id="ea-price-per-applicant" min="0" step="0.01"></td>';
+		echo '<td><input type="number" name="ea-price-per-applicant" id="ea-price-per-applicant" min="0" step="0.01">';
+        echo '<input type="checkbox" name="ea-price-per-applicant-sales-tax" id="ea-price-per-applicant-sales-tax"><label for="ea-price-per-applicant-sales-tax">apply sales tax ?</label>';
+        echo '</td>';
 	echo '</tr>';
 	echo '<tr>';
 		echo '<th><label for="ea-max-prereg-discount">Max Discount for<br>Already Registered:</label></th>';

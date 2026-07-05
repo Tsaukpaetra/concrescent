@@ -1,15 +1,15 @@
 <?php
 
-require_once dirname(__FILE__).'/../../config/config.php';
+require_once __DIR__ .'/../../config/config.php';
 
 class cm_paypal {
 
-	private $event_name;
-	private $api_url;
-	private $client_id;
-	private $secret;
-	private $currency;
-	private $token;
+	private mixed $event_name;
+	private mixed $api_url;
+	private mixed $client_id;
+	private mixed $secret;
+	private mixed $currency;
+	private mixed $token;
 
 	public function __construct($token = null) {
 		$config = $GLOBALS['cm_config']['event'];
@@ -83,19 +83,24 @@ class cm_paypal {
 		return json_decode($result, true);
 	}
 
-	public function create_item($name, $price) {
+	public function create_item($name, $price, $tax) {
 		return array(
 			'quantity' => '1',
 			'name' => $name,
 			'price' => number_format($price, 2, '.', ''),
-			'currency' => $this->currency
+			'currency' => $this->currency,
+            'tax' => number_format($tax, 2, '.', ''),
 		);
 	}
 
-	public function create_total($total) {
+	public function create_total($total, $tax) {
 		return array(
 			'total' => number_format($total, 2, '.', ''),
-			'currency' => $this->currency
+			'currency' => $this->currency,
+            'details' => [
+                "subtotal" => number_format($total-$tax, 2, '.', ''),
+                "tax" => number_format($tax, 2, '.', ''),
+            ]
 		);
 	}
 

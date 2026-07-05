@@ -1,16 +1,19 @@
 <?php
 
-require_once dirname(__FILE__).'/../../config/config.php';
-require_once dirname(__FILE__).'/../../lib/database/application.php';
-require_once dirname(__FILE__).'/../../lib/database/forms.php';
-require_once dirname(__FILE__).'/../../lib/database/attendee.php';
-require_once dirname(__FILE__).'/../../lib/database/mail.php';
-require_once dirname(__FILE__).'/../../lib/database/misc.php';
-require_once dirname(__FILE__).'/../../lib/util/util.php';
-require_once dirname(__FILE__).'/../../lib/util/cmlists.php';
-require_once dirname(__FILE__).'/../../lib/util/cmforms.php';
-require_once dirname(__FILE__).'/../../lib/util/slack.php';
-require_once dirname(__FILE__).'/../admin.php';
+require_once __DIR__ .'/../../config/config.php';
+require_once __DIR__ .'/../../lib/database/application.php';
+require_once __DIR__ .'/../../lib/database/forms.php';
+require_once __DIR__ .'/../../lib/database/attendee.php';
+require_once __DIR__ .'/../../lib/database/mail.php';
+require_once __DIR__ .'/../../lib/database/misc.php';
+require_once __DIR__ .'/../../lib/util/util.php';
+require_once __DIR__ .'/../../lib/util/cmlists.php';
+require_once __DIR__ .'/../../lib/util/cmforms.php';
+require_once __DIR__ .'/../../lib/util/slack.php';
+require_once __DIR__ .'/../admin.php';
+require_once __DIR__ .'/../../../vendor/autoload.php';
+
+global $log;
 
 $context = (isset($_GET['c']) ? trim($_GET['c']) : null);
 if (!$context) {
@@ -20,8 +23,7 @@ if (!$context) {
 $ctx_lc = strtolower($context);
 $ctx_uc = strtoupper($context);
 $ctx_info = (
-	isset($cm_config['application_types'][$ctx_uc]) ?
-	$cm_config['application_types'][$ctx_uc] : null
+	$cm_config['application_types'][$ctx_uc] ?? null
 );
 if (!$ctx_info) {
 	header('Location: ../');
@@ -57,6 +59,12 @@ $questions = $fdb->list_questions();
 $atdb = new cm_attendee_db($db);
 $mdb = new cm_mail_db($db);
 $midb = new cm_misc_db($db);
+
+$taskSchedulePublishable = new \App\Task\SchedulePublishableTask(
+    new \App\Hook\CloudflareApi(
+        $log
+    ),
+);
 
 $new = !isset($_GET['id']);
 $id = $new ? -1 : (int)$_GET['id'];
@@ -128,7 +136,7 @@ if (isset($_POST['cm-list-action'])) {
 	header('Content-type: text/plain');
 	switch ($_POST['cm-list-action']) {
 		case 'list':
-			$applicants = isset($item['applicants']) ? $item['applicants'] : array();
+			$applicants = $item['applicants'] ?? array();
 			$response = cm_list_process_entities($list_def, $applicants);
 			echo json_encode($response);
 			break;
@@ -167,14 +175,14 @@ if ($submitted) {
 			|| ( float_or_null($item['payment-txn-amt'    ]) !== float_or_null($_POST['payment-txn-amt'    ]) )
 			|| (               $item['payment-details'    ]  !=                $_POST['payment-details'    ]  )
 		) {
+            $item['payment-group-uuid' ] = $db->uuid();
+            $item['payment-date'       ] = $db->now();
 			$item['payment-status'     ] =          trim($_POST['payment-status'     ]);
 			$item['payment-badge-price'] = float_or_null($_POST['payment-badge-price']);
 			$item['payment-type'       ] =          trim($_POST['payment-type'       ]);
-			$item['payment-txn-id'     ] =          trim($_POST['payment-txn-id'     ]);
+			$item['payment-txn-id'     ] =          trim($_POST['payment-txn-id'     ]) ?: $item['payment-group-uuid' ];
 			$item['payment-txn-amt'    ] = float_or_null($_POST['payment-txn-amt'    ]);
 			$item['payment-details'    ] =               $_POST['payment-details'    ] ;
-			$item['payment-group-uuid' ] = $db->uuid();
-			$item['payment-date'       ] = $db->now();
 		}
 
 		/* Custom Questions */
@@ -225,6 +233,7 @@ if ($submitted) {
 
 	/* Write Changes */
 	if ($new) {
+        $item['payment-txn-id'] = $item['payment-group-uuid'];
 		$id = $apdb->create_application($item, $fdb);
 		$new = ($id === false);
 		$changed = ($id !== false);
@@ -251,6 +260,7 @@ if ($submitted) {
 			}
 		}
 		if ($can_edit_status) {
+			$taskSchedulePublishable->onScheduleManualUpdate();
 			if (isset($_POST['resend-application-email']) && $_POST['resend-application-email']) {
 				$application_status = strtolower($item['application-status']);
 				$template_name = 'application-' . $application_status . '-' . $ctx_lc;
@@ -280,7 +290,7 @@ if ($submitted) {
 }
 
 $title = ($new ? 'Add ' : ($review_mode ? 'Review ' : 'Edit ')) . $ctx_name . ' Application';
-$name = isset($item['application-name']) ? $item['application-name'] : null;
+$name = $item['application-name'] ?? null;
 $full_title = (!$new && $name) ? ($title . ' - ' . $name) : $title;
 
 $image_size = $midb->get_file_image_size('rooms-and-tables');
@@ -292,7 +302,7 @@ if (!$new) cm_list_head($list_def);
 
 echo '<link rel="stylesheet" href="edit.css">';
 echo '<style>.tag-map { padding-bottom: ' . $image_ratio . '%; }</style>';
-echo '<script type="text/javascript">cm_assigned_rooms_and_tables = ('.json_encode(isset($item['assigned-rooms-and-tables']) ? $item['assigned-rooms-and-tables'] : array()).');</script>';
+echo '<script type="text/javascript">cm_assigned_rooms_and_tables = ('.json_encode($item['assigned-rooms-and-tables'] ?? array()).');</script>';
 echo '<script type="text/javascript" src="edit.js"></script>';
 
 cm_admin_body($title);
@@ -378,10 +388,13 @@ echo '<article>';
 					}
 				echo '</div>';
 			}
-			if ($item['min-age'] && $item['min-age'] < 18) {
+
+            $under18 = !$new && ($item['min-age'] && $item['min-age'] < 18);
+
+			if ($under18) {
 				echo '<p class="cm-note-box">At least one applicant on this application is under 18.</p>';
 			}
-			if (($can_submit && $submitted) || $attendee_blacklisted || $applicant_blacklisted || $application_blacklisted || ($item['min-age'] && $item['min-age'] < 18)) {
+			if (($can_submit && $submitted) || $attendee_blacklisted || $applicant_blacklisted || $application_blacklisted || $under18) {
 				echo '<hr>';
 			}
 			echo '<table border="0" cellpadding="0" cellspacing="0" class="cm-form-table cm-list-table-containing-table">';
@@ -420,7 +433,7 @@ echo '<article>';
 
 				echo '<tr>';
 					echo '<th>&nbsp;</th>';
-					$value = isset($item['contact-subscribed']) ? $item['contact-subscribed'] : true;
+					$value = $item['contact-subscribed'] ?? true;
 					if ($can_edit_info) {
 						echo '<td><label>';
 							echo '<input type="checkbox" name="contact-subscribed" value="1"' . ($value ? ' checked>' : '>');
@@ -527,10 +540,7 @@ echo '<article>';
 				foreach ($questions as $question) {
 					if (my_question_is_visible($question)) {
 						$answer = (
-							isset($item['form-answers']) &&
-							isset($item['form-answers'][$question['question-id']]) ?
-							$item['form-answers'][$question['question-id']] :
-							array()
+							$item['form-answers'][$question['question-id']] ?? array()
 						);
 						echo cm_form_review_row($question, $answer, $can_edit_info);
 					}

@@ -1,10 +1,29 @@
 <?php
 
-require_once dirname(__FILE__).'/../../config/config.php';
-require_once dirname(__FILE__).'/util.php';
+require_once __DIR__ .'/../../config/config.php';
+require_once __DIR__ .'/util.php';
+require_once __DIR__.'/../../../vendor/autoload.php';
+
+$log = \App\Log\LogLibrary::createSingleInstance();
+
+$isAppDebug = getenv('APP_DEBUG');
+
+$twig = new \Twig\Environment(
+	new \Twig\Loader\FilesystemLoader(__DIR__.'/../../../templates'),
+	[
+        'debug' => $isAppDebug,
+        'strict_variables' => $isAppDebug,
+        'cache' => __DIR__.'/../../../var/cache/twig',
+    ],
+);
+$twig->addFunction(new \Twig\TwigFunction('theme_file_url', theme_file_url(...)));
+$twig->addFunction(new \Twig\TwigFunction('resource_file_url', resource_file_url(...)));
+$twig->addFunction(new \Twig\TwigFunction('get_site_url', get_site_url(...)));
+$twig->addFilter(new \Twig\TwigFilter('price_string', price_string(...)));
+$twig->addFilter(new \Twig\TwigFilter('cm_status_label', cm_status_label(...)));
 
 function config_file_path($file) {
-	return realpath(dirname(__FILE__) . '/../../config') . '/' . $file;
+	return realpath(__DIR__ . '/../../config') . '/' . $file;
 }
 
 function config_file_url($file, $full) {
@@ -12,7 +31,7 @@ function config_file_url($file, $full) {
 }
 
 function resource_file_path($file) {
-	return realpath(dirname(__FILE__) . '/../res') . '/' . $file;
+	return realpath(__DIR__ . '/../res') . '/' . $file;
 }
 
 function resource_file_url($file, $full) {
@@ -28,7 +47,7 @@ function theme_location() {
 }
 
 function theme_file_path($file) {
-	return realpath(dirname(__FILE__) . '/../../' . theme_location()) . '/' . $file;
+	return realpath(__DIR__ . '/../../' . theme_location()) . '/' . $file;
 }
 
 function theme_file_url($file, $full) {

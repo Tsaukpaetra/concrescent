@@ -28,11 +28,11 @@ hr {
 
 header {
 	background: #656cb9;
-	font-family: Georgia;
+	font-family: Georgia, serif;
 	color: white;
 }
 .cm-admin header {
-	background-image: url(logo.png);
+	background-image: url("/themes/luna/logo.png");
 	background-repeat: no-repeat;
 	background-position: right top;
 }

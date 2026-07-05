@@ -1,21 +1,21 @@
 <?php
 
+require_once 'util.php';
 error_reporting(0);
-header('Content-Type: text/plain');
 
 $success = false;
 
 function print_success() {
 	if ($GLOBALS['success']) {
-		echo 'OK The cURL extension is installed and working.';
+		passed('curl', 'The cURL extension is installed and working.');
 	} else {
-		echo 'NG The cURL extension is not installed or is not working. Please reinstall the cURL extension.';
+		failed('curl', 'The cURL extension is not installed or is not working. Please reinstall the cURL extension.');
 	}
 }
 
-register_shutdown_function('print_success');
+register_shutdown_function(print_success(...));
 
-$curl = @curl_init('http://www.paypal.com');
+$curl = @curl_init('https://www.paypal.com');
 if (!$curl) exit(0);
 
 @curl_setopt($curl, CURLOPT_CUSTOMREQUEST, 'HEAD');

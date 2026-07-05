@@ -1,12 +1,12 @@
 <?php
 
-require_once dirname(__FILE__).'/../util/util.php';
-require_once dirname(__FILE__).'/../util/res.php';
-require_once dirname(__FILE__).'/database.php';
+require_once __DIR__ .'/../util/util.php';
+require_once __DIR__ .'/../util/res.php';
+require_once __DIR__ .'/database.php';
 
 class cm_payment_db {
 
-	public $payment_statuses = array(
+	public array $payment_statuses = array(
 		'Incomplete',
 		'Cancelled',
 		'Rejected',
@@ -14,9 +14,9 @@ class cm_payment_db {
 		'Refunded'
 	);
 
-	public $cm_db;
+	public cm_db $cm_db;
 
-	public function __construct($cm_db) {
+	public function __construct(cm_db $cm_db) {
 		$this->cm_db = $cm_db;
 		$this->cm_db->table_def('payments', (
 			'`id` INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY,'.
@@ -31,6 +31,7 @@ class cm_payment_db {
 			'`payment_name` VARCHAR(255) NOT NULL,'.
 			'`payment_description` TEXT NULL,'.
 			'`payment_price` DECIMAL(7,2) NOT NULL,'.
+			'`sales_tax` BOOLEAN NOT NULL,'.
 			'`payment_status` ENUM('.
 				'\'Incomplete\','.
 				'\'Cancelled\','.
@@ -52,11 +53,11 @@ class cm_payment_db {
 			'SELECT `id`, `uuid`, `date_created`, `date_modified`,'.
 			' `requested_by`, `first_name`, `last_name`,'.
 			' `email_address`, `mail_template`, `payment_name`,'.
-			' `payment_description`, `payment_price`,'.
+			' `payment_description`, `payment_price`, `sales_tax`,'.
 			' `payment_status`, `payment_type`,'.
 			' `payment_txn_id`, `payment_txn_amt`,'.
 			' `payment_date`, `payment_details`'.
-			' FROM '.$this->cm_db->table_name('payments')
+			' FROM `payments`'
 		);
 		if ($id) {
 			if ($uuid) $query .= ' WHERE `id` = ? AND `uuid` = ? LIMIT 1';
@@ -64,7 +65,7 @@ class cm_payment_db {
 		} else {
 			$query .= ' WHERE `uuid` = ? LIMIT 1';
 		}
-		$stmt = $this->cm_db->connection->prepare($query);
+		$stmt = $this->cm_db->prepare($query);
 		if ($id) {
 			if ($uuid) $stmt->bind_param('is', $id, $uuid);
 			else $stmt->bind_param('i', $id);
@@ -76,7 +77,7 @@ class cm_payment_db {
 			$id, $uuid, $date_created, $date_modified,
 			$requested_by, $first_name, $last_name,
 			$email_address, $mail_template, $payment_name,
-			$payment_description, $payment_price,
+			$payment_description, $payment_price, $sales_tax,
 			$payment_status, $payment_type,
 			$payment_txn_id, $payment_txn_amt,
 			$payment_date, $payment_details
@@ -112,6 +113,7 @@ class cm_payment_db {
 				'payment-name' => $payment_name,
 				'payment-description' => $payment_description,
 				'payment-price' => $payment_price,
+				'sales-tax' => $sales_tax,
 				'payment-price-string' => $payment_price_string,
 				'payment-status' => $payment_status,
 				'payment-type' => $payment_type,
@@ -122,32 +124,29 @@ class cm_payment_db {
 				'review-link' => $review_link,
 				'search-content' => $search_content
 			);
-			$stmt->close();
 			return $result;
 		}
-		$stmt->close();
 		return false;
 	}
 
 	public function list_payments() {
 		$payments = array();
-		$stmt = $this->cm_db->connection->prepare(
+		$stmt = $this->cm_db->execute(
 			'SELECT `id`, `uuid`, `date_created`, `date_modified`,'.
 			' `requested_by`, `first_name`, `last_name`,'.
 			' `email_address`, `mail_template`, `payment_name`,'.
-			' `payment_description`, `payment_price`,'.
+			' `payment_description`, `payment_price`, `sales_tax`,'.
 			' `payment_status`, `payment_type`,'.
 			' `payment_txn_id`, `payment_txn_amt`,'.
 			' `payment_date`, `payment_details`'.
-			' FROM '.$this->cm_db->table_name('payments').
+			' FROM `payments`' .
 			' ORDER BY `id`'
 		);
-		$stmt->execute();
 		$stmt->bind_result(
 			$id, $uuid, $date_created, $date_modified,
 			$requested_by, $first_name, $last_name,
 			$email_address, $mail_template, $payment_name,
-			$payment_description, $payment_price,
+			$payment_description, $payment_price, $sales_tax,
 			$payment_status, $payment_type,
 			$payment_txn_id, $payment_txn_amt,
 			$payment_date, $payment_details
@@ -184,6 +183,7 @@ class cm_payment_db {
 				'payment-name' => $payment_name,
 				'payment-description' => $payment_description,
 				'payment-price' => $payment_price,
+				'sales-tax' => $sales_tax,
 				'payment-price-string' => $payment_price_string,
 				'payment-status' => $payment_status,
 				'payment-type' => $payment_type,
@@ -195,108 +195,106 @@ class cm_payment_db {
 				'search-content' => $search_content
 			);
 		}
-		$stmt->close();
 		return $payments;
 	}
 
 	public function create_payment($payment) {
 		if (!$payment) return false;
-		$requested_by = (isset($payment['requested-by']) ? $payment['requested-by'] : '');
-		$first_name = (isset($payment['first-name']) ? $payment['first-name'] : '');
-		$last_name = (isset($payment['last-name']) ? $payment['last-name'] : '');
-		$email_address = (isset($payment['email-address']) ? $payment['email-address'] : '');
-		$mail_template = (isset($payment['mail-template']) ? $payment['mail-template'] : '');
-		$payment_name = (isset($payment['payment-name']) ? $payment['payment-name'] : '');
-		$payment_description = (isset($payment['payment-description']) ? $payment['payment-description'] : null);
-		$payment_price = (isset($payment['payment-price']) ? $payment['payment-price'] : null);
-		$payment_status = (isset($payment['payment-status']) ? $payment['payment-status'] : null);
-		$payment_type = (isset($payment['payment-type']) ? $payment['payment-type'] : null);
-		$payment_txn_id = (isset($payment['payment-txn-id']) ? $payment['payment-txn-id'] : null);
-		$payment_txn_amt = (isset($payment['payment-txn-amt']) ? $payment['payment-txn-amt'] : null);
-		$payment_date = (isset($payment['payment-date']) ? $payment['payment-date'] : null);
-		$payment_details = (isset($payment['payment-details']) ? $payment['payment-details'] : null);
-		$stmt = $this->cm_db->connection->prepare(
-			'INSERT INTO '.$this->cm_db->table_name('payments').' SET '.
+		$requested_by = ($payment['requested-by'] ?? '');
+		$first_name = ($payment['first-name'] ?? '');
+		$last_name = ($payment['last-name'] ?? '');
+		$email_address = ($payment['email-address'] ?? '');
+		$mail_template = ($payment['mail-template'] ?? '');
+		$payment_name = ($payment['payment-name'] ?? '');
+		$payment_description = ($payment['payment-description'] ?? null);
+		$payment_price = ($payment['payment-price'] ?? null);
+		$sales_tax = ($payment['sales-tax'] ?? null);
+		$payment_status = ($payment['payment-status'] ?? null);
+		$payment_type = ($payment['payment-type'] ?? null);
+		$payment_txn_id = ($payment['payment-txn-id'] ?? null);
+		$payment_txn_amt = ($payment['payment-txn-amt'] ?? null);
+		$payment_date = ($payment['payment-date'] ?? null);
+		$payment_details = ($payment['payment-details'] ?? null);
+		$stmt = $this->cm_db->prepare(
+			'INSERT INTO `payments` SET '.
 			'`uuid` = UUID(), `date_created` = NOW(), `date_modified` = NOW(), '.
 			'`requested_by` = ?, `first_name` = ?, `last_name` = ?, '.
 			'`email_address` = ?, `mail_template` = ?, `payment_name` = ?, '.
-			'`payment_description` = ?, `payment_price` = ?, '.
+			'`payment_description` = ?, `payment_price` = ?, `sales_tax` = ?, '.
 			'`payment_status` = ?, `payment_type` = ?, '.
 			'`payment_txn_id` = ?, `payment_txn_amt` = ?, '.
 			'`payment_date` = ?, `payment_details` = ?'
 		);
 		$stmt->bind_param(
-			'sssssssdsssdss',
+			'sssssssdisssdss',
 			$requested_by, $first_name, $last_name,
 			$email_address, $mail_template, $payment_name,
-			$payment_description, $payment_price,
+			$payment_description, $payment_price, $sales_tax,
 			$payment_status, $payment_type,
 			$payment_txn_id, $payment_txn_amt,
 			$payment_date, $payment_details
 		);
-		$id = $stmt->execute() ? $this->cm_db->connection->insert_id : false;
-		$stmt->close();
+		$id = $stmt->execute() ? $this->cm_db->last_insert_id() : false;
 		return $id;
 	}
 
 	public function update_payment($payment) {
 		if (!$payment || !isset($payment['id']) || !$payment['id']) return false;
-		$requested_by = (isset($payment['requested-by']) ? $payment['requested-by'] : '');
-		$first_name = (isset($payment['first-name']) ? $payment['first-name'] : '');
-		$last_name = (isset($payment['last-name']) ? $payment['last-name'] : '');
-		$email_address = (isset($payment['email-address']) ? $payment['email-address'] : '');
-		$mail_template = (isset($payment['mail-template']) ? $payment['mail-template'] : '');
-		$payment_name = (isset($payment['payment-name']) ? $payment['payment-name'] : '');
-		$payment_description = (isset($payment['payment-description']) ? $payment['payment-description'] : null);
-		$payment_price = (isset($payment['payment-price']) ? $payment['payment-price'] : null);
-		$payment_status = (isset($payment['payment-status']) ? $payment['payment-status'] : null);
-		$payment_type = (isset($payment['payment-type']) ? $payment['payment-type'] : null);
-		$payment_txn_id = (isset($payment['payment-txn-id']) ? $payment['payment-txn-id'] : null);
-		$payment_txn_amt = (isset($payment['payment-txn-amt']) ? $payment['payment-txn-amt'] : null);
-		$payment_date = (isset($payment['payment-date']) ? $payment['payment-date'] : null);
-		$payment_details = (isset($payment['payment-details']) ? $payment['payment-details'] : null);
-		$stmt = $this->cm_db->connection->prepare(
-			'UPDATE '.$this->cm_db->table_name('payments').' SET '.
+		$requested_by = ($payment['requested-by'] ?? '');
+		$first_name = ($payment['first-name'] ?? '');
+		$last_name = ($payment['last-name'] ?? '');
+		$email_address = ($payment['email-address'] ?? '');
+		$mail_template = ($payment['mail-template'] ?? '');
+		$payment_name = ($payment['payment-name'] ?? '');
+		$payment_description = ($payment['payment-description'] ?? null);
+		$payment_price = ($payment['payment-price'] ?? null);
+		$sales_tax = ($payment['sales-tax'] ?? null);
+		$payment_status = ($payment['payment-status'] ?? null);
+		$payment_type = ($payment['payment-type'] ?? null);
+		$payment_txn_id = ($payment['payment-txn-id'] ?? null);
+		$payment_txn_amt = ($payment['payment-txn-amt'] ?? null);
+		$payment_date = ($payment['payment-date'] ?? null);
+		$payment_details = ($payment['payment-details'] ?? null);
+		$stmt = $this->cm_db->prepare(
+			'UPDATE `payments` SET '.
 			'`date_modified` = NOW(), '.
 			'`requested_by` = ?, `first_name` = ?, `last_name` = ?, '.
 			'`email_address` = ?, `mail_template` = ?, `payment_name` = ?, '.
-			'`payment_description` = ?, `payment_price` = ?, '.
+			'`payment_description` = ?, `payment_price` = ?,  `sales_tax` = ?, '.
 			'`payment_status` = ?, `payment_type` = ?, '.
 			'`payment_txn_id` = ?, `payment_txn_amt` = ?, '.
 			'`payment_date` = ?, `payment_details` = ?'.
 			' WHERE `id` = ? LIMIT 1'
 		);
 		$stmt->bind_param(
-			'sssssssdsssdssi',
+			'sssssssdisssdssi',
 			$requested_by, $first_name, $last_name,
 			$email_address, $mail_template, $payment_name,
-			$payment_description, $payment_price,
+			$payment_description, $payment_price, $sales_tax,
 			$payment_status, $payment_type,
 			$payment_txn_id, $payment_txn_amt,
 			$payment_date, $payment_details,
 			$payment['id']
 		);
 		$success = $stmt->execute();
-		$stmt->close();
 		return $success;
 	}
 
 	public function delete_payment($id) {
 		if (!$id) return false;
-		$stmt = $this->cm_db->connection->prepare(
-			'DELETE FROM '.$this->cm_db->table_name('payments').
+		$stmt = $this->cm_db->prepare(
+			'DELETE FROM `payments`' .
 			' WHERE `id` = ? LIMIT 1'
 		);
 		$stmt->bind_param('i', $id);
 		$success = $stmt->execute();
-		$stmt->close();
 		return $success;
 	}
 
 	public function update_payment_status($id, $status, $type, $txn_id, $txn_amt, $date, $details) {
 		if (!$id) return false;
-		$stmt = $this->cm_db->connection->prepare(
-			'UPDATE '.$this->cm_db->table_name('payments').' SET '.
+		$stmt = $this->cm_db->prepare(
+			'UPDATE `payments` SET '.
 			'`payment_status` = ?, `payment_type` = ?, `payment_txn_id` = ?, '.
 			'`payment_txn_amt` = ?, `payment_date` = ?, `payment_details` = ?'.
 			' WHERE `id` = ? LIMIT 1'
@@ -307,8 +305,6 @@ class cm_payment_db {
 			$txn_amt, $date, $details, $id
 		);
 		$success = $stmt->execute();
-		$stmt->close();
 		return $success;
 	}
-
 }

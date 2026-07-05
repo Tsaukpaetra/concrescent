@@ -1,9 +1,9 @@
 <?php
 
-require_once dirname(__FILE__).'/../../config/config.php';
-require_once dirname(__FILE__).'/../../lib/database/mail.php';
-require_once dirname(__FILE__).'/../../lib/util/cmmail.php';
-require_once dirname(__FILE__).'/../admin.php';
+require_once __DIR__ .'/../../config/config.php';
+require_once __DIR__ .'/../../lib/database/mail.php';
+require_once __DIR__ .'/../../lib/util/cmmail.php';
+require_once __DIR__ .'/../admin.php';
 
 $context = (isset($_GET['c']) ? trim($_GET['c']) : null);
 if (!$context) {
@@ -13,8 +13,7 @@ if (!$context) {
 $ctx_lc = strtolower($context);
 $ctx_uc = strtoupper($context);
 $ctx_info = (
-	isset($cm_config['application_types'][$ctx_uc]) ?
-	$cm_config['application_types'][$ctx_uc] : null
+	$cm_config['application_types'][$ctx_uc] ?? null
 );
 if (!$ctx_info) {
 	header('Location: ../');
@@ -72,7 +71,6 @@ echo '<article>';
 				'qr-data' => 'The QR code data for this applicant.',
 				'qr-url' => 'A URL of a QR code for this applicant.',
 				'real-name' => 'The applicant\'s first and last name.',
-				'fandom-name' => 'The applicant\'s fandom name.',
 				'display-name' => 'The name the applicant has chosen to appear on their badge.',
 				'unsubscribe-link' => 'A URL to remove the applicant\'s email address from the mailing list.',
 				'badge-type-name' => 'The name of the badge type the applicant applied for.',

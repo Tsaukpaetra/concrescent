@@ -1,38 +1,38 @@
 <?php
 
-require_once dirname(__FILE__).'/../../config/config.php';
-require_once dirname(__FILE__).'/../util/util.php';
-require_once dirname(__FILE__).'/../util/res.php';
-require_once dirname(__FILE__).'/database.php';
-require_once dirname(__FILE__).'/lists.php';
-require_once dirname(__FILE__).'/forms.php';
+require_once __DIR__ .'/../../config/config.php';
+require_once __DIR__ .'/../util/util.php';
+require_once __DIR__ .'/../util/res.php';
+require_once __DIR__ .'/database.php';
+require_once __DIR__ .'/lists.php';
+require_once __DIR__ .'/forms.php';
 
 class cm_staff_db {
 
-	public $mail_depths = array(
+	public array $mail_depths = array(
 		'Executive',
 		'Staff',
 		'Recursive'
 	);
-	public $names_on_badge = array(
+	public array $names_on_badge = array(
 		'Fandom Name Large, Real Name Small',
 		'Real Name Large, Fandom Name Small',
 		'Fandom Name Only',
 		'Real Name Only'
 	);
-	public $application_statuses = array(
+	public array $application_statuses = array(
 		'Submitted',
 		'Cancelled',
 		'Accepted',
 		'Waitlisted',
 		'Rejected'
 	);
-	public $mailbox_types = array(
+	public array $mailbox_types = array(
 		'Mailbox, No Forwarding',
 		'Mailbox, With Forwarding',
 		'Forwarding Only'
 	);
-	public $payment_statuses = array(
+	public array $payment_statuses = array(
 		'Incomplete',
 		'Cancelled',
 		'Rejected',
@@ -40,11 +40,11 @@ class cm_staff_db {
 		'Refunded'
 	);
 
-	public $event_info;
-	public $cm_db;
-	public $cm_ldb;
+	public mixed $event_info;
+	public cm_db $cm_db;
+	public cm_lists_db $cm_ldb;
 
-	public function __construct($cm_db) {
+	public function __construct(cm_db $cm_db) {
 		$this->event_info = $GLOBALS['cm_config']['event'];
 		$this->cm_db = $cm_db;
 		$this->cm_db->table_def('staff_departments', (
@@ -228,10 +228,10 @@ class cm_staff_db {
 
 	public function get_department($id) {
 		if (!$id) return false;
-		$stmt = $this->cm_db->connection->prepare(
+		$stmt = $this->cm_db->prepare(
 			'SELECT `id`, `parent_id`, `name`, `description`,'.
 			' `mail_alias_1`, `mail_alias_2`, `mail_depth`, `active`'.
-			' FROM '.$this->cm_db->table_name('staff_departments').
+			' FROM `staff_departments`' .
 			' WHERE `id` = ? LIMIT 1'
 		);
 		$stmt->bind_param('i', $id);
@@ -257,12 +257,11 @@ class cm_staff_db {
 					$mail_alias_1, $mail_alias_2
 				)
 			);
-			$stmt->close();
 
 			while ($parent_id && !isset($result['hierarchy'][$parent_id])) {
-				$stmt = $this->cm_db->connection->prepare(
+				$stmt = $this->cm_db->prepare(
 					'SELECT `id`, `parent_id`, `name`'.
-					' FROM '.$this->cm_db->table_name('staff_departments').
+					' FROM `staff_departments`' .
 					' WHERE `id` = ? LIMIT 1'
 				);
 				$stmt->bind_param('i', $parent_id);
@@ -274,17 +273,16 @@ class cm_staff_db {
 				} else {
 					$parent_id = null;
 				}
-				$stmt->close();
 			}
 			$result['hierarchy'] = array_keys_values(
 				array_reverse($result['hierarchy'], true),
 				'id', 'name'
 			);
 
-			$stmt = $this->cm_db->connection->prepare(
+			$stmt = $this->cm_db->prepare(
 				'SELECT `id`, `parent_id`, `order`, `name`,'.
 				' `description`, `executive`, `active`'.
-				' FROM '.$this->cm_db->table_name('staff_positions').
+				' FROM `staff_positions`' .
 				' WHERE `parent_id` = ?'.
 				' ORDER BY `order`'
 			);
@@ -307,19 +305,17 @@ class cm_staff_db {
 				$result['search-content'][] = $name;
 				$result['search-content'][] = $description;
 			}
-			$stmt->close();
 
 			return $result;
 		}
-		$stmt->close();
 		return false;
 	}
 
 	public function get_department_map() {
 		$departments = array();
-		$stmt = $this->cm_db->connection->prepare(
+		$stmt = $this->cm_db->prepare(
 			'SELECT `id`, `parent_id`, `name`'.
-			' FROM '.$this->cm_db->table_name('staff_departments').
+			' FROM `staff_departments`' .
 			' ORDER BY `name`'
 		);
 		$stmt->execute();
@@ -331,15 +327,14 @@ class cm_staff_db {
 				'name' => $name
 			);
 		}
-		$stmt->close();
 		return $departments;
 	}
 
 	public function get_position_map() {
 		$positions = array();
-		$stmt = $this->cm_db->connection->prepare(
+		$stmt = $this->cm_db->prepare(
 			'SELECT `id`, `parent_id`, `name`'.
-			' FROM '.$this->cm_db->table_name('staff_positions').
+			' FROM `staff_positions`' .
 			' ORDER BY `parent_id`, `order`'
 		);
 		$stmt->execute();
@@ -351,16 +346,15 @@ class cm_staff_db {
 				'name' => $name
 			);
 		}
-		$stmt->close();
 		return $positions;
 	}
 
 	public function list_departments() {
 		$departments = array();
-		$stmt = $this->cm_db->connection->prepare(
+		$stmt = $this->cm_db->prepare(
 			'SELECT `id`, `parent_id`, `name`, `description`,'.
 			' `mail_alias_1`, `mail_alias_2`, `mail_depth`, `active`'.
-			' FROM '.$this->cm_db->table_name('staff_departments').
+			' FROM `staff_departments`' .
 			' ORDER BY `name`'
 		);
 		$stmt->execute();
@@ -386,7 +380,6 @@ class cm_staff_db {
 				)
 			);
 		}
-		$stmt->close();
 
 		foreach (array_keys($departments) as $id) {
 			$parent_id = $departments[$id]['parent-id'];
@@ -401,10 +394,10 @@ class cm_staff_db {
 			);
 		}
 
-		$stmt = $this->cm_db->connection->prepare(
+		$stmt = $this->cm_db->prepare(
 			'SELECT `id`, `parent_id`, `order`, `name`,'.
 			' `description`, `executive`, `active`'.
-			' FROM '.$this->cm_db->table_name('staff_positions').
+			' FROM `staff_positions`' .
 			' ORDER BY `order`'
 		);
 		$stmt->execute();
@@ -425,24 +418,23 @@ class cm_staff_db {
 			$departments[$parent_id]['search-content'][] = $name;
 			$departments[$parent_id]['search-content'][] = $description;
 		}
-		$stmt->close();
 
 		return array_values($departments);
 	}
 
 	public function create_department($department) {
 		if (!$department) return false;
-		$this->cm_db->connection->autocommit(false);
+		$this->cm_db->connection->beginTransaction();
 
 		$parent_id = ((isset($department['parent-id']) && (int)$department['parent-id']) ? (int)$department['parent-id'] : null);
-		$name = (isset($department['name']) ? $department['name'] : '');
-		$description = (isset($department['description']) ? $department['description'] : '');
+		$name = ($department['name'] ?? '');
+		$description = ($department['description'] ?? '');
 		$mail_alias_1 = ((isset($department['mail-alias-1']) && $department['mail-alias-1']) ? $department['mail-alias-1'] : null);
 		$mail_alias_2 = ((isset($department['mail-alias-2']) && $department['mail-alias-2']) ? $department['mail-alias-2'] : null);
 		$mail_depth = ((isset($department['mail-depth']) && $department['mail-depth']) ? $department['mail-depth'] : null);
 		$active = (isset($department['active']) ? ($department['active'] ? 1 : 0) : 1);
-		$stmt = $this->cm_db->connection->prepare(
-			'INSERT INTO '.$this->cm_db->table_name('staff_departments').' SET '.
+		$stmt = $this->cm_db->prepare(
+			'INSERT INTO `staff_departments` SET '.
 			'`parent_id` = ?, `name` = ?, `description` = ?, '.
 			'`mail_alias_1` = ?, `mail_alias_2` = ?, `mail_depth` = ?, `active` = ?'
 		);
@@ -451,19 +443,18 @@ class cm_staff_db {
 			$parent_id, $name, $description,
 			$mail_alias_1, $mail_alias_2, $mail_depth, $active
 		);
-		$id = $stmt->execute() ? $this->cm_db->connection->insert_id : false;
-		$stmt->close();
+		$id = $stmt->execute() ? $this->cm_db->last_insert_id() : false;
 
 		if ($id !== false && isset($department['positions']) && $department['positions']) {
 			$order = 0;
 			foreach ($department['positions'] as $position) {
 				$order++;
-				$name = (isset($position['name']) ? $position['name'] : '');
-				$description = (isset($position['description']) ? $position['description'] : '');
+				$name = ($position['name'] ?? '');
+				$description = ($position['description'] ?? '');
 				$executive = (isset($position['executive']) ? ($position['executive'] ? 1 : 0) : 0);
 				$active = (isset($position['active']) ? ($position['active'] ? 1 : 0) : 1);
-				$stmt = $this->cm_db->connection->prepare(
-					'INSERT INTO '.$this->cm_db->table_name('staff_positions').' SET '.
+				$stmt = $this->cm_db->prepare(
+					'INSERT INTO `staff_positions` SET '.
 					'`parent_id` = ?, `order` = ?, `name` = ?, '.
 					'`description` = ?, `executive` = ?, `active` = ?'
 				);
@@ -473,27 +464,26 @@ class cm_staff_db {
 					$description, $executive, $active
 				);
 				$stmt->execute();
-				$stmt->close();
 			}
 		}
 
-		$this->cm_db->connection->autocommit(true);
+		$this->cm_db->connection->commit();
 		return $id;
 	}
 
 	public function update_department($department) {
 		if (!$department || !isset($department['id']) || !$department['id']) return false;
-		$this->cm_db->connection->autocommit(false);
+		$this->cm_db->connection->beginTransaction();
 
 		$parent_id = ((isset($department['parent-id']) && (int)$department['parent-id']) ? (int)$department['parent-id'] : null);
-		$name = (isset($department['name']) ? $department['name'] : '');
-		$description = (isset($department['description']) ? $department['description'] : '');
+		$name = ($department['name'] ?? '');
+		$description = ($department['description'] ?? '');
 		$mail_alias_1 = ((isset($department['mail-alias-1']) && $department['mail-alias-1']) ? $department['mail-alias-1'] : null);
 		$mail_alias_2 = ((isset($department['mail-alias-2']) && $department['mail-alias-2']) ? $department['mail-alias-2'] : null);
 		$mail_depth = ((isset($department['mail-depth']) && $department['mail-depth']) ? $department['mail-depth'] : null);
 		$active = (isset($department['active']) ? ($department['active'] ? 1 : 0) : 1);
-		$stmt = $this->cm_db->connection->prepare(
-			'UPDATE '.$this->cm_db->table_name('staff_departments').' SET '.
+		$stmt = $this->cm_db->prepare(
+			'UPDATE `staff_departments` SET '.
 			'`parent_id` = ?, `name` = ?, `description` = ?, '.
 			'`mail_alias_1` = ?, `mail_alias_2` = ?, `mail_depth` = ?, `active` = ?'.
 			' WHERE `id` = ? LIMIT 1'
@@ -505,27 +495,25 @@ class cm_staff_db {
 			$department['id']
 		);
 		$success = $stmt->execute();
-		$stmt->close();
 
 		if ($success) {
-			$stmt = $this->cm_db->connection->prepare(
-				'DELETE FROM '.$this->cm_db->table_name('staff_positions').
+			$stmt = $this->cm_db->prepare(
+				'DELETE FROM `staff_positions`' .
 				' WHERE `parent_id` = ?'
 			);
 			$stmt->bind_param('i', $department['id']);
 			$stmt->execute();
-			$stmt->close();
 			if (isset($department['positions']) && $department['positions']) {
 				$order = 0;
 				foreach ($department['positions'] as $position) {
 					$order++;
-					$name = (isset($position['name']) ? $position['name'] : '');
-					$description = (isset($position['description']) ? $position['description'] : '');
+					$name = ($position['name'] ?? '');
+					$description = ($position['description'] ?? '');
 					$executive = (isset($position['executive']) ? ($position['executive'] ? 1 : 0) : 0);
 					$active = (isset($position['active']) ? ($position['active'] ? 1 : 0) : 1);
 					$id = ((isset($position['id']) && (int)$position['id']) ? (int)$position['id'] : null);
-					$stmt = $this->cm_db->connection->prepare(
-						'INSERT INTO '.$this->cm_db->table_name('staff_positions').' SET '.
+					$stmt = $this->cm_db->prepare(
+						'INSERT INTO `staff_positions` SET '.
 						'`id` = ?, `parent_id` = ?, `order` = ?, `name` = ?, '.
 						'`description` = ?, `executive` = ?, `active` = ?'
 					);
@@ -535,85 +523,79 @@ class cm_staff_db {
 						$description, $executive, $active
 					);
 					$stmt->execute();
-					$stmt->close();
 				}
 			}
 		}
 
-		$this->cm_db->connection->autocommit(true);
+		$this->cm_db->connection->commit();
 		return $success;
 	}
 
 	public function delete_department($id) {
 		if (!$id) return false;
-		$this->cm_db->connection->autocommit(false);
+		$this->cm_db->connection->beginTransaction();
 
-		$stmt = $this->cm_db->connection->prepare(
+		$stmt = $this->cm_db->prepare(
 			'SELECT `parent_id`'.
-			' FROM '.$this->cm_db->table_name('staff_departments').
+			' FROM `staff_departments`' .
 			' WHERE `id` = ? LIMIT 1'
 		);
 		$stmt->bind_param('i', $id);
 		$stmt->execute();
 		$stmt->bind_result($parent_id);
 		if (!$stmt->fetch()) $parent_id = null;
-		$stmt->close();
 
-		$stmt = $this->cm_db->connection->prepare(
-			'DELETE FROM '.$this->cm_db->table_name('staff_departments').
+		$stmt = $this->cm_db->prepare(
+			'DELETE FROM `staff_departments`' .
 			' WHERE `id` = ? LIMIT 1'
 		);
 		$stmt->bind_param('i', $id);
 		$success = $stmt->execute();
-		$stmt->close();
 
 		if ($success) {
-			$stmt = $this->cm_db->connection->prepare(
-				'UPDATE '.$this->cm_db->table_name('staff_departments').
+			$stmt = $this->cm_db->prepare(
+				'UPDATE `staff_departments`' .
 				' SET `parent_id` = ?'.
 				' WHERE `parent_id` = ?'
 			);
 			$stmt->bind_param('ii', $parent_id, $id);
 			$stmt->execute();
-			$stmt->close();
 
-			$stmt = $this->cm_db->connection->prepare(
-				'DELETE FROM '.$this->cm_db->table_name('staff_positions').
+			$stmt = $this->cm_db->prepare(
+				'DELETE FROM `staff_positions`' .
 				' WHERE `parent_id` = ?'
 			);
 			$stmt->bind_param('i', $id);
 			$stmt->execute();
-			$stmt->close();
 		}
 
-		$this->cm_db->connection->autocommit(true);
+		$this->cm_db->connection->commit();
 		return $success;
 	}
 
 	public function activate_department($id, $active) {
 		if (!$id) return false;
 		$active = $active ? 1 : 0;
-		$stmt = $this->cm_db->connection->prepare(
-			'UPDATE '.$this->cm_db->table_name('staff_departments').
+		$stmt = $this->cm_db->prepare(
+			'UPDATE `staff_departments`' .
 			' SET `active` = ? WHERE `id` = ? LIMIT 1'
 		);
 		$stmt->bind_param('ii', $active, $id);
 		$success = $stmt->execute();
-		$stmt->close();
 		return $success;
 	}
 
 	public function get_badge_type($id) {
 		if (!$id) return false;
-		$stmt = $this->cm_db->connection->prepare(
+		$stmt = $this->cm_db->prepare(
 			'SELECT b.`id`, b.`order`, b.`name`, b.`description`, b.`rewards`,'.
 			' b.`price`, b.`active`, b.`quantity`,'.
 			' b.`start_date`, b.`end_date`, b.`min_age`, b.`max_age`,'.
-			' (SELECT COUNT(*) FROM '.$this->cm_db->table_name('staff').' a1'.
+			' (SELECT COUNT(*) FROM `staff` a1'.
 			' WHERE a1.`badge_type_id` = b.`id` AND a1.`application_status` = \'Accepted\') c1,'.
-			' (SELECT COUNT(*) FROM '.$this->cm_db->table_name('staff').' a2'.
+			' (SELECT COUNT(*) FROM `staff` a2'.
 			' WHERE a2.`badge_type_id` = b.`id` AND a2.`payment_status` = \'Completed\') c2'.
-			' FROM '.$this->cm_db->table_name('staff_badge_types').' b'.
+			' FROM `staff_badge_types` b'.
 			' WHERE `id` = ? LIMIT 1'
 		);
 		$stmt->bind_param('i', $id);
@@ -629,7 +611,7 @@ class cm_staff_db {
 			$event_end_date   = $this->event_info['end_date'  ];
 			$min_birthdate = $max_age ? (((int)$event_start_date - $max_age - 1) . substr($event_start_date, 4)) : null;
 			$max_birthdate = $min_age ? (((int)$event_end_date   - $min_age    ) . substr($event_end_date  , 4)) : null;
-			$result = array(
+			return [
 				'id' => $id,
 				'id-string' => 'SB' . $id,
 				'order' => $order,
@@ -648,20 +630,17 @@ class cm_staff_db {
 				'max-age' => $max_age,
 				'min-birthdate' => $min_birthdate,
 				'max-birthdate' => $max_birthdate,
-				'search-content' => array($name, $description, $rewards)
-			);
-			$stmt->close();
-			return $result;
+				'search-content' => [$name, $description, $rewards],
+			];
 		}
-		$stmt->close();
 		return false;
 	}
 
 	public function get_badge_type_name_map() {
 		$badge_types = array();
-		$stmt = $this->cm_db->connection->prepare(
+		$stmt = $this->cm_db->prepare(
 			'SELECT `id`, `name`'.
-			' FROM '.$this->cm_db->table_name('staff_badge_types').
+			' FROM `staff_badge_types`' .
 			' ORDER BY `order`'
 		);
 		$stmt->execute();
@@ -669,15 +648,14 @@ class cm_staff_db {
 		while ($stmt->fetch()) {
 			$badge_types[$id] = $name;
 		}
-		$stmt->close();
 		return $badge_types;
 	}
 
 	public function list_badge_type_names() {
 		$badge_types = array();
-		$stmt = $this->cm_db->connection->prepare(
+		$stmt = $this->cm_db->prepare(
 			'SELECT `id`, `name`'.
-			' FROM '.$this->cm_db->table_name('staff_badge_types').
+			' FROM `staff_badge_types`' .
 			' ORDER BY `order`'
 		);
 		$stmt->execute();
@@ -688,32 +666,28 @@ class cm_staff_db {
 				'name' => $name
 			);
 		}
-		$stmt->close();
 		return $badge_types;
 	}
 
-	public function list_badge_types($active_only = false, $unsold_only = false) {
+	public function list_badge_types(bool $active_only = false, bool $unsold_only = false, bool $allowFutureBadges = false): array {
 		$badge_types = array();
 		$query = (
 			'SELECT b.`id`, b.`order`, b.`name`, b.`description`, b.`rewards`,'.
 			' b.`price`, b.`active`, b.`quantity`,'.
 			' b.`start_date`, b.`end_date`, b.`min_age`, b.`max_age`,'.
-			' (SELECT COUNT(*) FROM '.$this->cm_db->table_name('staff').' a1'.
+			' (SELECT COUNT(*) FROM `staff` a1'.
 			' WHERE a1.`badge_type_id` = b.`id` AND a1.`application_status` = \'Accepted\') c1,'.
-			' (SELECT COUNT(*) FROM '.$this->cm_db->table_name('staff').' a2'.
+			' (SELECT COUNT(*) FROM `staff` a2'.
 			' WHERE a2.`badge_type_id` = b.`id` AND a2.`payment_status` = \'Completed\') c2'.
-			' FROM '.$this->cm_db->table_name('staff_badge_types').' b'
+			' FROM `staff_badge_types` b'
 		);
-		$first = true;
 		if ($active_only) {
-			$query .= (
-				($first ? ' WHERE' : ' AND').' b.`active`'.
-				' AND (b.`start_date` IS NULL OR b.`start_date` <= CURDATE())'.
-				' AND (b.`end_date` IS NULL OR b.`end_date` >= CURDATE())'
-			);
-			$first = false;
+			$query .= ' WHERE b.`active` AND (b.`end_date` IS NULL OR b.`end_date` >= CURDATE())';
+			if (!$allowFutureBadges) {
+				$query .= ' AND (b.`start_date` IS NULL OR b.`start_date` <= CURDATE())';
+			}
 		}
-		$stmt = $this->cm_db->connection->prepare($query . ' ORDER BY b.`order`');
+		$stmt = $this->cm_db->prepare($query . ' ORDER BY b.`order`');
 		$stmt->execute();
 		$stmt->bind_result(
 			$id, $order, $name, $description, $rewards,
@@ -749,33 +723,31 @@ class cm_staff_db {
 				'search-content' => array($name, $description, $rewards)
 			);
 		}
-		$stmt->close();
 		return $badge_types;
 	}
 
 	public function create_badge_type($badge_type) {
 		if (!$badge_type) return false;
-		$this->cm_db->connection->autocommit(false);
-		$stmt = $this->cm_db->connection->prepare(
+		$this->cm_db->connection->beginTransaction();
+		$stmt = $this->cm_db->prepare(
 			'SELECT IFNULL(MAX(`order`),0)+1 FROM '.
-			$this->cm_db->table_name('staff_badge_types')
+			'`staff_badge_types`'
 		);
 		$stmt->execute();
 		$stmt->bind_result($order);
 		$stmt->fetch();
-		$stmt->close();
-		$name = (isset($badge_type['name']) ? $badge_type['name'] : '');
-		$description = (isset($badge_type['description']) ? $badge_type['description'] : '');
+		$name = ($badge_type['name'] ?? '');
+		$description = ($badge_type['description'] ?? '');
 		$rewards = (isset($badge_type['rewards']) ? implode("\n", $badge_type['rewards']) : '');
 		$price = (isset($badge_type['price']) ? (float)$badge_type['price'] : 0);
 		$active = (isset($badge_type['active']) ? ($badge_type['active'] ? 1 : 0) : 1);
-		$quantity = (isset($badge_type['quantity']) ? $badge_type['quantity'] : null);
-		$start_date = (isset($badge_type['start-date']) ? $badge_type['start-date'] : null);
-		$end_date = (isset($badge_type['end-date']) ? $badge_type['end-date'] : null);
-		$min_age = (isset($badge_type['min-age']) ? $badge_type['min-age'] : null);
-		$max_age = (isset($badge_type['max-age']) ? $badge_type['max-age'] : null);
-		$stmt = $this->cm_db->connection->prepare(
-			'INSERT INTO '.$this->cm_db->table_name('staff_badge_types').' SET '.
+		$quantity = ($badge_type['quantity'] ?? null);
+		$start_date = ($badge_type['start-date'] ?? null);
+		$end_date = ($badge_type['end-date'] ?? null);
+		$min_age = ($badge_type['min-age'] ?? null);
+		$max_age = ($badge_type['max-age'] ?? null);
+		$stmt = $this->cm_db->prepare(
+			'INSERT INTO `staff_badge_types` SET '.
 			'`order` = ?, `name` = ?, `description` = ?, `rewards` = ?, '.
 			'`price` = ?, `active` = ?, `quantity` = ?, '.
 			'`start_date` = ?, `end_date` = ?, `min_age` = ?, `max_age` = ?'
@@ -786,26 +758,25 @@ class cm_staff_db {
 			$price, $active, $quantity,
 			$start_date, $end_date, $min_age, $max_age
 		);
-		$id = $stmt->execute() ? $this->cm_db->connection->insert_id : false;
-		$stmt->close();
-		$this->cm_db->connection->autocommit(true);
+		$id = $stmt->execute() ? $this->cm_db->last_insert_id() : false;
+		$this->cm_db->connection->commit();
 		return $id;
 	}
 
 	public function update_badge_type($badge_type) {
 		if (!$badge_type || !isset($badge_type['id']) || !$badge_type['id']) return false;
-		$name = (isset($badge_type['name']) ? $badge_type['name'] : '');
-		$description = (isset($badge_type['description']) ? $badge_type['description'] : '');
+		$name = ($badge_type['name'] ?? '');
+		$description = ($badge_type['description'] ?? '');
 		$rewards = (isset($badge_type['rewards']) ? implode("\n", $badge_type['rewards']) : '');
 		$price = (isset($badge_type['price']) ? (float)$badge_type['price'] : 0);
 		$active = (isset($badge_type['active']) ? ($badge_type['active'] ? 1 : 0) : 1);
-		$quantity = (isset($badge_type['quantity']) ? $badge_type['quantity'] : null);
-		$start_date = (isset($badge_type['start-date']) ? $badge_type['start-date'] : null);
-		$end_date = (isset($badge_type['end-date']) ? $badge_type['end-date'] : null);
-		$min_age = (isset($badge_type['min-age']) ? $badge_type['min-age'] : null);
-		$max_age = (isset($badge_type['max-age']) ? $badge_type['max-age'] : null);
-		$stmt = $this->cm_db->connection->prepare(
-			'UPDATE '.$this->cm_db->table_name('staff_badge_types').' SET '.
+		$quantity = ($badge_type['quantity'] ?? null);
+		$start_date = ($badge_type['start-date'] ?? null);
+		$end_date = ($badge_type['end-date'] ?? null);
+		$min_age = ($badge_type['min-age'] ?? null);
+		$max_age = ($badge_type['max-age'] ?? null);
+		$stmt = $this->cm_db->prepare(
+			'UPDATE `staff_badge_types` SET '.
 			'`name` = ?, `description` = ?, `rewards` = ?, '.
 			'`price` = ?, `active` = ?, `quantity` = ?, '.
 			'`start_date` = ?, `end_date` = ?, `min_age` = ?, `max_age` = ?'.
@@ -819,43 +790,39 @@ class cm_staff_db {
 			$badge_type['id']
 		);
 		$success = $stmt->execute();
-		$stmt->close();
 		return $success;
 	}
 
 	public function delete_badge_type($id) {
 		if (!$id) return false;
-		$stmt = $this->cm_db->connection->prepare(
-			'DELETE FROM '.$this->cm_db->table_name('staff_badge_types').
+		$stmt = $this->cm_db->prepare(
+			'DELETE FROM `staff_badge_types`' .
 			' WHERE `id` = ? LIMIT 1'
 		);
 		$stmt->bind_param('i', $id);
 		$success = $stmt->execute();
-		$stmt->close();
 		return $success;
 	}
 
 	public function activate_badge_type($id, $active) {
 		if (!$id) return false;
 		$active = $active ? 1 : 0;
-		$stmt = $this->cm_db->connection->prepare(
-			'UPDATE '.$this->cm_db->table_name('staff_badge_types').
+		$stmt = $this->cm_db->prepare(
+			'UPDATE `staff_badge_types`' .
 			' SET `active` = ? WHERE `id` = ? LIMIT 1'
 		);
 		$stmt->bind_param('ii', $active, $id);
 		$success = $stmt->execute();
-		$stmt->close();
 		return $success;
 	}
 
 	public function reorder_badge_type($id, $direction) {
 		if (!$id || !$direction) return false;
-		$this->cm_db->connection->autocommit(false);
+		$this->cm_db->connection->beginTransaction();
 		$ids = array();
 		$index = -1;
-		$stmt = $this->cm_db->connection->prepare(
-			'SELECT `id` FROM '.
-			$this->cm_db->table_name('staff_badge_types').
+		$stmt = $this->cm_db->prepare(
+			'SELECT `id` FROM `staff_badge_types`' .
 			' ORDER BY `order`'
 		);
 		$stmt->execute();
@@ -865,7 +832,6 @@ class cm_staff_db {
 			$ids[] = $cid;
 			if ($id == $cid) $index = $cindex;
 		}
-		$stmt->close();
 		if ($index >= 0) {
 			while ($direction < 0 && $index > 0) {
 				$ids[$index] = $ids[$index - 1];
@@ -880,23 +846,22 @@ class cm_staff_db {
 				$index++;
 			}
 			foreach ($ids as $cindex => $cid) {
-				$stmt = $this->cm_db->connection->prepare(
-					'UPDATE '.$this->cm_db->table_name('staff_badge_types').
+				$stmt = $this->cm_db->prepare(
+					'UPDATE `staff_badge_types`' .
 					' SET `order` = ? WHERE `id` = ? LIMIT 1'
 				);
 				$ni = $cindex + 1;
 				$stmt->bind_param('ii', $ni, $cid);
 				$stmt->execute();
-				$stmt->close();
 			}
 		}
-		$this->cm_db->connection->autocommit(true);
+		$this->cm_db->connection->commit();
 		return ($index >= 0);
 	}
 
 	public function get_blacklist_entry($id) {
 		if (!$id) return false;
-		$stmt = $this->cm_db->connection->prepare(
+		$stmt = $this->cm_db->prepare(
 			'SELECT `id`, `first_name`, `last_name`, `fandom_name`,'.
 			' `email_address`, `phone_number`, `added_by`, `notes`,'.
 			' `normalized_real_name`,'.
@@ -904,7 +869,7 @@ class cm_staff_db {
 			' `normalized_fandom_name`,'.
 			' `normalized_email_address`,'.
 			' `normalized_phone_number`'.
-			' FROM '.$this->cm_db->table_name('staff_blacklist').
+			' FROM `staff_blacklist`' .
 			' WHERE `id` = ? LIMIT 1'
 		);
 		$stmt->bind_param('i', $id);
@@ -943,16 +908,14 @@ class cm_staff_db {
 					$added_by, $notes
 				)
 			);
-			$stmt->close();
 			return $result;
 		}
-		$stmt->close();
 		return false;
 	}
 
 	public function list_blacklist_entries() {
 		$blacklist = array();
-		$stmt = $this->cm_db->connection->prepare(
+		$stmt = $this->cm_db->prepare(
 			'SELECT `id`, `first_name`, `last_name`, `fandom_name`,'.
 			' `email_address`, `phone_number`, `added_by`, `notes`,'.
 			' `normalized_real_name`,'.
@@ -960,7 +923,7 @@ class cm_staff_db {
 			' `normalized_fandom_name`,'.
 			' `normalized_email_address`,'.
 			' `normalized_phone_number`'.
-			' FROM '.$this->cm_db->table_name('staff_blacklist').
+			' FROM `staff_blacklist`' .
 			' ORDER BY `first_name`, `last_name`'
 		);
 		$stmt->execute();
@@ -999,38 +962,37 @@ class cm_staff_db {
 				)
 			);
 		}
-		$stmt->close();
 		return $blacklist;
 	}
 
 	public function create_blacklist_entry($entry) {
 		if (!$entry) return false;
-		$first_name = (isset($entry['first-name']) ? $entry['first-name'] : '');
-		$last_name = (isset($entry['last-name']) ? $entry['last-name'] : '');
-		$fandom_name = (isset($entry['fandom-name']) ? $entry['fandom-name'] : '');
-		$email_address = (isset($entry['email-address']) ? $entry['email-address'] : '');
-		$phone_number = (isset($entry['phone-number']) ? $entry['phone-number'] : '');
-		$added_by = (isset($entry['added-by']) ? $entry['added-by'] : '');
-		$notes = (isset($entry['notes']) ? $entry['notes'] : '');
+		$first_name = ($entry['first-name'] ?? '');
+		$last_name = ($entry['last-name'] ?? '');
+		$fandom_name = ($entry['fandom-name'] ?? '');
+		$email_address = ($entry['email-address'] ?? '');
+		$phone_number = ($entry['phone-number'] ?? '');
+		$added_by = ($entry['added-by'] ?? '');
+		$notes = ($entry['notes'] ?? '');
 		$normalized_real_name = strtoupper(preg_replace('/[^A-Za-z0-9]+/', '', $first_name . $last_name));
 		$normalized_reversed_name = strtoupper(preg_replace('/[^A-Za-z0-9]+/', '', $last_name . $first_name));
 		$normalized_fandom_name = strtoupper(preg_replace('/[^A-Za-z0-9]+/', '', $fandom_name));
 		$normalized_email_address = strtoupper(preg_replace('/\\+.*@|[^A-Za-z0-9]+/', '', $email_address));
 		$normalized_phone_number = preg_replace('/[^0-9]+/', '', $phone_number);
-		if (!$first_name) $first_name = null;
-		if (!$last_name) $last_name = null;
-		if (!$fandom_name) $fandom_name = null;
-		if (!$email_address) $email_address = null;
-		if (!$phone_number) $phone_number = null;
-		if (!$added_by) $added_by = null;
-		if (!$notes) $notes = null;
-		if (!$normalized_real_name) $normalized_real_name = null;
-		if (!$normalized_reversed_name) $normalized_reversed_name = null;
-		if (!$normalized_fandom_name) $normalized_fandom_name = null;
-		if (!$normalized_email_address) $normalized_email_address = null;
-		if (!$normalized_phone_number) $normalized_phone_number = null;
-		$stmt = $this->cm_db->connection->prepare(
-			'INSERT INTO '.$this->cm_db->table_name('staff_blacklist').' SET '.
+		if (!$first_name) $first_name = '';
+		if (!$last_name) $last_name = '';
+		if (!$fandom_name) $fandom_name = '';
+		if (!$email_address) $email_address = '';
+		if (!$phone_number) $phone_number = '';
+		if (!$added_by) $added_by = '';
+		if (!$notes) $notes = '';
+		if (!$normalized_real_name) $normalized_real_name = '';
+		if (!$normalized_reversed_name) $normalized_reversed_name = '';
+		if (!$normalized_fandom_name) $normalized_fandom_name = '';
+		if (!$normalized_email_address) $normalized_email_address = '';
+		if (!$normalized_phone_number) $normalized_phone_number = '';
+		$stmt = $this->cm_db->prepare(
+			'INSERT INTO `staff_blacklist` SET '.
 			'`first_name` = ?, `last_name` = ?, `fandom_name` = ?, '.
 			'`email_address` = ?, `phone_number` = ?, `added_by` = ?, `notes` = ?, '.
 			'`normalized_real_name` = ?, '.
@@ -1049,39 +1011,38 @@ class cm_staff_db {
 			$normalized_email_address,
 			$normalized_phone_number
 		);
-		$id = $stmt->execute() ? $this->cm_db->connection->insert_id : false;
-		$stmt->close();
+		$id = $stmt->execute() ? $this->cm_db->last_insert_id() : false;
 		return $id;
 	}
 
 	public function update_blacklist_entry($entry) {
 		if (!$entry || !isset($entry['id']) || !$entry['id']) return false;
-		$first_name = (isset($entry['first-name']) ? $entry['first-name'] : '');
-		$last_name = (isset($entry['last-name']) ? $entry['last-name'] : '');
-		$fandom_name = (isset($entry['fandom-name']) ? $entry['fandom-name'] : '');
-		$email_address = (isset($entry['email-address']) ? $entry['email-address'] : '');
-		$phone_number = (isset($entry['phone-number']) ? $entry['phone-number'] : '');
-		$added_by = (isset($entry['added-by']) ? $entry['added-by'] : '');
-		$notes = (isset($entry['notes']) ? $entry['notes'] : '');
+		$first_name = ($entry['first-name'] ?? '');
+		$last_name = ($entry['last-name'] ?? '');
+		$fandom_name = ($entry['fandom-name'] ?? '');
+		$email_address = ($entry['email-address'] ?? '');
+		$phone_number = ($entry['phone-number'] ?? '');
+		$added_by = ($entry['added-by'] ?? '');
+		$notes = ($entry['notes'] ?? '');
 		$normalized_real_name = strtoupper(preg_replace('/[^A-Za-z0-9]+/', '', $first_name . $last_name));
 		$normalized_reversed_name = strtoupper(preg_replace('/[^A-Za-z0-9]+/', '', $last_name . $first_name));
 		$normalized_fandom_name = strtoupper(preg_replace('/[^A-Za-z0-9]+/', '', $fandom_name));
 		$normalized_email_address = strtoupper(preg_replace('/\\+.*@|[^A-Za-z0-9]+/', '', $email_address));
 		$normalized_phone_number = preg_replace('/[^0-9]+/', '', $phone_number);
-		if (!$first_name) $first_name = null;
-		if (!$last_name) $last_name = null;
-		if (!$fandom_name) $fandom_name = null;
-		if (!$email_address) $email_address = null;
-		if (!$phone_number) $phone_number = null;
-		if (!$added_by) $added_by = null;
-		if (!$notes) $notes = null;
-		if (!$normalized_real_name) $normalized_real_name = null;
-		if (!$normalized_reversed_name) $normalized_reversed_name = null;
-		if (!$normalized_fandom_name) $normalized_fandom_name = null;
-		if (!$normalized_email_address) $normalized_email_address = null;
-		if (!$normalized_phone_number) $normalized_phone_number = null;
-		$stmt = $this->cm_db->connection->prepare(
-			'UPDATE '.$this->cm_db->table_name('staff_blacklist').' SET '.
+		if (!$first_name) $first_name = '';
+		if (!$last_name) $last_name = '';
+		if (!$fandom_name) $fandom_name = '';
+		if (!$email_address) $email_address = '';
+		if (!$phone_number) $phone_number = '';
+		if (!$added_by) $added_by = '';
+		if (!$notes) $notes = '';
+		if (!$normalized_real_name) $normalized_real_name = '';
+		if (!$normalized_reversed_name) $normalized_reversed_name = '';
+		if (!$normalized_fandom_name) $normalized_fandom_name = '';
+		if (!$normalized_email_address) $normalized_email_address = '';
+		if (!$normalized_phone_number) $normalized_phone_number = '';
+		$stmt = $this->cm_db->prepare(
+			'UPDATE `staff_blacklist` SET '.
 			'`first_name` = ?, `last_name` = ?, `fandom_name` = ?, '.
 			'`email_address` = ?, `phone_number` = ?, `added_by` = ?, `notes` = ?, '.
 			'`normalized_real_name` = ?, '.
@@ -1103,29 +1064,27 @@ class cm_staff_db {
 			$entry['id']
 		);
 		$success = $stmt->execute();
-		$stmt->close();
 		return $success;
 	}
 
 	public function delete_blacklist_entry($id) {
 		if (!$id) return false;
-		$stmt = $this->cm_db->connection->prepare(
-			'DELETE FROM '.$this->cm_db->table_name('staff_blacklist').
+		$stmt = $this->cm_db->prepare(
+			'DELETE FROM `staff_blacklist`' .
 			' WHERE `id` = ? LIMIT 1'
 		);
 		$stmt->bind_param('i', $id);
 		$success = $stmt->execute();
-		$stmt->close();
 		return $success;
 	}
 
 	public function is_blacklisted($person) {
 		if (!$person) return false;
-		$first_name = (isset($person['first-name']) ? $person['first-name'] : '');
-		$last_name = (isset($person['last-name']) ? $person['last-name'] : '');
-		$fandom_name = (isset($person['fandom-name']) ? $person['fandom-name'] : '');
-		$email_address = (isset($person['email-address']) ? $person['email-address'] : '');
-		$phone_number = (isset($person['phone-number']) ? $person['phone-number'] : '');
+		$first_name = ($person['first-name'] ?? '');
+		$last_name = ($person['last-name'] ?? '');
+		$fandom_name = ($person['fandom-name'] ?? '');
+		$email_address = ($person['email-address'] ?? '');
+		$phone_number = ($person['phone-number'] ?? '');
 		$normalized_real_name = strtoupper(preg_replace('/[^A-Za-z0-9]+/', '', $first_name . $last_name));
 		$normalized_reversed_name = strtoupper(preg_replace('/[^A-Za-z0-9]+/', '', $last_name . $first_name));
 		$normalized_fandom_name = strtoupper(preg_replace('/[^A-Za-z0-9]+/', '', $fandom_name));
@@ -1171,16 +1130,14 @@ class cm_staff_db {
 			$bind_params[] = &$normalized_phone_number;
 		}
 		if (!$query_params) return false;
-		$stmt = $this->cm_db->connection->prepare(
-			'SELECT `id` FROM '.
-			$this->cm_db->table_name('staff_blacklist').
+		$stmt = $this->cm_db->prepare(
+			'SELECT `id` FROM `staff_blacklist`' .
 			' WHERE '.implode(' OR ', $query_params).' LIMIT 1'
 		);
 		call_user_func_array(array($stmt, 'bind_param'), $bind_params);
 		$stmt->execute();
 		$stmt->bind_result($id);
 		$success = $stmt->fetch();
-		$stmt->close();
 		return $success ? $this->get_blacklist_entry($id) : false;
 	}
 
@@ -1206,7 +1163,7 @@ class cm_staff_db {
 			' `payment_group_uuid`, `payment_type`,'.
 			' `payment_txn_id`, `payment_txn_amt`,'.
 			' `payment_date`, `payment_details`'.
-			' FROM '.$this->cm_db->table_name('staff')
+			' FROM `staff`'
 		);
 		if ($id) {
 			if ($uuid) $query .= ' WHERE `id` = ? AND `uuid` = ? LIMIT 1';
@@ -1214,7 +1171,7 @@ class cm_staff_db {
 		} else {
 			$query .= ' WHERE `uuid` = ? LIMIT 1';
 		}
-		$stmt = $this->cm_db->connection->prepare($query);
+		$stmt = $this->cm_db->prepare($query);
 		if ($id) {
 			if ($uuid) $stmt->bind_param('is', $id, $uuid);
 			else $stmt->bind_param('i', $id);
@@ -1245,7 +1202,7 @@ class cm_staff_db {
 			$qr_data = 'CM*' . $id_string . '*' . strtoupper($uuid);
 			$qr_url = resource_file_url('barcode.php', true) . '?s=qr&w=300&h=300&d=' . $qr_data;
 			$badge_type_id_string = 'SB' . $badge_type_id;
-			$badge_type_name = (isset($name_map[$badge_type_id]) ? $name_map[$badge_type_id] : $badge_type_id);
+			$badge_type_name = ($name_map[$badge_type_id] ?? $badge_type_id);
 			$real_name = trim(trim($first_name) . ' ' . trim($last_name));
 			$only_name = $real_name;
 			$large_name = '';
@@ -1355,11 +1312,10 @@ class cm_staff_db {
 				'review-link' => $review_link,
 				'search-content' => $search_content
 			);
-			$stmt->close();
 
-			$stmt = $this->cm_db->connection->prepare(
+			$stmt = $this->cm_db->prepare(
 				'SELECT `department_id`, `department_name`, `position_id`, `position_name`'.
-				' FROM '.$this->cm_db->table_name('staff_assigned_positions').
+				' FROM `staff_assigned_positions`' .
 				' WHERE `staff_id` = ?'.
 				' ORDER BY `order`'
 			);
@@ -1408,7 +1364,6 @@ class cm_staff_db {
 				$result['assigned-position-names-h'] = array_column_simple($assigned_positions, 'position-name-h');
 				$result['assigned-positions'] = $assigned_positions;
 			}
-			$stmt->close();
 
 			$answers = $fdb->list_answers($id);
 			if ($answers) {
@@ -1422,7 +1377,6 @@ class cm_staff_db {
 			}
 			return $result;
 		}
-		$stmt->close();
 		return false;
 	}
 
@@ -1448,7 +1402,7 @@ class cm_staff_db {
 			' `payment_group_uuid`, `payment_type`,'.
 			' `payment_txn_id`, `payment_txn_amt`,'.
 			' `payment_date`, `payment_details`'.
-			' FROM '.$this->cm_db->table_name('staff')
+			' FROM `staff`'
 		);
 		$first = true;
 		$bind = array('');
@@ -1464,7 +1418,7 @@ class cm_staff_db {
 			$bind[0] .= 's';
 			$bind[] = &$tid;
 		}
-		$stmt = $this->cm_db->connection->prepare($query . ' ORDER BY `id`');
+		$stmt = $this->cm_db->prepare($query . ' ORDER BY `id`');
 		if (!$first) call_user_func_array(array($stmt, 'bind_param'), $bind);
 		$stmt->execute();
 		$stmt->bind_result(
@@ -1491,7 +1445,7 @@ class cm_staff_db {
 			$qr_data = 'CM*' . $id_string . '*' . strtoupper($uuid);
 			$qr_url = $qr_base_url . $qr_data;
 			$badge_type_id_string = 'SB' . $badge_type_id;
-			$badge_type_name = (isset($name_map[$badge_type_id]) ? $name_map[$badge_type_id] : $badge_type_id);
+			$badge_type_name = ($name_map[$badge_type_id] ?? $badge_type_id);
 			$real_name = trim(trim($first_name) . ' ' . trim($last_name));
 			$only_name = $real_name;
 			$large_name = '';
@@ -1602,11 +1556,10 @@ class cm_staff_db {
 				'search-content' => $search_content
 			);
 		}
-		$stmt->close();
 		foreach ($staff_members as $i => $staff_member) {
-			$stmt = $this->cm_db->connection->prepare(
+			$stmt = $this->cm_db->prepare(
 				'SELECT `department_id`, `department_name`, `position_id`, `position_name`'.
-				' FROM '.$this->cm_db->table_name('staff_assigned_positions').
+				' FROM `staff_assigned_positions`' .
 				' WHERE `staff_id` = ?'.
 				' ORDER BY `order`'
 			);
@@ -1670,7 +1623,6 @@ class cm_staff_db {
 				$staff_members[$i]['assigned-position-names-h'] = ['[[UNASSIGNED]]'];
 				$staff_members[$i]['assigned-positions'] = [];
 			}
-			$stmt->close();
 
 			$answers = $fdb->list_answers($staff_member['id']);
 			if ($answers) {
@@ -1688,40 +1640,40 @@ class cm_staff_db {
 
 	public function create_staff_member($staff_member, $dept_map = null, $pos_map = null, $fdb = null) {
 		if (!$staff_member) return false;
-		$badge_type_id = (isset($staff_member['badge-type-id']) ? $staff_member['badge-type-id'] : null);
-		$notes = (isset($staff_member['notes']) ? $staff_member['notes'] : null);
-		$first_name = (isset($staff_member['first-name']) ? $staff_member['first-name'] : '');
-		$last_name = (isset($staff_member['last-name']) ? $staff_member['last-name'] : '');
-		$fandom_name = (isset($staff_member['fandom-name']) ? $staff_member['fandom-name'] : '');
+		$badge_type_id = ($staff_member['badge-type-id'] ?? null);
+		$notes = ($staff_member['notes'] ?? null);
+		$first_name = ($staff_member['first-name'] ?? '');
+		$last_name = ($staff_member['last-name'] ?? '');
+		$fandom_name = ($staff_member['fandom-name'] ?? '');
 		$name_on_badge = (($fandom_name && isset($staff_member['name-on-badge'])) ? $staff_member['name-on-badge'] : 'Real Name Only');
-		$date_of_birth = (isset($staff_member['date-of-birth']) ? $staff_member['date-of-birth'] : null);
+		$date_of_birth = ($staff_member['date-of-birth'] ?? null);
 		$subscribed = (isset($staff_member['subscribed']) ? ($staff_member['subscribed'] ? 1 : 0) : 0);
-		$email_address = (isset($staff_member['email-address']) ? $staff_member['email-address'] : '');
-		$phone_number = (isset($staff_member['phone-number']) ? $staff_member['phone-number'] : '');
-		$address_1 = (isset($staff_member['address-1']) ? $staff_member['address-1'] : '');
-		$address_2 = (isset($staff_member['address-2']) ? $staff_member['address-2'] : '');
-		$city = (isset($staff_member['city']) ? $staff_member['city'] : '');
-		$state = (isset($staff_member['state']) ? $staff_member['state'] : '');
-		$zip_code = (isset($staff_member['zip-code']) ? $staff_member['zip-code'] : '');
-		$country = (isset($staff_member['country']) ? $staff_member['country'] : '');
-		$ice_name = (isset($staff_member['ice-name']) ? $staff_member['ice-name'] : '');
-		$ice_relationship = (isset($staff_member['ice-relationship']) ? $staff_member['ice-relationship'] : '');
-		$ice_email_address = (isset($staff_member['ice-email-address']) ? $staff_member['ice-email-address'] : '');
-		$ice_phone_number = (isset($staff_member['ice-phone-number']) ? $staff_member['ice-phone-number'] : '');
-		$application_status = (isset($staff_member['application-status']) ? $staff_member['application-status'] : null);
+		$email_address = ($staff_member['email-address'] ?? '');
+		$phone_number = ($staff_member['phone-number'] ?? '');
+		$address_1 = ($staff_member['address-1'] ?? '');
+		$address_2 = ($staff_member['address-2'] ?? '');
+		$city = ($staff_member['city'] ?? '');
+		$state = ($staff_member['state'] ?? '');
+		$zip_code = ($staff_member['zip-code'] ?? '');
+		$country = ($staff_member['country'] ?? '');
+		$ice_name = ($staff_member['ice-name'] ?? '');
+		$ice_relationship = ($staff_member['ice-relationship'] ?? '');
+		$ice_email_address = ($staff_member['ice-email-address'] ?? '');
+		$ice_phone_number = ($staff_member['ice-phone-number'] ?? '');
+		$application_status = ($staff_member['application-status'] ?? null);
 		$mail_alias_1 = ((isset($staff_member['mail-alias-1']) && $staff_member['mail-alias-1']) ? $staff_member['mail-alias-1'] : null);
 		$mail_alias_2 = ((isset($staff_member['mail-alias-2']) && $staff_member['mail-alias-2']) ? $staff_member['mail-alias-2'] : null);
 		$mailbox_type = ((isset($staff_member['mailbox-type']) && $staff_member['mailbox-type']) ? $staff_member['mailbox-type'] : null);
-		$payment_status = (isset($staff_member['payment-status']) ? $staff_member['payment-status'] : null);
-		$payment_badge_price = (isset($staff_member['payment-badge-price']) ? $staff_member['payment-badge-price'] : null);
-		$payment_group_uuid = (isset($staff_member['payment-group-uuid']) ? $staff_member['payment-group-uuid'] : null);
-		$payment_type = (isset($staff_member['payment-type']) ? $staff_member['payment-type'] : null);
-		$payment_txn_id = (isset($staff_member['payment-txn-id']) ? $staff_member['payment-txn-id'] : null);
-		$payment_txn_amt = (isset($staff_member['payment-txn-amt']) ? $staff_member['payment-txn-amt'] : null);
-		$payment_date = (isset($staff_member['payment-date']) ? $staff_member['payment-date'] : null);
-		$payment_details = (isset($staff_member['payment-details']) ? $staff_member['payment-details'] : null);
-		$stmt = $this->cm_db->connection->prepare(
-			'INSERT INTO '.$this->cm_db->table_name('staff').' SET '.
+		$payment_status = ($staff_member['payment-status'] ?? null);
+		$payment_badge_price = ($staff_member['payment-badge-price'] ?? null);
+		$payment_group_uuid = ($staff_member['payment-group-uuid'] ?? null);
+		$payment_type = ($staff_member['payment-type'] ?? null);
+		$payment_txn_id = ($staff_member['payment-txn-id'] ?? null);
+		$payment_txn_amt = ($staff_member['payment-txn-amt'] ?? null);
+		$payment_date = ($staff_member['payment-date'] ?? null);
+		$payment_details = ($staff_member['payment-details'] ?? null);
+		$stmt = $this->cm_db->prepare(
+			'INSERT INTO `staff` SET '.
 			'`uuid` = UUID(), `date_created` = NOW(), `date_modified` = NOW(), '.
 			'`badge_type_id` = ?, `notes` = ?, `first_name` = ?, `last_name` = ?, '.
 			'`fandom_name` = ?, `name_on_badge` = ?, `date_of_birth` = ?, '.
@@ -1751,8 +1703,7 @@ class cm_staff_db {
 			$payment_txn_id, $payment_txn_amt,
 			$payment_date, $payment_details
 		);
-		$id = $stmt->execute() ? $this->cm_db->connection->insert_id : false;
-		$stmt->close();
+		$id = $stmt->execute() ? $this->cm_db->last_insert_id() : false;
 		if ($id !== false) {
 			if ($dept_map && $pos_map && isset($staff_member['assigned-positions'])) {
 				$order = 0;
@@ -1773,8 +1724,8 @@ class cm_staff_db {
 					} else {
 						$department_id = null;
 					}
-					$stmt = $this->cm_db->connection->prepare(
-						'INSERT INTO '.$this->cm_db->table_name('staff_assigned_positions').' SET '.
+					$stmt = $this->cm_db->prepare(
+						'INSERT INTO `staff_assigned_positions` SET '.
 						'`staff_id` = ?, `order` = ?, '.
 						'`department_id` = ?, `department_name` = ?, '.
 						'`position_id` = ?, `position_name` = ?'
@@ -1786,7 +1737,6 @@ class cm_staff_db {
 						$position_id, $position_name
 					);
 					$stmt->execute();
-					$stmt->close();
 				}
 			}
 			if ($fdb && isset($staff_member['form-answers'])) {
@@ -1800,40 +1750,40 @@ class cm_staff_db {
 
 	public function update_staff_member($staff_member, $dept_map = null, $pos_map = null, $fdb = null) {
 		if (!$staff_member || !isset($staff_member['id']) || !$staff_member['id']) return false;
-		$badge_type_id = (isset($staff_member['badge-type-id']) ? $staff_member['badge-type-id'] : null);
-		$notes = (isset($staff_member['notes']) ? $staff_member['notes'] : null);
-		$first_name = (isset($staff_member['first-name']) ? $staff_member['first-name'] : '');
-		$last_name = (isset($staff_member['last-name']) ? $staff_member['last-name'] : '');
-		$fandom_name = (isset($staff_member['fandom-name']) ? $staff_member['fandom-name'] : '');
+		$badge_type_id = ($staff_member['badge-type-id'] ?? null);
+		$notes = ($staff_member['notes'] ?? null);
+		$first_name = ($staff_member['first-name'] ?? '');
+		$last_name = ($staff_member['last-name'] ?? '');
+		$fandom_name = ($staff_member['fandom-name'] ?? '');
 		$name_on_badge = (($fandom_name && isset($staff_member['name-on-badge'])) ? $staff_member['name-on-badge'] : 'Real Name Only');
-		$date_of_birth = (isset($staff_member['date-of-birth']) ? $staff_member['date-of-birth'] : null);
+		$date_of_birth = ($staff_member['date-of-birth'] ?? null);
 		$subscribed = (isset($staff_member['subscribed']) ? ($staff_member['subscribed'] ? 1 : 0) : 0);
-		$email_address = (isset($staff_member['email-address']) ? $staff_member['email-address'] : '');
-		$phone_number = (isset($staff_member['phone-number']) ? $staff_member['phone-number'] : '');
-		$address_1 = (isset($staff_member['address-1']) ? $staff_member['address-1'] : '');
-		$address_2 = (isset($staff_member['address-2']) ? $staff_member['address-2'] : '');
-		$city = (isset($staff_member['city']) ? $staff_member['city'] : '');
-		$state = (isset($staff_member['state']) ? $staff_member['state'] : '');
-		$zip_code = (isset($staff_member['zip-code']) ? $staff_member['zip-code'] : '');
-		$country = (isset($staff_member['country']) ? $staff_member['country'] : '');
-		$ice_name = (isset($staff_member['ice-name']) ? $staff_member['ice-name'] : '');
-		$ice_relationship = (isset($staff_member['ice-relationship']) ? $staff_member['ice-relationship'] : '');
-		$ice_email_address = (isset($staff_member['ice-email-address']) ? $staff_member['ice-email-address'] : '');
-		$ice_phone_number = (isset($staff_member['ice-phone-number']) ? $staff_member['ice-phone-number'] : '');
-		$application_status = (isset($staff_member['application-status']) ? $staff_member['application-status'] : null);
+		$email_address = ($staff_member['email-address'] ?? '');
+		$phone_number = ($staff_member['phone-number'] ?? '');
+		$address_1 = ($staff_member['address-1'] ?? '');
+		$address_2 = ($staff_member['address-2'] ?? '');
+		$city = ($staff_member['city'] ?? '');
+		$state = ($staff_member['state'] ?? '');
+		$zip_code = ($staff_member['zip-code'] ?? '');
+		$country = ($staff_member['country'] ?? '');
+		$ice_name = ($staff_member['ice-name'] ?? '');
+		$ice_relationship = ($staff_member['ice-relationship'] ?? '');
+		$ice_email_address = ($staff_member['ice-email-address'] ?? '');
+		$ice_phone_number = ($staff_member['ice-phone-number'] ?? '');
+		$application_status = ($staff_member['application-status'] ?? null);
 		$mail_alias_1 = ((isset($staff_member['mail-alias-1']) && $staff_member['mail-alias-1']) ? $staff_member['mail-alias-1'] : null);
 		$mail_alias_2 = ((isset($staff_member['mail-alias-2']) && $staff_member['mail-alias-2']) ? $staff_member['mail-alias-2'] : null);
 		$mailbox_type = ((isset($staff_member['mailbox-type']) && $staff_member['mailbox-type']) ? $staff_member['mailbox-type'] : null);
-		$payment_status = (isset($staff_member['payment-status']) ? $staff_member['payment-status'] : null);
-		$payment_badge_price = (isset($staff_member['payment-badge-price']) ? $staff_member['payment-badge-price'] : null);
-		$payment_group_uuid = (isset($staff_member['payment-group-uuid']) ? $staff_member['payment-group-uuid'] : null);
-		$payment_type = (isset($staff_member['payment-type']) ? $staff_member['payment-type'] : null);
-		$payment_txn_id = (isset($staff_member['payment-txn-id']) ? $staff_member['payment-txn-id'] : null);
-		$payment_txn_amt = (isset($staff_member['payment-txn-amt']) ? $staff_member['payment-txn-amt'] : null);
-		$payment_date = (isset($staff_member['payment-date']) ? $staff_member['payment-date'] : null);
-		$payment_details = (isset($staff_member['payment-details']) ? $staff_member['payment-details'] : null);
-		$stmt = $this->cm_db->connection->prepare(
-			'UPDATE '.$this->cm_db->table_name('staff').' SET '.
+		$payment_status = ($staff_member['payment-status'] ?? null);
+		$payment_badge_price = ($staff_member['payment-badge-price'] ?? null);
+		$payment_group_uuid = ($staff_member['payment-group-uuid'] ?? null);
+		$payment_type = ($staff_member['payment-type'] ?? null);
+		$payment_txn_id = ($staff_member['payment-txn-id'] ?? null);
+		$payment_txn_amt = ($staff_member['payment-txn-amt'] ?? null);
+		$payment_date = ($staff_member['payment-date'] ?? null);
+		$payment_details = ($staff_member['payment-details'] ?? null);
+		$stmt = $this->cm_db->prepare(
+			'UPDATE `staff` SET '.
 			'`date_modified` = NOW(), '.
 			'`badge_type_id` = ?, `notes` = ?, `first_name` = ?, `last_name` = ?, '.
 			'`fandom_name` = ?, `name_on_badge` = ?, `date_of_birth` = ?, '.
@@ -1866,16 +1816,14 @@ class cm_staff_db {
 			$staff_member['id']
 		);
 		$success = $stmt->execute();
-		$stmt->close();
 		if ($success) {
 			if ($dept_map && $pos_map && isset($staff_member['assigned-positions'])) {
-				$stmt = $this->cm_db->connection->prepare(
-					'DELETE FROM '.$this->cm_db->table_name('staff_assigned_positions').
+				$stmt = $this->cm_db->prepare(
+					'DELETE FROM `staff_assigned_positions`' .
 					' WHERE `staff_id` = ?'
 				);
 				$stmt->bind_param('i', $staff_member['id']);
 				$stmt->execute();
-				$stmt->close();
 				$order = 0;
 				foreach ($staff_member['assigned-positions'] as $ap) {
 					$order++;
@@ -1894,8 +1842,8 @@ class cm_staff_db {
 					} else {
 						$department_id = null;
 					}
-					$stmt = $this->cm_db->connection->prepare(
-						'INSERT INTO '.$this->cm_db->table_name('staff_assigned_positions').' SET '.
+					$stmt = $this->cm_db->prepare(
+						'INSERT INTO `staff_assigned_positions` SET '.
 						'`staff_id` = ?, `order` = ?, '.
 						'`department_id` = ?, `department_name` = ?, '.
 						'`position_id` = ?, `position_name` = ?'
@@ -1907,7 +1855,6 @@ class cm_staff_db {
 						$position_id, $position_name
 					);
 					$stmt->execute();
-					$stmt->close();
 				}
 			}
 			if ($fdb && isset($staff_member['form-answers'])) {
@@ -1923,21 +1870,19 @@ class cm_staff_db {
 
 	public function delete_staff_member($id) {
 		if (!$id) return false;
-		$stmt = $this->cm_db->connection->prepare(
-			'DELETE FROM '.$this->cm_db->table_name('staff').
+		$stmt = $this->cm_db->prepare(
+			'DELETE FROM `staff`' .
 			' WHERE `id` = ? LIMIT 1'
 		);
 		$stmt->bind_param('i', $id);
 		$success = $stmt->execute();
-		$stmt->close();
 		if ($success) {
-			$stmt = $this->cm_db->connection->prepare(
-				'DELETE FROM '.$this->cm_db->table_name('staff_assigned_positions').
+			$stmt = $this->cm_db->prepare(
+				'DELETE FROM `staff_assigned_positions`' .
 				' WHERE `staff_id` = ?'
 			);
 			$stmt->bind_param('i', $id);
 			$stmt->execute();
-			$stmt->close();
 			$this->cm_ldb->remove_entity($id);
 		}
 		return $success;
@@ -1949,8 +1894,8 @@ class cm_staff_db {
 		$last_name = (isset($person['last-name']) ? strtolower($person['last-name']) : '');
 		$date_of_birth = (isset($person['date-of-birth']) ? strtolower($person['date-of-birth']) : null);
 		$email_address = (isset($person['email-address']) ? strtolower($person['email-address']) : '');
-		$stmt = $this->cm_db->connection->prepare(
-			'SELECT 1 FROM '.$this->cm_db->table_name('staff').
+		$stmt = $this->cm_db->prepare(
+			'SELECT 1 FROM `staff`' .
 			' WHERE LCASE(`first_name`) = ? AND LCASE(`last_name`) = ?'.
 			' AND LCASE(`date_of_birth`) = ? AND LCASE(`email_address`) = ?'
 		);
@@ -1961,14 +1906,13 @@ class cm_staff_db {
 		$stmt->execute();
 		$stmt->bind_result($x);
 		$exists = $stmt->fetch() && $x;
-		$stmt->close();
 		return $exists;
 	}
 
 	public function update_payment_status($id, $status, $type, $txn_id, $txn_amt, $date, $details) {
 		if (!$id) return false;
-		$stmt = $this->cm_db->connection->prepare(
-			'UPDATE '.$this->cm_db->table_name('staff').' SET '.
+		$stmt = $this->cm_db->prepare(
+			'UPDATE `staff` SET '.
 			'`payment_status` = ?, `payment_type` = ?, `payment_txn_id` = ?, '.
 			'`payment_txn_amt` = ?, `payment_date` = ?, `payment_details` = ?'.
 			' WHERE `id` = ? LIMIT 1'
@@ -1979,7 +1923,6 @@ class cm_staff_db {
 			$txn_amt, $date, $details, $id
 		);
 		$success = $stmt->execute();
-		$stmt->close();
 		if ($success) {
 			$staff_member = $this->get_staff_member($id);
 			$this->cm_ldb->remove_entity($id);
@@ -1990,24 +1933,22 @@ class cm_staff_db {
 
 	public function unsubscribe_email_address($email) {
 		if (!$email) return false;
-		$stmt = $this->cm_db->connection->prepare(
-			'UPDATE '.$this->cm_db->table_name('staff').' SET '.
+		$stmt = $this->cm_db->prepare(
+			'UPDATE `staff` SET '.
 			'`subscribed` = FALSE WHERE LCASE(`email_address`) = LCASE(?)'
 		);
 		$stmt->bind_param('s', $email);
-		$count = $stmt->execute() ? $this->cm_db->connection->affected_rows : false;
-		$stmt->close();
+		$count = $stmt->execute() ? $this->cm_db->affected_rows() : false;
 		if ($count) {
 			$ids = array();
-			$stmt = $this->cm_db->connection->prepare(
-				'SELECT `id` FROM '.$this->cm_db->table_name('staff').
+			$stmt = $this->cm_db->prepare(
+				'SELECT `id` FROM `staff`' .
 				' WHERE LCASE(`email_address`) = LCASE(?)'
 			);
 			$stmt->bind_param('s', $email);
 			$stmt->execute();
 			$stmt->bind_result($id);
 			while ($stmt->fetch()) $ids[] = $id;
-			$stmt->close();
 			foreach ($ids as $id) {
 				$staff_member = $this->get_staff_member($id);
 				$this->cm_ldb->remove_entity($id);
@@ -2019,8 +1960,8 @@ class cm_staff_db {
 
 	public function staff_printed($id, $reset = false) {
 		if (!$id) return false;
-		$stmt = $this->cm_db->connection->prepare(
-			'UPDATE '.$this->cm_db->table_name('staff').' SET '.
+		$stmt = $this->cm_db->prepare(
+			'UPDATE `staff` SET '.
 			($reset ? (
 				'`print_count` = NULL, '.
 				'`print_first_time` = NULL, '.
@@ -2034,7 +1975,6 @@ class cm_staff_db {
 		);
 		$stmt->bind_param('i', $id);
 		$success = $stmt->execute();
-		$stmt->close();
 		if ($success) {
 			$staff_member = $this->get_staff_member($id);
 			$this->cm_ldb->remove_entity($id);
@@ -2045,8 +1985,8 @@ class cm_staff_db {
 
 	public function staff_checked_in($id, $reset = false) {
 		if (!$id) return false;
-		$stmt = $this->cm_db->connection->prepare(
-			'UPDATE '.$this->cm_db->table_name('staff').' SET '.
+		$stmt = $this->cm_db->prepare(
+			'UPDATE `staff` SET '.
 			($reset ? (
 				'`checkin_count` = NULL, '.
 				'`checkin_first_time` = NULL, '.
@@ -2060,7 +2000,6 @@ class cm_staff_db {
 		);
 		$stmt->bind_param('i', $id);
 		$success = $stmt->execute();
-		$stmt->close();
 		if ($success) {
 			$staff_member = $this->get_staff_member($id);
 			$this->cm_ldb->remove_entity($id);
@@ -2081,9 +2020,9 @@ class cm_staff_db {
 		$counters['*'] = array(0, 0, 0, 0);
 		$timelines['*'] = array(array(), array(), array(), array());
 
-		$stmt = $this->cm_db->connection->prepare(
+		$stmt = $this->cm_db->prepare(
 			'SELECT UNIX_TIMESTAMP(`date_created`), `badge_type_id`'.
-			' FROM '.$this->cm_db->table_name('staff').
+			' FROM `staff`' .
 			' ORDER BY `date_created`'
 		);
 		$stmt->execute();
@@ -2095,11 +2034,10 @@ class cm_staff_db {
 			$timelines[$btid][0][$timestamp] = ++$counters[$btid][0];
 			$timelines['*'][0][$timestamp] = ++$counters['*'][0];
 		}
-		$stmt->close();
 
-		$stmt = $this->cm_db->connection->prepare(
+		$stmt = $this->cm_db->prepare(
 			'SELECT UNIX_TIMESTAMP(`payment_date`), `badge_type_id`'.
-			' FROM '.$this->cm_db->table_name('staff').
+			' FROM `staff`' .
 			' WHERE `payment_status` = \'Completed\''.
 			' AND `payment_date` IS NOT NULL'.
 			' ORDER BY `payment_date`'
@@ -2113,11 +2051,10 @@ class cm_staff_db {
 			$timelines[$btid][1][$timestamp] = ++$counters[$btid][1];
 			$timelines['*'][1][$timestamp] = ++$counters['*'][1];
 		}
-		$stmt->close();
 
-		$stmt = $this->cm_db->connection->prepare(
+		$stmt = $this->cm_db->prepare(
 			'SELECT UNIX_TIMESTAMP(`print_first_time`), `badge_type_id`'.
-			' FROM '.$this->cm_db->table_name('staff').
+			' FROM `staff`' .
 			' WHERE `print_first_time` IS NOT NULL'.
 			' ORDER BY `print_first_time`'
 		);
@@ -2130,11 +2067,10 @@ class cm_staff_db {
 			$timelines[$btid][2][$timestamp] = ++$counters[$btid][2];
 			$timelines['*'][2][$timestamp] = ++$counters['*'][2];
 		}
-		$stmt->close();
 
-		$stmt = $this->cm_db->connection->prepare(
+		$stmt = $this->cm_db->prepare(
 			'SELECT UNIX_TIMESTAMP(`checkin_first_time`), `badge_type_id`'.
-			' FROM '.$this->cm_db->table_name('staff').
+			' FROM `staff`' .
 			' WHERE `checkin_first_time` IS NOT NULL'.
 			' ORDER BY `checkin_first_time`'
 		);
@@ -2147,7 +2083,6 @@ class cm_staff_db {
 			$timelines[$btid][3][$timestamp] = ++$counters[$btid][3];
 			$timelines['*'][3][$timestamp] = ++$counters['*'][3];
 		}
-		$stmt->close();
 
 		ksort($timestamps);
 		return array(
@@ -2156,5 +2091,4 @@ class cm_staff_db {
 			'timelines' => $timelines
 		);
 	}
-
 }

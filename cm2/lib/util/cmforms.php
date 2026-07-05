@@ -1,7 +1,7 @@
 <?php
 
-require_once dirname(__FILE__).'/res.php';
-require_once dirname(__FILE__).'/util.php';
+require_once __DIR__ .'/res.php';
+require_once __DIR__ .'/util.php';
 
 function cm_form_label($id, $text) {
 	$htmlid = $id ? ('cm-question-' . htmlspecialchars($id)) : $id;
@@ -90,11 +90,11 @@ function cm_form_row($question, $answer, $error = null, $for_editor = false) {
 		}
 		$out = '<tr class="' . implode(' ', $classes) . '">';
 	}
-	$id = isset($question['question-id']) ? $question['question-id'] : '';
-	$title = isset($question['title']) ? $question['title'] : '';
-	$text = isset($question['text']) ? $question['text'] : '';
-	$type = isset($question['type']) ? $question['type'] : '';
-	$values = isset($question['values']) ? $question['values'] : array();
+	$id = $question['question-id'] ?? '';
+	$title = $question['title'] ?? '';
+	$text = $question['text'] ?? '';
+	$type = $question['type'] ?? '';
+	$values = $question['values'] ?? array();
 	switch ($type) {
 		case 'h1':
 		case 'h2':
@@ -177,18 +177,25 @@ function cm_form_posted_answer($id, $type, $post) {
 				}
 			}*/
 			return $answer;
+		case 'h1':
+		case 'h2':
+		case 'h3':
+		case 'p':
+		case 'q':
+		case 'hr':
+			return array();
 		default:
-		error_log("Error type of question " . $type . " is not recognized for question " . $id);
+			error_log("Error type of question " . $type . " is not recognized for question " . $id);
 			return array();
 	}
 }
 
 function cm_form_review_row($question, $answer, $can_edit = true) {
-	$type = isset($question['type']) ? $question['type'] : '';
+	$type = $question['type'] ?? '';
 	$is_title = ($type == 'h1' || $type == 'h2' || $type == 'h3');
 	$is_text = ($type == 'p' || $type == 'q' || $type == 'hr');
-	$title = isset($question['title']) ? $question['title'] : '';
-	$text = isset($question['text']) ? $question['text'] : '';
+	$title = $question['title'] ?? '';
+	$text = $question['text'] ?? '';
 	if ($can_edit || $is_title || $is_text) {
 		if ($title) $question['text'] = null;
 		return cm_form_row($question, $answer);
@@ -301,6 +308,10 @@ function cm_form_edit_dynamic_section(&$form_def) {
 			echo '<td><label><input type="checkbox" class="ea-listed">Answers appear in a column on Review and Edit list pages.</label></td>';
 		echo '</tr>';
 		echo '<tr class="cm-form-editor-row-editor-row">';
+			echo '<th><label>Exposed</label></th>';
+			echo '<td><label><input type="checkbox" class="ea-exposed">Answers are exposed in the schedule API</label></td>';
+		echo '</tr>';
+		echo '<tr class="cm-form-editor-row-editor-row">';
 			echo '<th><label>Visible</label></th>';
 			echo '<td><label><input type="checkbox" checked class="ea-visible">Question appears on Register and Apply pages.</label> <a href="#" class="ea-visible-advanced">Advanced...</a></td>';
 		echo '</tr>';
@@ -351,8 +362,8 @@ function cm_form_edit_body(&$form_def, $questions) {
 	foreach ($questions as $question) {
 		if ($question['type'] == 'custom-text') {
 			if ($section) cm_form_edit_static_section($section);
-			$name = (isset($question['name']) ? $question['name'] : '');
-			$default = (isset($question['default']) ? $question['default'] : '');
+			$name = ($question['name'] ?? '');
+			$default = ($question['default'] ?? '');
 			cm_form_edit_custom_text_section($name, $default);
 			$section = array();
 		} else if ($question['type'] == 'custom-questions') {
