@@ -21,7 +21,7 @@ class MonologDatabaseHandler extends \Monolog\Handler\AbstractProcessingHandler
         $data = array(
             'remote_addr' => $record['extra']['ip'],
             'request_uri' => $record['extra']['url'],
-            'message'     => $record['message'],
+            'message'     => substr($record['message'],0,500),
             'level'       => $record['level_name'],
             'channel'     => $record['channel'],
             'data'        => mb_strcut( $this->getFormatter()->format($record['context']), 0, 65535, 'UTF-8')

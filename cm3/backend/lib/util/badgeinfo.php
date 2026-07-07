@@ -737,8 +737,9 @@ final class badgeinfo
                     new SearchTerm('real_name', '%' . $searchText . '%', 'LIKE', 'OR'),
                     new SearchTerm('fandom_name', '%' . $searchText . '%', 'LIKE', 'OR'),
                     new SearchTerm('notify_email', '%' . $searchText . '%', 'LIKE', 'OR'),
-                    new SearchTerm('ice_name', '%' . $searchText . '%', 'LIKE', 'OR'),
-                    new SearchTerm('ice_email_address', '%' . $searchText . '%', 'LIKE', 'OR'),
+                    
+                    $this->CurrentUserInfo->GetPerms()->EventPerms->isBadge_Ice() ?  new SearchTerm('ice_name', '%' . $searchText . '%', 'LIKE', 'OR'): null,
+                    $this->CurrentUserInfo->GetPerms()->EventPerms->isBadge_Ice() ?  new SearchTerm('ice_email_address', '%' . $searchText . '%', 'LIKE', 'OR') : null,
                     new SearchTerm('email_address', '%' . $searchText . '%', 'LIKE', 'OR', JoinedTableAlias:'con'),
                 )
             ));
@@ -1051,10 +1052,10 @@ final class badgeinfo
                     'date_of_birth',
                     'notify_email',
                     'can_transfer',
-                    'ice_name',
-                    'ice_relationship',
-                    'ice_email_address',
-                    'ice_phone_number',
+                    $this->CurrentUserInfo->GetPerms()->EventPerms->isBadge_Ice() ?  'ice_name' : null,
+                    $this->CurrentUserInfo->GetPerms()->EventPerms->isBadge_Ice() ?  'ice_relationship' : null,
+                    $this->CurrentUserInfo->GetPerms()->EventPerms->isBadge_Ice() ?  'ice_email_address' : null,
+                    $this->CurrentUserInfo->GetPerms()->EventPerms->isBadge_Ice() ?  'ice_phone_number' : null,
                 ), array(
                     new SearchTerm('application_id', $badge['id'])
                 ));
@@ -1181,10 +1182,10 @@ final class badgeinfo
                 'date_of_birth',
                 'notify_email',
                 'can_transfer',
-                'ice_name',
-                'ice_relationship',
-                'ice_email_address',
-                'ice_phone_number',
+                $this->CurrentUserInfo->GetPerms()->EventPerms->isBadge_Ice() ?  'ice_name' : null,
+                $this->CurrentUserInfo->GetPerms()->EventPerms->isBadge_Ice() ?  'ice_relationship' : null,
+                $this->CurrentUserInfo->GetPerms()->EventPerms->isBadge_Ice() ?  'ice_email_address' : null,
+                $this->CurrentUserInfo->GetPerms()->EventPerms->isBadge_Ice() ?  'ice_phone_number' : null,
             ), array(
                 new SearchTerm('application_id', $id)
             ));
@@ -1713,10 +1714,10 @@ final class badgeinfo
                     'date_of_birth',
                     'notify_email',
                     'can_transfer',
-                    'ice_name',
-                    'ice_relationship',
-                    'ice_email_address',
-                    'ice_phone_number',
+                    $this->CurrentUserInfo->GetPerms()->EventPerms->isBadge_Ice() ?  'ice_name' : null,
+                    $this->CurrentUserInfo->GetPerms()->EventPerms->isBadge_Ice() ?  'ice_relationship' : null,
+                    $this->CurrentUserInfo->GetPerms()->EventPerms->isBadge_Ice() ?  'ice_email_address' : null,
+                    $this->CurrentUserInfo->GetPerms()->EventPerms->isBadge_Ice() ?  'ice_phone_number' : null,
                 ), array(
                     new SearchTerm('application_id', $result['id'])
                 ));
