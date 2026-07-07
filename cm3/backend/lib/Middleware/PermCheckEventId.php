@@ -55,6 +55,10 @@ class PermCheckEventId
                 $hasPerm |= $perms->EventPerms->getValue() & $value->getValue();
             }
         }
+        //If no attribute and no perms list, assume the check is if they have any perm with the event at all
+        if(is_null($this->AttributeName) && empty($this->AllowedPerms)){
+            $hasPerm = $perms->EventPerms->getValue() > 0;
+        }
         if (!$hasPerm && !$perms->EventPerms->isGlobalAdmin()) {
             throw new HttpUnauthorizedException($request, 'Event ID not accessible with current permissions');
         }

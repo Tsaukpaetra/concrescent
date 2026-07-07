@@ -68,7 +68,8 @@ class TokenGenerator
                 }
             }
         }
-        if ($perms->EventPerms->isNoPermission()) {
+        if ($perms->EventPerms->isNoPermission() && empty($eperms->EventPerms)) {
+            //They don't have permissions elsewhere either
             $perms = null;
         }
 

@@ -13,15 +13,20 @@ use Psr\Http\Message\ServerRequestInterface;
 return function (App $app, DI\Container $container) {
     $app->group(
         '/EventInfo',
-        function (RouteCollectorProxy $app) {
+        function (RouteCollectorProxy $app) use ($container) {
+            
+            $accessPerm = $container->get(PermCheckEventId::class)->withAllowedPerms(array(
+                PermEvent::EventAdmin(),
+                PermEvent::GlobalAdmin()
+            ));
             $app->get('', \CM3_Lib\Action\EventInfo\Search::class);
-            $app->post('', \CM3_Lib\Action\EventInfo\Create::class);
+            $app->post('', \CM3_Lib\Action\EventInfo\Create::class)
+            ->add($accessPerm);
             $app->get('/{id}', \CM3_Lib\Action\EventInfo\Read::class);
-            $app->post('/{id}', \CM3_Lib\Action\EventInfo\Update::class);
-            $app->delete('/{id}', \CM3_Lib\Action\EventInfo\Delete::class);
+            $app->post('/{id}', \CM3_Lib\Action\EventInfo\Update::class)
+            ->add($accessPerm);
+            $app->delete('/{id}', \CM3_Lib\Action\EventInfo\Delete::class)
+            ->add($accessPerm);
         }
-    )->add(($container->get(PermCheckEventId::class))->withAllowedPerms(array(
-        PermEvent::EventAdmin(),
-        PermEvent::GlobalAdmin()
-    )));
+    );
 };

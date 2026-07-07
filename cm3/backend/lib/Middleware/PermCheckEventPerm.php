@@ -42,7 +42,7 @@ class PermCheckEventPerm
         }
         //Check if we don't have any required perms (and thus only require basic event perms)
         if (count($this->AllowedPerms) == 0) {
-            $hasPerm = true;
+            $hasPerm = $perms->EventPerms->getValue() > 0;
         }
         if (!$hasPerm
             && !$perms->EventPerms->isGlobalAdmin()
