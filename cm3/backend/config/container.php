@@ -161,13 +161,38 @@ return [
     },
 
     PHPMailer::class => function (ContainerInterface $container) {
-        $mail = new PHPMailer();
         $mc = $container->get('config')['mailer'];
-        switch ($mc['mode']) {
+        $mode = $mc['mode'] ?? 'SMTP';
+
+        // 1. Define built-in legacy modes
+        $builtInModes = ['SMTP', 'Sendmail', 'Gmail'];
+
+        if (in_array($mode, $builtInModes, true)) {
+            // Use standard PHPMailer for default drivers
+            $mail = new PHPMailer(true);
+        } else {
+            // 2. Map custom modes to your specific namespace
+            $mailerClass = "CM3_Lib\\Modules\\Mailers\\" . $mode;
+
+            // Ensure the class exists before trying to instantiate it
+            if (!class_exists($mailerClass)) {
+                throw new \RuntimeException("Mailer module class '{$mailerClass}' not found for mode '{$mode}'");
+            }
+
+            // Security Check: Ensure the custom driver extends PHPMailer
+            if (!is_subclass_of($mailerClass, PHPMailer::class)) {
+                throw new \RuntimeException("Mailer module '{$mailerClass}' must extend " . PHPMailer::class);
+            }
+
+            $mail = new $mailerClass(true);
+        }
+
+        // 3. Configure standard built-in transport modes
+        switch ($mode) {
             case 'SMTP':
                 $mail->isSMTP();
-                $mail->Host = $mc['Host'];
-                $mail->Port = $mc['Port'];
+                $mail->Host = $mc['Host'] ?? '';
+                $mail->Port = $mc['Port'] ?? 587;
                 if (!empty($mc['Username'])) {
                     $mail->SMTPAuth =  true;
                     $mail->Username =  $mc['Username'];
@@ -203,8 +228,18 @@ return [
                     )
                 );
                 break;
+            default:
+                // 4. Pass configuration directly to custom modules
+                if (method_exists($mail, 'configureCustomTransport')) {
+                    $mail->configureCustomTransport($mc);
+                }
+                break;
         }
-        $mail->setFrom($mc['defaultFrom']);
+
+        if (!empty($mc['defaultFrom'])) {
+            $mail->setFrom($mc['defaultFrom']);
+        }
+
         return $mail;
     },
 
