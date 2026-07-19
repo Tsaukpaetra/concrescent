@@ -263,6 +263,8 @@ final class badgeinfo
         }
         //Actually don't accept updates to uuid
         unset($data['uuid']);
+        //Submissions never have birthdays
+        unset($data['date_of_birth']);
         //TODO: Make sure the badge belongs to the context specified?
         //Slide in the ID
         $data['id'] = $id;

@@ -1032,10 +1032,23 @@ final class PaymentBuilder
         foreach ($this->cart_items as $key => &$item) {
             //Revert the badge
             $item['payment_status'] = 'Cancelled';
+            if (isset($item['application_status'])) {
+                $item['application_status'] = 'Cancelled';
+            }
+            
             if (isset($item['existing'])) {
-                $this->badgeinfo->UpdateSpecificBadgeUnchecked($item['id'], $item['context_code'], $item['existing']);
+                $badgeData =& $item['existing'];
             } else {
-                $this->badgeinfo->UpdateSpecificBadgeUnchecked($item['id'], $item['context_code'], $item);
+                $badgeData =& $item;
+            }
+
+            //If it's not an application, wire up the processor normally
+            if ($item['context_code'] == 'A' || $item['context_code'] == 'S') {
+                $this->badgeinfo->UpdateSpecificBadgeUnchecked($item['id'], $item['context_code'], $badgeData);
+            } else {
+                //Group applications are special
+                //Create/update the application submission
+                $this->badgeinfo->UpdateSpecificGroupApplicationUnchecked($item['id'], $item['context_code'], $badgeData);
             }
 
             //Check for addons
