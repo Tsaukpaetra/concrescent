@@ -158,6 +158,10 @@ final class DefaultErrorHandler implements ErrorHandlerInterface
             }
 
             $result[$key] = $trace;
+            //Stop adding more traces once we've hit the middleware
+            if (isset($trace['file']) && str_starts_with($trace['file'], '/vendor/slim/slim/Slim/MiddlewareDispatcher.php')) {
+                break;
+            }
         }
         return $result;
     }
