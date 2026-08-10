@@ -14,7 +14,7 @@ use CM3_Lib\util\MonologDatabaseHandler;
 /**
  * Factory.
  */
-final class LoggerFactory
+class LoggerFactory
 {
     private string $path;
 
@@ -61,7 +61,7 @@ final class LoggerFactory
         }
 
         //Add in web processor
-        $logger->pushProcessor(new \Monolog\Processor\WebProcessor($_SERVER));
+        $logger->pushProcessor(new \Monolog\Processor\WebProcessor($_SERVER, ['url', 'ip', 'http_method', 'server', 'referrer', 'user_agent']));
 
         foreach ($this->processors as $processor) {
             $logger->pushProcessor($processor);

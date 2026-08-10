@@ -32,20 +32,4 @@ class error_log extends \CM3_Lib\database\Table
         $this->DefaultSearchColumns = array('id','timestamp','remote_addr','request_uri','message');
     }
 
-
-    public function log_access()
-    {
-        //TODO: Add ability to specify module info, params, etc
-        return $this->Create(
-            array(
-                'contact_id' => getContactId(),
-                'remote_addr' => $_SERVER['REMOTE_ADDR'] ?? '',
-                'remote_host' => $_SERVER['REMOTE_HOST'] ?? '',
-                'request_uri' => $_SERVER['REQUEST_URI'] ?? '',
-                'http_referrer' => $_SERVER['HTTP_REFERER'] ?? '',
-                'http_user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? '',
-
-            )
-        );
-    }
 }

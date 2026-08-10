@@ -21,6 +21,7 @@ use Throwable;
  */
 final class DefaultErrorHandler implements ErrorHandlerInterface
 {
+    private string $basePath;
     private Responder $responder;
 
     private ResponseFactoryInterface $responseFactory;
@@ -40,13 +41,15 @@ final class DefaultErrorHandler implements ErrorHandlerInterface
         Responder $responder,
         ResponseFactoryInterface $responseFactory,
         LoggerFactory $loggerFactory,
-        CurrentUserInfo $CurrentUserInfo
+        CurrentUserInfo $CurrentUserInfo,
+        \Slim\App $app
     ) {
         $this->responder = $responder;
         $this->responseFactory = $responseFactory;
         $this->logger = $loggerFactory->createLogger('Main');
         $this->installpath = dirname(__DIR__, 2);
         $this->CurrentUserInfo = $CurrentUserInfo;
+        $this->basePath = $app->getBasePath();
     }
 
     /**
@@ -69,13 +72,38 @@ final class DefaultErrorHandler implements ErrorHandlerInterface
     ): ResponseInterface {
         // Log error
         if ($logErrors) {
-            $error = $this->getErrorDetails($exception, $logErrorDetails);
-            $error['method'] = $request->getMethod();
-            $error['url'] = (string)$request->getUri();
-            $error['contact_id'] = $this->CurrentUserInfo->GetContactId();
-            $error['event_id'] = $this->CurrentUserInfo->GetEventId();
+            $path = $request->getUri()->getPath();
+            // Strip the base path if present
+            if ($this->basePath !== '' && str_starts_with($path, $this->basePath)) {
+                $path = substr($path, strlen($this->basePath));
+            }
 
-            $this->logger->error($exception->getMessage(), $error);
+            $data = [
+                ... $this->extractData($request),
+                ... $this->getErrorDetails($exception, $logErrorDetails)
+            ];
+
+            $context['contact_id'] = $this->CurrentUserInfo->GetContactId();
+            $context['event_id'] = $this->CurrentUserInfo->GetEventId();
+            $context['path'] = $path;
+            $context['data'] = $data;
+
+            try {
+                //code...
+                $this->logger->error($exception->getMessage(), $context);
+            } catch (\Throwable $th) {
+                //throw $th;
+                
+
+                $response = $this->responseFactory->createResponse();
+
+                // Render response
+                $response = $this->responder->withJson($response, [
+                    'error' => $this->getErrorDetails($th, $displayErrorDetails),
+                ]);
+
+                return $response->withStatus($this->getHttpStatusCode($exception));
+            }
         }
 
         $response = $this->responseFactory->createResponse();
@@ -164,5 +192,85 @@ final class DefaultErrorHandler implements ErrorHandlerInterface
             }
         }
         return $result;
+    }
+    
+    function extractData(ServerRequestInterface $request)
+    {
+        
+        $method = $request->getMethod();
+        $queryParams = $request->getQueryParams();
+        $postData = null;
+        $isTruncated = false;
+
+        if (in_array($method, ['POST', 'PUT', 'PATCH'])) {
+            // 2. Automatically handles JSON, Form-data, etc., and turns it into an array
+            $parsedBody = $request->getParsedBody();
+            
+            if (!empty($parsedBody)) {
+                // Cast objects (like deserialized JSON objects) or arrays cleanly to an array
+                $bodyArray = (array) $parsedBody;
+                
+                $encoded = json_encode($bodyArray);
+                $maxLength = 60000; // MySQL TEXT safety limit
+
+                if (mb_strlen($encoded) > $maxLength) {
+                    $postData = mb_substr($encoded, 0, $maxLength);
+                    $isTruncated = true;
+                } else {
+                    $postData = $encoded; // Stored as a structured JSON string in your TEXT column
+                }
+            } else {
+                // 2. Fallback for raw files, plain text, or binary payloads
+                $contentType = $request->getHeaderLine('Content-Type');
+                $bodyStream = $request->getBody();
+                $bodySize = $bodyStream->getSize();
+
+                if ($bodySize !== null && $bodySize > 0) {
+                    // 1. If it's structured text/data, read and parse it once
+                    if (str_contains($contentType, 'application/json') || str_contains($contentType, 'application/x-www-form-urlencoded')) {
+                        $bodyStream->rewind();
+                        $rawContent = $bodyStream->getContents();
+
+                        $decoded = [];
+                        if (str_contains($contentType, 'application/json')) {
+                            $decoded = json_decode($rawContent, true) ?? [];
+                        } else {
+                            parse_str($rawContent, $decoded);
+                        }
+
+                        if (!empty($decoded)) {
+                            $encoded = json_encode($decoded);
+                            $maxLength = 60000;
+
+                            if (mb_strlen($encoded) > $maxLength) {
+                                $postData = mb_substr($encoded, 0, $maxLength);
+                                $isTruncated = true;
+                            } else {
+                                $postData = $decoded;
+                            }
+                        }
+                    } 
+                    // 2. Otherwise, treat as a binary/raw file and only read a 200-byte snippet
+                    else {
+                        $bodyStream->rewind();
+                        $snippet = $bodyStream->read(200);
+
+                        if (preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', $snippet)) {
+                            $postData = "[BINARY DATA OMITTED, content type submitted was {$contentType}]";
+                        } else {
+                            $postData = $snippet;
+                        }
+                        $isTruncated = ($bodySize > 200);
+                    }
+                }
+            }
+        }
+
+        return 
+        [
+            'query_params' => $queryParams,
+            'request_body' => $postData,
+            'is_truncated' => $isTruncated
+        ];
     }
 }

@@ -2,6 +2,7 @@
 
 use Slim\App;
 use Slim\Middleware\ErrorMiddleware;
+use CM3_Lib\Middleware\AccessLogMiddleware;
 use CM3_Lib\Middleware\GZCompress;
 
 return function (App $app, $s_config) {
@@ -25,7 +26,10 @@ return function (App $app, $s_config) {
     $app->add(new Tuupola\Middleware\BrancaAuthentication([
         "ttl" => $s_config['environment']['token_life'],
         "secret" => $s_config['environment']['token_secret'],
-        "ignore" =>  $s_config['environment']['base_path'] .'/public',
+        "ignore" =>  [
+            $s_config['environment']['base_path'] .'/public',
+            $s_config['environment']['base_path'] .'/test'
+        ],
         "before" => function ($request, $arguments) use ($app) {
             //Load the CurrentUserInfo with the token data
             $CurrentUserInfo = $app->getContainer()->get(CM3_Lib\util\CurrentUserInfo::class);
@@ -36,10 +40,19 @@ return function (App $app, $s_config) {
               ->withAttribute("contact_id", $CurrentUserInfo->GetContactId())
               ->withAttribute("event_id", $CurrentUserInfo->GetEventId())
               ->withAttribute("perms", $CurrentUserInfo->GetPerms());
+        },
+        "error" => function ($request, $response, $arguments) {
+            $data['error']["message"] = $arguments["message"];
+            $response->getBody()->write(json_encode($data));
+        
+            return $response
+                ->withStatus(401)
+                ->withHeader("Content-Type", "application/json");
         }
     ]));
     //Add the authorization-as-query parameter
     $app->add(new CM3_Lib\Middleware\authInGet());
 
     $app->add(ErrorMiddleware::class);
+    $app->add(AccessLogMiddleware::class);
 };

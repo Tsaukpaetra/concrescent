@@ -19,10 +19,11 @@ class access_log extends \CM3_Lib\database\Table
             'request_uri'	=> new cm_Column('VARCHAR', 255, false),
             'http_referrer'	=> new cm_Column('VARCHAR', 255, false),
             'http_user_agent'	=> new cm_Column('VARCHAR', 255, false),
-            'module'	=> new cm_Column('VARCHAR', 255, false),
             'action'	=> new cm_Column('VARCHAR', 255, false),
+            'status_code' => new cm_Column('SMALLINT UNSIGNED', null, false),
+            'server_duration' => new cm_Column('DECIMAL(8, 2) UNSIGNED', null, false),
             'message'	=> new cm_Column('VARCHAR', 500, false),
-            'postdata'	=> new cm_Column('TEXT', null, true),
+            'data'	=> new cm_Column('TEXT', null, true),
 
         );
         $this->IndexDefs = array(
@@ -32,22 +33,5 @@ class access_log extends \CM3_Lib\database\Table
             )));
         $this->PrimaryKeys = array('id'=>false);
         $this->DefaultSearchColumns = array('id');
-    }
-
-
-    public function log_access()
-    {
-        //TODO: Add ability to specify module info, params, etc
-        return $this->Create(
-            array(
-                'contact_id' => getContactId(),
-                'remote_addr' => $_SERVER['REMOTE_ADDR'] ?? '',
-                'remote_host' => $_SERVER['REMOTE_HOST'] ?? '',
-                'request_uri' => $_SERVER['REQUEST_URI'] ?? '',
-                'http_referrer' => $_SERVER['HTTP_REFERER'] ?? '',
-                'http_user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? '',
-
-            )
-        );
     }
 }

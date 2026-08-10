@@ -217,44 +217,57 @@ abstract class Table
             fclose($fp);
         }
         //Do it!
-        if ($stmt->execute()) {
-            $stmt->store_result();
-            $affected = $this->cm_db->connection->affected_rows;
+        try {
+            if ($stmt->execute()) {
+                $stmt->store_result();
+                $affected = $this->cm_db->connection->affected_rows;
 
-            //Prep the result
-            $autoid = $this->cm_db->connection->insert_id;
-            $id = array_intersect_key($entrydata, $this->PrimaryKeys);
-            if ($autoid) {
-                //Find the AUTO_INCREMENT column and give it back
-                $columnName = array_keys(array_filter($this->ColumnDefs, function ($v) {
-                    return $v->isAutoIncrement;
-                }))[0];
-                if (isset($columnName)) {
-                    $id[$columnName] = $autoid;
+                //Prep the result
+                $autoid = $this->cm_db->connection->insert_id;
+                $id = array_intersect_key($entrydata, $this->PrimaryKeys);
+                if ($autoid) {
+                    //Find the AUTO_INCREMENT column and give it back
+                    $columnName = array_keys(array_filter($this->ColumnDefs, function ($v) {
+                        return $v->isAutoIncrement;
+                    }))[0];
+                    if (isset($columnName)) {
+                        $id[$columnName] = $autoid;
+                    }
                 }
-            }
 
-            if ($affected == 0) {
-                if ($isNew) {
-                    //We expected an insert, throw error
+                if ($affected == 0) {
+                    if ($isNew) {
+                        //We expected an insert, throw error
 
-                    $this->checkAndThrowError(
-                        "Failed to create entry for $this->TableName.",
-                        array(
-                          'Submitted data:\n' . print_r($entrydata, true),
-                          'LastError: ' . print_r($this->cm_db->connection->error, true)
-                        ),
-                        $sqlText
-                    );
+                        $this->checkAndThrowError(
+                            "Failed to create entry for $this->TableName.",
+                            array(
+                                'Submitted data:\n' . print_r($entrydata, true),
+                                'LastError: ' . print_r($this->cm_db->connection->error, true)
+                            ),
+                            $sqlText
+                        );
+                    }
                 }
+            } else {
+                $this->checkAndThrowError(
+                    "Error while attempting to " . ($isNew ? 'create' : 'update') . " entry for $this->TableName.",
+                    array(
+                        'Submitted data:\n' . print_r($entrydata, true),
+                        'LastError: ' . print_r($this->cm_db->connection->error, true)
+                    ),
+                    $sqlText
+                );
+                $id = false;
             }
-        } else {
+        } catch (\Throwable $th) {
+            //A harder error was thrown
             $this->checkAndThrowError(
                 "Error while attempting to " . ($isNew ? 'create' : 'update') . " entry for $this->TableName.",
                 array(
-            'Submitted data:\n' . print_r($entrydata, true),
-            'LastError: ' . print_r($this->cm_db->connection->error, true)
-          ),
+                    'Submitted data:\n' . print_r($entrydata, true),
+                    'LastError: ' . print_r($this->cm_db->connection->error, true)
+                ),
                 $sqlText
             );
             $id = false;

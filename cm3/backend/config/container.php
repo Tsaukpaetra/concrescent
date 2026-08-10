@@ -1,9 +1,12 @@
 <?php
 
 use CM3_Lib\Factory\LoggerFactory;
+use CM3_Lib\Factory\ErrorLoggerFactory;
 use CM3_Lib\Factory\PaymentModuleFactory;
 use CM3_Lib\Middleware\DefaultErrorHandler;
+use CM3_Lib\Middleware\AccessLogMiddleware;
 use CM3_Lib\util\TokenGenerator;
+use CM3_Lib\util\CurrentUserInfo;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
@@ -11,6 +14,8 @@ use Psr\Http\Message\ServerRequestFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
 use Psr\Http\Message\UploadedFileFactoryInterface;
 use Psr\Http\Message\UriFactoryInterface;
+use function DI\autowire;
+use function DI\get;
 use Slim\App;
 use Slim\Factory\AppFactory;
 use Slim\Interfaces\RouteParserInterface;
@@ -134,7 +139,7 @@ return [
         ;
     },
     //And one for errors specifically
-    'ErrorLoggerFactory'=> function (ContainerInterface $container) {
+    ErrorLoggerFactory::class => function (ContainerInterface $container) {
         return (new LoggerFactory($container->get('config')['logger']))
         ->addDBHandler($container->get(\CM3_Lib\models\admin\error_log::class))
         ->addFileHandler('error.log');
@@ -275,6 +280,17 @@ return [
         return new MarkdownConverter($environment);
     },
 
+    AccessLogMiddleware::class => function (ContainerInterface $container) {
+        // You can use a dedicated access logger or your default application logger
+        $loggerFactory = $container->get(LoggerFactory::class); 
+        $app  = $container->get(App::class);
+
+        return new AccessLogMiddleware($loggerFactory->createLogger('Access'), $container->get(CurrentUserInfo::class), $app->getBasePath());
+    },
+
+    DefaultErrorHandler::class => autowire()
+        ->constructorParameter('loggerFactory', get(ErrorLoggerFactory::class)),
+
     ErrorMiddleware::class => function (ContainerInterface $container) {
         $s_config_error = $container->get('config')['error'];
         $app = $container->get(App::class);
@@ -288,8 +304,7 @@ return [
         );
 
         $errorMiddleware->setDefaultErrorHandler(
-            //We're overriding the normal logger factory in the autowire here
-            $container->make(DefaultErrorHandler::class, array('loggerFactory'=> $container->get('ErrorLoggerFactory')))
+            $container->get(DefaultErrorHandler::class)
         );
 
         return $errorMiddleware;

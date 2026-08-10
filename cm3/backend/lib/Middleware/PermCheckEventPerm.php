@@ -35,6 +35,12 @@ class PermCheckEventPerm
         $perms = $request->getAttribute('perms');
         $hasPerm = false;
 
+        //Short circuit if there are no event perms
+        if(is_null($perms)){
+            
+            throw new HttpUnauthorizedException($request, 'Not accessible without any permissions');
+        }
+
         foreach ($this->AllowedPerms as $value) {
             if ($value instanceof PermEvent) {
                 $hasPerm |= $perms->EventPerms->getValue() & $value->getValue();
