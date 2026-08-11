@@ -14,13 +14,16 @@ trait orderableTrait
     //Override the table's Create method
     public function _createOrUpdate_entry( array $entrydata, bool $isNew): array|bool
     {
+        $this->cm_db->transaction_begin();
         if($isNew 
         || (isset($entrydata[$this->orderColumn]) && ($entrydata[$this->orderColumn] ?? 0) == 0)
         )
         {
             $entrydata[$this->orderColumn] = $this->GetNextOrder($entrydata);
         }
-        return parent::_createOrUpdate_entry($entrydata, $isNew);
+        $result = parent::_createOrUpdate_entry($entrydata, $isNew);
+        $this->cm_db->transaction_commit();
+        return $result;
     }
 
     public function GetNextOrder($entrydata) :int
@@ -104,12 +107,13 @@ trait orderableTrait
         //Execute search
         $items = $this->Search($retrieveColumns, $searchTerms, [$this->orderColumn => $upwards], $positions + 1);
 
-        //Shortcut: If there aren't any items to modify, fuggetaboutit
+        //Shortcut: If there an unexpected number of items to move, fix it wholesale
         $total = count($items) - 1;
-        if (count($items) < 2){
+        if ($total != $positions
+         || count(array_flip(array_column($items , $this->orderColumn))) < count($items)
+        ){
             //TODO: Remove this workaround when we have actual calls to the fix endpoing
-            $this->orderFix($id);
-            return [];
+            return $this->orderFix($id);
         }
 
         //Preserve last item, which is what will be swapped with the target
@@ -140,7 +144,7 @@ trait orderableTrait
     {
 
         //Note, upwards in this case means reduce the order number
-        $retrieveColumns = array_merge(array_keys($this->PrimaryKeys));
+        $retrieveColumns = array_keys($this->PrimaryKeys);
 
         //Retrieve the target
         $targetItem = $this->GetById($id, array_merge($retrieveColumns, $this->orderGroupColumns));
@@ -149,7 +153,7 @@ trait orderableTrait
         $searchTerms = [];
         foreach ($this->orderGroupColumns as $colkey)
         {
-            $searchTerms[] = new SearchTerm($colkey, $targetItem[$colkey]);
+            $searchTerms[] = new SearchTerm($colkey, $targetItem[$colkey], is_null($targetItem[$colkey]) ? 'IS' : '=');
         }
 
         //Execute search, preserve any existing order
