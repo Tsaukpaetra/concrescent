@@ -14,6 +14,8 @@ use Psr\Http\Message\ServerRequestFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
 use Psr\Http\Message\UploadedFileFactoryInterface;
 use Psr\Http\Message\UriFactoryInterface;
+use Psr\Log\LoggerInterface;
+use DI\Factory\RequestedEntry;
 use function DI\autowire;
 use function DI\get;
 use Slim\App;
@@ -143,6 +145,69 @@ return [
         return (new LoggerFactory($container->get('config')['logger']))
         ->addDBHandler($container->get(\CM3_Lib\models\admin\error_log::class))
         ->addFileHandler('error.log');
+    },
+    //The default logger interface will  send to the error log
+    LoggerInterface::class => function (ContainerInterface $container) {
+        
+        $loggerFactory = $container->get(ErrorLoggerFactory::class);
+        $logger = $loggerFactory->createLogger();
+        $logger->pushProcessor(function ($record) {
+            $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 10);
+            
+            // Walk back the trace to find the first class outside of vendor/psr/monolog
+            foreach ($trace as $frame) {
+                $class = $frame['class'] ?? null;
+                if ($class && str_starts_with($class, 'CM3_Lib\\')) {
+                    // This is your application class (e.g., App\Services\UserService)
+                    $record['channel'] = $class; 
+                    break;
+                }
+            }
+
+            return $record;
+        });
+
+        // 2. Global Context Processor (Path, Request Data, User Info)
+        $logger->pushProcessor(function ($record) use ($container) {
+            $context = ['data' => $record['context']];
+        
+            //Get the simplified path
+            $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?? '';            
+            $basePath = $container->get('config')['environment']['base_path'] ?? '';
+            if ($basePath !== '' && str_starts_with($path, $basePath)) {
+                $path = substr($path, strlen($basePath));
+            }
+            $context['path'] = $path;
+
+            //Get the query params
+            $queryParams = [];
+            if (!empty($_SERVER['QUERY_STRING'])) {
+                parse_str($_SERVER['QUERY_STRING'], $queryParams);
+            }
+            $context['data']['query_params'] = $queryParams;
+
+                
+            if ($container->has(Psr\Http\Message\ServerRequestInterface::class)) {
+                // $data = [
+                //     ... $this->extractData($request)
+                // ];
+                // $context['data'] = $data;
+            }
+
+            // Fetch user info dynamically if service exists
+            if ($container->has(CurrentUserInfo::class)) {
+                $userInfo = $container->get(CurrentUserInfo::class);
+                $context['contact_id'] = $userInfo->GetContactId();
+                $context['event_id'] = $userInfo->GetEventId();
+            }
+            //Spit the updated context back
+            $record['context'] = $context;
+
+            return $record;
+        });
+
+
+        return $logger;
     },
 
     // Database connection

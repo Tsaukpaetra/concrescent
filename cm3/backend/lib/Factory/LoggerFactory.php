@@ -67,8 +67,8 @@ class LoggerFactory
             $logger->pushProcessor($processor);
         }
 
-        $this->handler = [];
-        $this->processors = [];
+        // $this->handler = [];
+        // $this->processors = [];
 
         return $logger;
     }
