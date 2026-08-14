@@ -1,0 +1,49 @@
+services:
+  # 1. Nginx Web Server Container
+  webserver:
+    image: nginx:alpine
+    container_name: cm3_nginx
+    restart: always
+    ports:
+      - 8080:80
+    volumes:
+      - ./cm3/nginx-default.conf:/etc/nginx/conf.d/default.conf
+      - web_root:/var/www/html
+    depends_on:
+      - app
+  # 2. PHP-FPM Application Container
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cm3_php_fpm
+    restart: always
+    volumes:
+      - web_root:/var/www/html
+    depends_on:
+      - mariadb
+    environment:
+    #Overrides the default config.php file with a custom values (see below)
+      - DATABASE_HOST=mariadb
+      - DATABASE_DATABASE=cm3_db
+      - DATABASE_USERNAME=cm3_user
+      - DATABASE_PASSWORD=cm3_pass
+      - ENVIRONMENT_IGNORE_INSECURE=True
+  # 3. MariaDB Database Container
+  mariadb:
+    image: mariadb:11.2
+    container_name: cm3_mariadb
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_secure_password
+      MYSQL_DATABASE: cm3_db
+      MYSQL_USER: cm3_user
+      MYSQL_PASSWORD: cm3_pass
+    ports:
+      - 3306:3306
+    volumes:
+      - mariadb_data:/var/lib/mysql
+volumes:
+  web_root: null
+  mariadb_data: null
+networks: {}
