@@ -17,7 +17,7 @@ class BaseIntEncoder
         $converted = '';
 
         while ($n > 0) {
-            $converted = substr(self::codeset, bcmod($n, $base), 1) . $converted;
+            $converted = substr(self::codeset, \bcmod($n, $base), 1) . $converted;
             $n = self::bcFloor(bcdiv($n, $base));
         }
 

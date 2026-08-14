@@ -22,7 +22,7 @@ class TokenGenerator
 
     public function forLoginOnly($contact_id, $event_id)
     {
-        $event_id = $this->checkEventID($event_id);
+        $event_id = $this->checkEventID($event_id, $contact_id);
 
         //Generate the token proper
         $packer = (new Packer())
@@ -40,8 +40,6 @@ class TokenGenerator
         //Decode and load their Permissions
         $eperms = $this->loadPermissionsAndPreferences($contact_id, $username, $preferences);
 
-        //TODO: Switch around event_id selection in case they're an EventAdmin or GlobalAdmin
-        $event_id = $this->checkEventID($event_id);
 
         //Fetch the permissions for the selected event
         if (isset($eperms->EventPerms[$event_id])) {
@@ -71,6 +69,11 @@ class TokenGenerator
         if ($perms->EventPerms->isNoPermission() && empty($eperms->EventPerms)) {
             //They don't have permissions elsewhere either
             $perms = null;
+        }
+        
+        //Don't check the event if they have permission for the event requested
+        if ($perms->EventPerms->isNoPermission() && empty($eperms->EventPerms)) {
+            $event_id = $this->checkEventID($event_id, 0);
         }
 
         //Generate the token proper
@@ -184,18 +187,17 @@ class TokenGenerator
         }
     }
 
-    public function checkEventID($event_id)
+    public function checkEventID($event_id, $contact_id)
     {
         //Determine the event ID if not provided
         $thedate = date("Y/m/d");
         $eventresult = $this->eventinfo->Search(
-            array('id'),
+            array('id','active'),
             terms: array(
                 //This probably doesn't work like we think?
                 new SearchTerm('id', $event_id, EncapsulationFunction: 'ifnull(?,0)', EncapsulationColumnOnly:false),
                 new SearchTerm('', null, TermType: 'OR', subSearch:array(
                 new SearchTerm('date_end', $thedate, ">="),
-                new SearchTerm('active', true),
                 new SearchTerm('', CompareValue: $event_id, Raw: '? IS NULL')
               ))
         ),
@@ -207,6 +209,18 @@ class TokenGenerator
 
         if (count($eventresult) == 0) {
             throw new \Exception("Invalid event_id or event not available");
+        }
+
+        //If the event is not active, do some extra checks to see if the contact supplied has permissions
+        if ($eventresult[0]['active'] == 0) {
+            $permissions = $this->loadPermissions($contact_id);
+            
+            //Check that the event is active and if not, check permissions
+            if (!($permissions->IsGlobalAdmin()
+            || (isset($permissions->EventPerms[$event_id]) && !$permissions->EventPerms[$event_id]->isNoPermission())
+            )) {
+                throw new \Exception("No permission to this event");
+            }
         }
 
         return $eventresult[0]['id'];

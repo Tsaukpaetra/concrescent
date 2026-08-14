@@ -6,7 +6,10 @@ use CM3_Lib\database\SearchTerm;
 use CM3_Lib\database\TableValidator;
 use CM3_Lib\util\TokenGenerator;
 use CM3_Lib\models\contact;
+use CM3_Lib\models\eventinfo;
+use CM3_Lib\models\admin\user;
 
+use CM3_Lib\util\UserPermissions;
 use Respect\Validation\Validator as v;
 use CM3_Lib\Responder\Responder;
 use Fig\Http\Message\StatusCodeInterface;
@@ -22,7 +25,9 @@ class CreateAccount
      * @param Responder $responder The responder
      * @param eventinfo $eventinfo The service
      */
-    public function __construct(private Responder $responder, private contact $contact, private TokenGenerator $TokenGenerator)
+    public function __construct(private Responder $responder, private contact $contact, private TokenGenerator $TokenGenerator,
+    private eventinfo $eventinfo, private user $user
+    )
     {
     }
 
@@ -58,10 +63,36 @@ class CreateAccount
 
         $result = $this->contact->Create($data);
 
-        $result = $this->TokenGenerator->forLoginOnly(
-            $result['id'],
-            $data['event_id']
-        );
+        //If this is the first contact ever, promote them to global Admin and create the first e vent
+        if($result['id'] == 1) {
+            $perms = new UserPermissions();
+            $perms->IsPermanentGlobalAdmin = true;
+            $this->user->Create([
+                'contact_id' => 1,
+                'username' => $data['email_address'],
+                'active' => 1,
+                'permissions' => $this->TokenGenerator->packPermissions($perms)
+            ]);
+            $this->eventinfo->Create([
+                'shortcode' => '1',
+                'active' => 0,
+                'display_name' => 'Default Event',
+                'date_start' => date('Y/m/d'),
+                'date_end' => date('Y/m/d'),
+                'staff_start' => date('Y/m/d'),
+                'staff_end' => date('Y/m/d'),
+                'notes' => 'Default event'
+            ]);
+            //Get their newly-minted admin token
+            $result = $this->TokenGenerator->forUser(1,1)['token'];
+        } else {
+            //Since they're new, make a bare token
+            $result = $this->TokenGenerator->forLoginOnly(
+                $result['id'],
+                $data['event_id']
+            );
+        }
+
 
         // Build the HTTP response
         return $this->responder

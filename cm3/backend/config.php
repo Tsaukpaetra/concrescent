@@ -36,7 +36,9 @@ return array(
       //How long (in seconds) until we log them out?
       'token_life' => 345600, //Four days is exceptionally generous, adjust to your needs
       /* Time zone PHP should use for date calculations (e.g. when badges are available). Should match database... */
-      'timezone' => 'America/Los_Angeles'
+      'timezone' => 'America/Los_Angeles',
+      //If the app is behind a reverse proxy that is handling the SSL, force the authenticator to believe we're secure
+      'ignore_insecure' => false
     ),
     'error' => array(
 

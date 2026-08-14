@@ -52,10 +52,8 @@ class SendMagicLink
     ): ResponseInterface {
         $data = (array) $request->getParsedBody();
 
-        //Confirm event_id is valid
-        $data['event_id'] = $this->TokenGenerator->checkEventID($data['event_id'] ?? null);
         //Let our session know of the possible event change
-        $this->CurrentUserInfo->SetEventId($data['event_id']);
+        $this->CurrentUserInfo->SetEventId($data['event_id'] ?? 0);
 
         $contact = $this->contact->Search(
             ["id", "uuid", "email_address", "real_name"],
