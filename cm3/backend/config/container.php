@@ -7,6 +7,7 @@ use CM3_Lib\Middleware\DefaultErrorHandler;
 use CM3_Lib\Middleware\AccessLogMiddleware;
 use CM3_Lib\util\TokenGenerator;
 use CM3_Lib\util\CurrentUserInfo;
+use CM3_Lib\AppConfig;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
@@ -32,9 +33,10 @@ use CM3_Lib\database\DbConnection;
 use CM3_Lib\util\FrontendUrlTranslator;
 use CM3_Lib\Middleware\PermCheckEventId;
 
+
 return [
     // Application settings
-    'config' => function () {
+    AppConfig::class => function () {
         //Load legacy config
         $config = require __DIR__ . '/../config.php';
         //Load .env file if it exists
@@ -76,7 +78,7 @@ return [
         
         /* Apply the default timezone here */
         date_default_timezone_set($config['environment']['timezone']);
-        return $config;
+        return new AppConfig($config);
     },
 
     App::class => function (ContainerInterface $container) {
@@ -100,9 +102,8 @@ return [
             throw new HttpNotFoundException($request);
         });
 
-
         // Register middleware
-        (require __DIR__ . '/middleware.php')($app, $container->get('config'));
+        (require __DIR__ . '/middleware.php')($app, $container->get(AppConfig::class));
 
         return $app;
     },
@@ -135,14 +136,14 @@ return [
 
     // The logger factory
     LoggerFactory::class => function (ContainerInterface $container) {
-        return (new LoggerFactory($container->get('config')['logger']))
+        return (new LoggerFactory($container->get(AppConfig::class)->get('logger')))
         ->addDBHandler($container->get(\CM3_Lib\models\admin\access_log::class))
         ->addFileHandler('access.log')
         ;
     },
     //And one for errors specifically
     ErrorLoggerFactory::class => function (ContainerInterface $container) {
-        return (new LoggerFactory($container->get('config')['logger']))
+        return (new LoggerFactory($container->get(AppConfig::class)->get('logger')))
         ->addDBHandler($container->get(\CM3_Lib\models\admin\error_log::class))
         ->addFileHandler('error.log');
     },
@@ -173,7 +174,7 @@ return [
         
             //Get the simplified path
             $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?? '';            
-            $basePath = $container->get('config')['environment']['base_path'] ?? '';
+            $basePath = $container->get(AppConfig::class)->get('environment.base_path') ?? '';
             if ($basePath !== '' && str_starts_with($path, $basePath)) {
                 $path = substr($path, strlen($basePath));
             }
@@ -212,26 +213,26 @@ return [
 
     // Database connection
     DbConnection::class => function (ContainerInterface $container) {
-        return new DbConnection($container->get('config')['database']);
+        return new DbConnection($container->get(AppConfig::class)->get('database'));
     },
 
     //Auth signer
     Branca::class => function (ContainerInterface $container) {
-        return new Branca($container->get('config')['environment']['token_secret']);
+        return new Branca($container->get(AppConfig::class)->get('environment')['token_secret']);
     },
 
     FrontendUrlTranslator::class => function (ContainerInterface $container) {
-        $env = $container->get('config')['environment'];
+        $env = $container->get(AppConfig::class)->get('environment');
         $TokenGenerator = $container->get(TokenGenerator::class);
-        return new FrontendUrlTranslator($env['frontend_host'], $env['frontend_isHashMode'],$TokenGenerator);
+        return new FrontendUrlTranslator($env['frontend_host'], $env['frontend_isHashMode'], $TokenGenerator);
     },
 
     PaymentModuleFactory::class => function (ContainerInterface $container) {
-        return new PaymentModuleFactory($container->get('config')['payments']);
+        return new PaymentModuleFactory($container->get(AppConfig::class)->get('payments'));
     },
 
     PHPMailer::class => function (ContainerInterface $container) {
-        $mc = $container->get('config')['mailer'];
+        $mc = $container->get(AppConfig::class)->get('mailer');
         $mode = $mc['mode'] ?? 'SMTP';
 
         // 1. Define built-in legacy modes
@@ -264,9 +265,9 @@ return [
                 $mail->Host = $mc['Host'] ?? '';
                 $mail->Port = $mc['Port'] ?? 587;
                 if (!empty($mc['Username'])) {
-                    $mail->SMTPAuth =  true;
-                    $mail->Username =  $mc['Username'];
-                    $mail->Password =  $mc['Password'];
+                    $mail->SMTPAuth = true;
+                    $mail->Username = $mc['Username'];
+                    $mail->Password = $mc['Password'];
                 }
                 break;
             case 'Sendmail':
@@ -357,7 +358,7 @@ return [
         ->constructorParameter('loggerFactory', get(ErrorLoggerFactory::class)),
 
     ErrorMiddleware::class => function (ContainerInterface $container) {
-        $s_config_error = $container->get('config')['error'];
+        $s_config_error = $container->get(AppConfig::class)->get('error');
         $app = $container->get(App::class);
 
         $errorMiddleware = new ErrorMiddleware(

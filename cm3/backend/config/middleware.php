@@ -6,7 +6,8 @@ use CM3_Lib\Middleware\AccessLogMiddleware;
 use CM3_Lib\Middleware\GZCompress;
 
 return function (App $app, $s_config) {
-    $app->setBasePath($s_config['environment']['base_path']);
+    $environment = $s_config->get('environment');
+    $app->setBasePath($environment['base_path']);
 
     /*
      * The routing middleware should be added earlier than the ErrorMiddleware
@@ -18,18 +19,18 @@ return function (App $app, $s_config) {
     $app->addBodyParsingMiddleware();
 
     // Gzip compression middleware
-    if ($s_config['environment']['use_gzip']) {
+    if ($environment['use_gzip']) {
         $app->add(GZCompress::class);
     }
 
     //Branca token authenticator
     $app->add(new Tuupola\Middleware\BrancaAuthentication([
-        "secure" => !$s_config['environment']['ignore_insecure'],
-        "ttl" => $s_config['environment']['token_life'],
-        "secret" => $s_config['environment']['token_secret'],
+        "secure" => !$environment['ignore_insecure'],
+        "ttl" => $environment['token_life'],
+        "secret" => $environment['token_secret'],
         "ignore" =>  [
-            $s_config['environment']['base_path'] .'/public',
-            $s_config['environment']['base_path'] .'/test'
+            $environment['base_path'] .'/public',
+            $environment['base_path'] .'/test'
         ],
         "before" => function ($request, $arguments) use ($app) {
             //Load the CurrentUserInfo with the token data
