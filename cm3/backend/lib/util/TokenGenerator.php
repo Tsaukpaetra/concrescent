@@ -3,12 +3,12 @@
 namespace CM3_Lib\util;
 
 use CM3_Lib\database\SearchTerm;
-
 use CM3_Lib\models\admin\user;
 use CM3_Lib\models\eventinfo;
 use CM3_Lib\models\application\group;
 use CM3_Lib\util\Permissions;
 use CM3_Lib\util\EventPermissions;
+use CM3_Lib\AppConfig;
 
 use Branca\Branca;
 use MessagePack\Packer;
@@ -16,7 +16,7 @@ use MessagePack\BufferUnpacker;
 
 class TokenGenerator
 {
-    public function __construct(private user $user, private eventinfo $eventinfo, private group $group, private Branca $Branca)
+    public function __construct(private user $user, private eventinfo $eventinfo, private group $group, private Branca $Branca, private AppConfig $config)
     {
     }
 
@@ -93,6 +93,30 @@ class TokenGenerator
             $result['preferences'] = $preferences;
             $result['permissions'] = $perms->getPermEnumeration();
         }
+
+        return $result;
+    }
+    
+    public function forOAuth($contact_id, $event_id, $oauthPerm, $ttl = 0)
+    {
+        $event_id = $this->checkEventID($event_id, $contact_id);
+
+        //Generate the token proper
+        $packer = (new Packer())
+            ->extendWith(new OAuthPermissions());
+        //Initialize payload
+        $tokenPayload = $packer->pack($contact_id)
+          . $packer->pack($event_id)
+          . $packer->pack($oauthPerm);
+          
+        $result = array();
+        $result['event_id'] = $event_id;
+
+        $conf_ttl = $ttl ? time() - \intval($this->config->get('environment')['token_life']) + $ttl : 0;
+
+        $result['token'] = $this->Branca->encode($tokenPayload,  $conf_ttl );
+
+        $result['permissions'] = $oauthPerm->getKey();
 
         return $result;
     }

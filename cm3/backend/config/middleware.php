@@ -41,7 +41,8 @@ return function (App $app, $s_config) {
             return $request
               ->withAttribute("contact_id", $CurrentUserInfo->GetContactId())
               ->withAttribute("event_id", $CurrentUserInfo->GetEventId())
-              ->withAttribute("perms", $CurrentUserInfo->GetPerms());
+              ->withAttribute("perms", $CurrentUserInfo->GetPerms())
+              ->withAttribute("userscopes", $CurrentUserInfo->GetOAuthPerms());
         },
         "error" => function ($request, $response, $arguments) {
             $data['error']["message"] = $arguments["message"];

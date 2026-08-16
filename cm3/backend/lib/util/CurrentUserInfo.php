@@ -4,6 +4,8 @@ namespace CM3_Lib\util;
 use MessagePack\BufferUnpacker;
 
 use CM3_Lib\util\EventPermissions;
+use CM3_Lib\util\OAuthPermissions;
+use CM3_Lib\util\PermOAuth;
 
 use CM3_Lib\database\SearchTerm;
 
@@ -13,13 +15,15 @@ class CurrentUserInfo
         private \CM3_Lib\models\contact $contact,
     ) {
         $this->perms = new EventPermissions();
+        $this->oauth_perms = new PermOAuth(0);
     }
 
     public function fromToken(string $token){
 
             //Load up the unpacker
             $unpacker = (new BufferUnpacker())
-                ->extendWith(new EventPermissions());
+                ->extendWith(new EventPermissions())
+                ->extendWith(new OAuthPermissions());
             $unpacker->reset($token);
 
             //Get the Contact ID first
@@ -28,10 +32,16 @@ class CurrentUserInfo
             $this->event_id = $unpacker->unpack();
 
             $this->perms = new EventPermissions();
+            $this->oauth_perms = new PermOAuth(0);
+            
             //Does this token have permissions?
-            if ($unpacker->hasRemaining()) {
-                //Ooh, has admin permissions! Decode that...
-                $this->perms = $unpacker->unpack();
+            while ($unpacker->hasRemaining()) {
+                $nextObj = $unpacker->unpack();
+                match (get_class($nextObj)) {
+                    EventPermissions::class => $this->perms = $nextObj,
+                    PermOAuth::class => $this->oauth_perms = $nextObj,
+                    default => throw new \Exception("Unexpected object type: " . get_class($nextObj))
+                };
             }
     }
 
@@ -90,6 +100,16 @@ class CurrentUserInfo
         return $this->perms;
     }
 
+    private PermOAuth $oauth_perms;
+    public function SetOAuthPerms($oauth_perms)
+    {
+        $this->oauth_perms = $oauth_perms;
+    }
+    public function GetOAuthPerms()
+    {
+        return $this->oauth_perms;
+    }
+
     public function HasEventPerm(int $checkPerm)
     {
         if ($this->perms->EventPerms->isGlobalAdmin() || $this->perms->EventPerms->isEventAdmin()) {
@@ -106,5 +126,12 @@ class CurrentUserInfo
             return false;
         }
         return ($this->perms->GroupPerms[$groupId]->getValue() & $checkPerm) == $checkPerm;
+    }
+    public function HasOAuthPermissions(int $checkPerm)
+    {
+        if ($this->oauth_perms->OAuthPerms->isGlobalAdmin() || $this->oauth_perms->OAuthPerms->isOAuthAdmin()) {
+            return true;
+        }
+        return ($this->oauth_perms->OAuthPerms->getValue() & $checkPerm) == $checkPerm;
     }
 }
