@@ -457,6 +457,7 @@ abstract class Table
         $havingCodes = '';
         $havingData = array();
         $havingPart = '';
+        $selectColumnsForTotalCountHaving = [];
 
         //Check if we're doing joins because we're a view
         if (isset($viewName) && isset($viewJoins)) {
@@ -694,7 +695,7 @@ abstract class Table
 
         //Do we have any terms?
         if ($terms != null && count($terms)) {
-            $sqlWhere = $this->_WhereBuilder($terms, $whereCodes, $whereData, $columns, $groupNames, $havingCodes, $havingData, $havingPart, $initialTablePart);
+            $sqlWhere = $this->_WhereBuilder($terms, $whereCodes, $whereData, $columns, $groupNames, $havingCodes, $havingData, $havingPart, $initialTablePart, $selectColumnsForTotalCountHaving);
             if(strlen($sqlWhere)){
                 $sqlBody .= 'WHERE ' . $sqlWhere;
             }
@@ -864,7 +865,29 @@ abstract class Table
         $resultCountStmt = false;
         if ($resultTotal !== null) {
             //Prepare the resultCountStmt since we asked for a count
-            $resultCountSql = 'Select count(*) from ( select 1 ' . $sqlBody . $sqlGrouping . $sqlHaving . ' ) a';
+            $selectColumnTexts = array_map(function ($value) use ($initialTableAlias) {
+                $selectPart = str_replace(
+                    '?',
+                    (
+                        isset($value->JoinedTableAlias)
+                        ? '`' . $value->JoinedTableAlias . '`.'
+                        : (
+                            !is_null($initialTableAlias)
+                            ? '`' . $initialTableAlias . '`.'
+                            : $this->dbTableName() . '.'
+                        )
+                    )
+                    . '`' . $value->ColumnName . '`',
+                    $value->EncapsulationFunction != null ? $value->EncapsulationFunction : '?'
+                );
+                if (!is_null($value->Alias)) {
+                    $selectPart .= ' as `' . $value->Alias . '`';
+                }
+                return $selectPart;
+            }, $selectColumnsForTotalCountHaving);
+            $selectColumnTexts[] = '1';
+
+            $resultCountSql = 'Select count(*) from ( select ' . implode(', ', $selectColumnTexts) . $sqlBody . $sqlGrouping . $sqlHaving . ' ) a';
             $resultCountStmt = $this->cm_db->connection->prepare($resultCountSql);
             if ($resultCountStmt !== false) {
                 if (strlen($whereCodes) > 0) {
@@ -941,7 +964,8 @@ abstract class Table
         string &$havingCodes,
         array &$havingData,
         string &$havingPart,
-        $initialTablePart = null
+        $initialTablePart = null,
+        array &$selectColumnsForTotalCountHaving = []
     ) {
         //throw new \Exception('huh?');
         $initialTablePart = $initialTablePart  ?? $this->dbTableName();
@@ -1013,13 +1037,35 @@ abstract class Table
                         $currentData[] = &$term->CompareValue;
                     }
                 } else {
-                    //Normal term, add it in
-                    $currentComponent .= str_replace(
-                        '?',
-                        (isset($term->JoinedTableAlias) ? '`' . $term->JoinedTableAlias . '`' : $initialTablePart) . '.' .
-                            '`' . $term->ColumnName .'` ',
-                        $term->EncapsulationFunction != null && $term->EncapsulationColumnOnly !== false ? $term->EncapsulationFunction : '?'
-                    ) . ' ' . $term->Operation . ' ';
+                    //Check if we have a matching SelectColumn
+                    $matchedSelect = null;
+                    foreach ($selectColumns as $col) {
+                        if (
+                            $currentShouldBeHaving
+                            && $col->ColumnName == $term->ColumnName
+                            && $col->EncapsulationFunction == $term->EncapsulationFunction
+                            && $col->JoinedTableAlias == $term->JoinedTableAlias
+                            && !is_null($col->Alias)
+                        ) {
+                            $matchedSelect = $col;
+                            break;
+                        }
+                    }
+
+                    if ($matchedSelect) {
+                        $currentComponent .= '`' . $matchedSelect->Alias . '`';
+                        //Ensure it is in the having select for the total count
+                        in_array($matchedSelect, $selectColumnsForTotalCountHaving, true) || $selectColumnsForTotalCountHaving[] = $matchedSelect;
+                    } else {
+                        //Normal term, add it in
+                        $currentComponent .= str_replace(
+                            '?',
+                            (isset($term->JoinedTableAlias) ? '`' . $term->JoinedTableAlias . '`' : $initialTablePart) . '.' .
+                                '`' . $term->ColumnName .'` ',
+                            $term->EncapsulationFunction != null && $term->EncapsulationColumnOnly !== false ? $term->EncapsulationFunction : '?'
+                        );
+                    }
+                    $currentComponent .= ' ' . $term->Operation . ' ';
                     //Is our operation an IN ?
                     if (strpos(strtolower($term->Operation), 'in') !== false) {
                         $currentComponent .= '(';
@@ -1063,13 +1109,13 @@ abstract class Table
                 }
             } else {
                 //Sub-search. Ignore everything and recurse.
-                $currentComponent .= $this->_WhereBuilder($term->subSearch, $whereCodes, $whereData, $selectColumns, $groupNames,  $havingCodes, $havingData, $havingPart, $initialTablePart);
+                $currentComponent .= $this->_WhereBuilder($term->subSearch, $whereCodes, $whereData, $selectColumns, $groupNames,  $havingCodes, $havingData, $havingPart, $initialTablePart, $selectColumnsForTotalCountHaving);
             }
 
 
             //If we're normal, add it to the the Where
             if(!$currentShouldBeHaving)
-            {                    
+            {
                 //Only continue if there was something of substance to add
                 if(strlen($currentComponent) > 0)
                 {
