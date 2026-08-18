@@ -875,7 +875,7 @@ final class badgeinfo
                 return true;
             });
         });
-        $g_data = $this->g_badge->Search($g_bv, $g_terms, $orderNoFormResponses, $limit, $offset, $trG, 'b');
+        $g_data = ($context === false || !str_contains('AS',$context ?? 'B')) ?  $this->g_badge->Search($g_bv, $g_terms, $orderNoFormResponses, $limit, $offset, $trG, 'b') : [];
         $totalRows =  $trA + $trS + $trG;
 
 
@@ -1396,6 +1396,9 @@ final class badgeinfo
                new SelectColumn('name', Alias:'badge_type_name', JoinedTableAlias:'typ'),
                new SelectColumn('payable_onsite', Alias:'badge_type_payable_onsite', JoinedTableAlias:'typ'),
                new SelectColumn('email_address', Alias:'contact_email_address', JoinedTableAlias:'con'),
+               new SelectColumn('AssignmentCount',EncapsulationFunction:'ifnull(?,0)',Alias:'assignments',JoinedTableAlias:'ap'),
+               new SelectColumn('PositionIDs',EncapsulationFunction:'ifnull(?,\'\')',Alias:'assignments_positions',JoinedTableAlias:'ap'),
+               new SelectColumn('Onboarded',EncapsulationFunction:'ifnull(?,\'\')',Alias:'assignments_onboarded',JoinedTableAlias:'ap'),
                'notes',
              )
             ),
@@ -1427,6 +1430,13 @@ final class badgeinfo
                   ),
                   alias:'con'
               ),
+              new Join($this->s_assignedposition,['staff_id'=>'id'],'LEFT',
+              'ap',[
+                  new SelectColumn('staff_id',true),
+                  new SelectColumn('position_id',false,'GROUP_CONCAT(? SEPARATOR \',\')','PositionIDs'),
+                  new SelectColumn('onboard_completed',false,'GROUP_CONCAT(? SEPARATOR \',\')','Onboarded'),
+                  new SelectColumn('position_id',false,'count(?)','AssignmentCount')
+              ]),
              )
         );
 

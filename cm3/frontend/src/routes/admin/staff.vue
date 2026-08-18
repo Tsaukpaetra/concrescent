@@ -12,6 +12,13 @@
                             pos.department_text }}: {{ pos.position_text }}</v-chip>
                     </v-toolbar>
                 </template>
+                
+                <template v-slot:[`item.assignments`]="{ item }">
+                    <cellAssignedPositions :assignment_id="item.id" 
+                    :position_ids="item.assignments_positions.split(',').filter(x => x)"
+                    :onboarded="item.assignments_onboarded.split(',').filter(x => x)"
+                    >{{ item.assignments }}</cellAssignedPositions>
+                </template>
             </badgeSearchList>
 
             <v-dialog v-model="bEdit" fullscreen scrollable hide-overlay>
@@ -266,6 +273,7 @@ import treeList from '@/components/treeList.vue';
 import editBadgeAdmin from '@/components/editBadgeAdmin.vue';
 import editDepartment from '@/components/editDepartment.vue';
 import cellToggle from '@/components/datagridcell/toggleValue.vue';
+import cellAssignedPositions from '@/components/datagridcell/cellAssignedPositions.vue';
 import EmailTemplateEditor from '../../components/EmailTemplateEditor.vue';
 
 export default {
@@ -279,6 +287,7 @@ export default {
         editDepartment,
         simpleList,
         cellToggle,
+        cellAssignedPositions,
         EmailTemplateEditor
     },
     props: [
@@ -290,9 +299,8 @@ export default {
         ],
         listAddHeaders: [
             {
-                text: 'Assigned Positions',
-                value: '__assigned_positions',
-                sortable: false
+                text:'Assigned Positions',
+                value:'assignments'
             },
             {
                 text: 'Secondary Email',

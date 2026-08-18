@@ -61,40 +61,6 @@ final class Search
         // Invoke the Domain with inputs and retain the result
         $data = $this->badgeinfo->SearchBadgesText('S', $find, $pg['order'], $pg['limit'], $pg['offset'], $totalRows, $questionIds, $qp['filter'] ??'');
 
-        //Add in assigned positions
-        $pos = $this->assignedposition->Search(
-            new View(
-                array(
-                    'staff_id','position_id','onboard_completed','onboard_meta','date_created','date_modified',
-                    new SelectColumn('is_exec', JoinedTableAlias:'p'),
-                    new SelectColumn('name', Alias:'position_text', JoinedTableAlias:'p'),
-                    new SelectColumn('department_id', JoinedTableAlias:'p'),
-                    new SelectColumn('name', Alias:'department_text', JoinedTableAlias:'d'),
-                ),
-                array(
-                    new Join(
-                        $this->position,
-                        array('id'=>'position_id'),
-                        alias:'p'
-                    ),
-                    new Join(
-                        $this->department,
-                        array('id'=>new SearchTerm('department_id', null, JoinedTableAlias:'p')),
-                        alias:'d'
-                    ),
-                )
-            ),
-            array(
-                new SearchTerm('staff_id', array_column($data,'id'),'in')
-            )
-        );
-        //Prep lookup
-        $staffixlu = array_flip(array_column($data,'id'));
-
-        foreach ($pos as  $position) {
-            $data[$staffixlu[$position['staff_id']]]['assigned_positions'][] = $position;
-        }
-
         $response = $response->withHeader('X-Total-Rows', (string)$totalRows);
 
         // Build the HTTP response

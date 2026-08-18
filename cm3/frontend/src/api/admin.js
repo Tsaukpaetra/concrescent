@@ -272,6 +272,21 @@ export default {
             })
         })
     },
+    getAllStaffPositions(token) {
+        return new Promise((resolve,reject) =>{
+            axios.get(window.CM3_CONFIG.apiHostURL + 'Staff/Department/AllPositions', {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            })
+            .then(function(response) {
+                resolve(response.data);
+            })
+            .catch(function(error) {
+                reject(error.response.data);
+            })
+        })
+    },
 
 
 }

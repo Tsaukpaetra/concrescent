@@ -18,6 +18,7 @@ const state = {
     locations:[],
     locationCategories:[],
     locationEvents:[],
+    allStaffPositions:[],
     gotEventInfo: false,
     gotBadgeContexts: false,
     gotBadges: {},
@@ -26,6 +27,7 @@ const state = {
     gotLocations: false,
     gotLocationCategories: false,
     gotLocationEvents: false,
+    gotAllStaffPositions: false,
 }
 
 // getters
@@ -82,6 +84,9 @@ const getters = {
     },
     locationEvents: (state) => {
         return state.locationEvents || [];
+    },
+    allStaffPositions: (state) => {
+        return state.allStaffPositions || [];
     },
 }
 
@@ -423,6 +428,30 @@ const actions = {
             }
         })
     },
+    getAllStaffPositions({
+        commit,
+        state,
+        rootState
+    }) {
+        return new Promise((resolve, reject) => {
+            if (state.selectedEventId == null)
+                return reject('Unable to get location events if the event ID is not known');            
+            //Load only if necessary
+            if (!state.gotAllStaffPositions) {
+                commit('setAllStaffPositions', []);
+                admin.getAllStaffPositions(rootState.mydata.token)
+                .then(contexts => {
+                    commit('setAllStaffPositions', contexts);
+                    resolve();
+                }).catch(err =>{
+                    reject(err)
+                });
+                
+            } else {
+                resolve();
+            }
+        })
+    },
 }
 
 // mutations
@@ -533,6 +562,10 @@ const mutations = {
         } else {
             console.log('deleteLocationEvent failed, not found', event)
         }
+    },
+    setAllStaffPositions(state, allStaffPositions) {
+        state.allStaffPositions = allStaffPositions;
+        state.gotAllStaffPositions = true;
     },
 }
 

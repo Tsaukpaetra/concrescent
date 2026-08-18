@@ -58,6 +58,8 @@ return function (App $app, $container) {
         '/Department' => function (RouteCollectorProxy $app) use ($staffPerm, $staffView) {
             $app->get('', \CM3_Lib\Action\Staff\Department\Search::class)
             ->add($staffView);
+            $app->get('/AllPositions', \CM3_Lib\Action\Staff\Position\All::class)
+            ->add($staffView);
             $app->post('', \CM3_Lib\Action\Staff\Department\Create::class)
             ->add($staffPerm);
             $app->get('/{id}', \CM3_Lib\Action\Staff\Department\Read::class)
