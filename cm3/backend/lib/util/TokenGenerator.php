@@ -72,7 +72,7 @@ class TokenGenerator
         }
         
         //Don't check the event if they have permission for the event requested
-        if ($perms->EventPerms->isNoPermission() && empty($eperms->EventPerms)) {
+        if ($perms == null || ($perms != null &&$perms->EventPerms->isNoPermission()) && empty($eperms->EventPerms)) {
             $event_id = $this->checkEventID($event_id, 0);
         }
 

@@ -173,7 +173,8 @@ export default {
             this.loading = true;
             this.sendRetrieveBadgeEmail({
                     email_address: this.email,
-                    returnTo: this.returnTo
+                    returnTo: this.returnTo,
+                    event_id: this.event_id
                 }).then(() => {
                     this.state = 2;
                     this.loading = false;
