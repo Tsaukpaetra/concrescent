@@ -5,12 +5,11 @@ FROM node:24-alpine AS frontend-builder
 WORKDIR /app
 RUN corepack enable
 
-# Copy frontend config files
-COPY cm3/frontend/package.json cm3/frontend/yarn.lock ./cm3/frontend/
-COPY cm3/frontend/ ./cm3/frontend/
-
-WORKDIR /app/cm3/frontend
-RUN yarn install --immutable && yarn build
+COPY frontend/package.json frontend/yarn.lock ./frontend/
+WORKDIR /app/frontend
+RUN yarn install --immutable
+COPY frontend/ ./
+RUN yarn build
 
 
 # ==========================================
@@ -25,12 +24,10 @@ RUN apt-get update && apt-get install -y \
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Copy backend config files safely preserving the cm3/ structure
-COPY cm3/backend/composer.json cm3/backend/composer.lock ./cm3/backend/
-COPY cm3/backend/ ./cm3/backend/
-
-WORKDIR /app/cm3/backend
+COPY backend/composer.json backend/composer.lock ./backend/
+WORKDIR /app/backend
 RUN composer install --no-dev --optimize-autoloader
+COPY backend/ ./
 
 
 # ==========================================
@@ -42,8 +39,7 @@ WORKDIR /var/www/html
 RUN docker-php-ext-install pdo_mysql mysqli
 
 # Copy compiled frontend assets
-COPY --chown=www-data:www-data --from=frontend-builder /app/cm3/frontend/dist /var/www/html
+COPY --chown=www-data:www-data --from=frontend-builder /app/frontend/dist /var/www/html
 
 # Create nested api directory and copy compiled backend assets
-COPY --chown=www-data:www-data --from=backend-builder /app/cm3/backend /var/www/html/api
-
+COPY --chown=www-data:www-data --from=backend-builder /app/backend /var/www/html/api
