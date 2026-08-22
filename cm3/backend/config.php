@@ -44,7 +44,7 @@ return array(
 
       // Should be set to false for the production environment.
       //If true API requests may contain HTML!
-      'display_error_details' => true,
+      'display_error_details' => false,
       // Should be set to false for the test environment
       'log_errors' => true,
       // Display error details (stack trace) in error log

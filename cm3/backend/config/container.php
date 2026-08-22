@@ -78,6 +78,12 @@ return [
         
         /* Apply the default timezone here */
         date_default_timezone_set($config['environment']['timezone']);
+        
+        //Disable deprecation warnings and other things that could ruin the output stream before Slim does its thing
+        if(!$config['error']['display_error_details']){
+            error_reporting(E_ALL ^ (E_NOTICE | E_WARNING | E_DEPRECATED));
+        }
+
         return new AppConfig($config);
     },
 
