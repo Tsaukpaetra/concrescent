@@ -5,8 +5,8 @@ FROM node:24-alpine AS frontend-builder
 WORKDIR /app
 RUN corepack enable
 
-COPY --from=source-fetcher /src/frontend/ ./frontend/
 WORKDIR /app/frontend
+COPY frontend/ ./
 RUN yarn install --immutable && yarn build
 
 
