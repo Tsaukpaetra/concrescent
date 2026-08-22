@@ -80,8 +80,15 @@ return [
         date_default_timezone_set($config['environment']['timezone']);
         
         //Disable deprecation warnings and other things that could ruin the output stream before Slim does its thing
-        if(!$config['error']['display_error_details']){
-            error_reporting(E_ALL ^ (E_NOTICE | E_WARNING | E_DEPRECATED));
+        if (!$config['error']['display_error_details']) {
+            // Hide deprecations, warnings, and notices from reporting
+            error_reporting(E_ALL & ~E_NOTICE & ~E_WARNING & ~E_DEPRECATED);
+            
+            // Prevent PHP from outputting errors directly into the response stream
+            ini_set('display_errors', '0');
+        } else {
+            error_reporting(E_ALL);
+            ini_set('display_errors', '1');
         }
 
         return new AppConfig($config);
