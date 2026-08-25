@@ -6,6 +6,7 @@ use Respect\Validation\Validator as v;
 
 use CM3_Lib\models\banlist;
 use CM3_Lib\models\payment;
+use CM3_Lib\models\contact;
 
 use CM3_Lib\util\badgevalidator;
 use CM3_Lib\util\badgepromoapplicator;
@@ -30,6 +31,7 @@ final class PaymentBuilder
     private bool $AllowPay = true;
     private bool $RequiresApproval = false;
     private bool $CanPay = true;
+    private bool $ContactIsBanned = false;
     private ?PayProcessorInterface $pp = null;
     private array $stagedItems = array();
     public function __construct(
@@ -38,6 +40,7 @@ final class PaymentBuilder
         private PaymentModuleFactory $PaymentModuleFactory,
         private banlist $banlist,
         private payment $payment,
+        private contact $contact,
         private badgevalidator $badgevalidator,
         private badgepromoapplicator $badgepromoapplicator,
         private FrontendUrlTranslator $FrontendUrlTranslator,
@@ -66,6 +69,7 @@ final class PaymentBuilder
         $this->cart_payment_txn_amt = 0;
         $this->AllowPay = true;
         $this->CanPay = true;
+        $this->ContactIsBanned = $this->banlist->is_banlisted($this->contact->GetByID($this->cart['contact_id']));
         $this->RequiresApproval = false;
         $this->pp = null;
         $this->stagedItems = array();
@@ -130,6 +134,10 @@ final class PaymentBuilder
         $this->cart_payment_txn_amt = 0;
         $this->AllowPay = true;
         $this->CanPay = true;
+        $this->ContactIsBanned = $this->banlist->is_banlisted(
+            $this->contact->GetByID($this->cart['contact_id'],
+            ['email_address','real_name','phone_number']
+            ));
         $this->RequiresApproval = false;
         $this->pp = null;
         $this->stagedItems = array();
@@ -182,6 +190,22 @@ final class PaymentBuilder
             return false;
         }
         return $this->AllowPay;
+    }
+    public function isBanListed() : bool 
+    {
+        return
+            $this->ContactIsBanned
+            || !empty(array_filter($this->cart_items, function ($item) {
+                if ($this->banlist->is_banlisted($item))
+                    return true;
+                if(!isset($item['subbadges'])) return false;
+                //If there are sub-badgess, check those too
+                return !empty(array_filter($item['subbadges'], function ($subbadge) {
+                    return $this->banlist->is_banlisted($subbadge);
+                }));
+
+            }))
+        ;
     }
     public function getNotes()
     {
@@ -392,14 +416,12 @@ final class PaymentBuilder
         $this->CanPay = true;
 
         $this->getCartTotal(true);
+        $banListed = $this->isBanListed();
 
         foreach ($this->cart_items as $key => &$item) {
             //Fetch type info
             $bt = $this->badgeinfo->getBadgetType($item['context_code'] ?? 'A', $item['badge_type_id'] ?? 0);
 
-            if ($this->banlist->is_banlisted($item)) {
-                $this->AllowPay = false;
-            }
 
             //If the badge type is invalid, short circuit because the rest of this loop does not make sense
             if ($bt === false) {
@@ -444,6 +466,29 @@ final class PaymentBuilder
                     }
                 } else {
                     $this->CanPay = false;
+                }
+                //Check if they're banned
+                if ($banListed) {              
+                    $notes = $bi['notes'] ?? '';
+                    if (!str_contains($notes, '[BAN_OVERRIDE')) {
+                        $this->CanPay = false;
+                    }
+                }
+            } else {
+                //Eligible for immediate payment
+                
+                //Check if they're banned
+                if ($banListed) {  
+                    //Get the badge info depending on staff or not
+                    if ($item['context_code'] == 'A' || $item['context_code'] == 'S') {
+                        $bi = $this->badgeinfo->getSpecificBadge($item['id'] ?? 0, $item['context_code']);
+                    } else {
+                        $bi = $this->badgeinfo->getASpecificGroupApplication($item['id'] ?? 0, $item['context_code']);
+                    }                      
+                    $notes = $bi['notes'] ?? '';
+                    if (!str_contains($notes, '[BAN_OVERRIDE')) {
+                        $this->CanPay = false;
+                    }
                 }
             }
         }
@@ -631,45 +676,41 @@ final class PaymentBuilder
     {
 
         //TODO: craete the checked versions and use them instead of blind faith
+        $banListed = $this->isBanListed();
 
         foreach ($this->cart_items as $key => &$cartitem) {
             //Create/Update the badge
             $cartitem['payment_id'] = $this->cart['id'];
             $cartitem['payment_status'] = 'Incomplete';
 
-            $badge_items = [];
-
             $bt = $this->badgeinfo->getBadgetType($cartitem['context_code'], $cartitem['badge_type_id']);
-            $saveFormResponses = true;
-            $badgeFreebies = 0;
             //If it's not an application, wire up the processor normally
             if ($cartitem['context_code'] == 'A' || $cartitem['context_code'] == 'S') {
-                $badgeItems = [&$cartitem];
 
 
                 //Check for bans
-                if ($this->banlist->is_banlisted($cartitem)) {
-                    $banlisted = true;
-                    $canPay = false;
+                if ($banListed) {
                     //TODO: Bubble a notify event
-                    $errors[] = 'Banned:'.$key;
+                    $notes = $cartitem['notes'] ?? '';
+                    if (!str_contains($notes, '[BAN_')) {
+                        $cartitem['notes'] = trim('[BAN_MATCHED]' . $notes);
+                    }
                 }
                 $this->createUpdateBadgeEntry($cartitem);
-
-                //Save the form responses
-                if (isset($cartitem['form_responses'])) {
-                    $this->badgeinfo->SetFormResponses($cartitem['id'], $cartitem['context_code'], $cartitem['form_responses']);
-                }
             } else {
-                //Grou applications are special
+                //Group applications are special
+                if ($banListed) {
+                    $notes = $cartitem['notes'] ?? '';
+                    if (!str_contains($notes, '[BAN_')) {
+                        $cartitem['notes'] = trim('[BAN_MATCHED]' . $notes);
+                    }
+                }
                 //Create/update the application submission
                 $this->createUpdateApplicationSubmission($cartitem, $bt);
-
-                $saveFormResponses = false;
-                //Save the form responses
-                if (isset($cartitem['form_responses'])) {
-                    $this->badgeinfo->SetFormResponses($cartitem['id'], $cartitem['context_code'], $cartitem['form_responses']);
-                }
+            }
+            //Save the form responses
+            if (isset($cartitem['form_responses'])) {
+                $this->badgeinfo->SetFormResponses($cartitem['id'], $cartitem['context_code'], $cartitem['form_responses']);
             }
 
 

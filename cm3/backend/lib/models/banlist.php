@@ -60,6 +60,9 @@ class banlist extends \CM3_Lib\database\Table
             ['ice_phone_number' , 'normalized_phone_number'],
             ['phone_number' , 'normalized_phone_number'],
             ['real_name' , 'real_name'],
+            ['email_address' , 'normalized_email_address'],
+            ['phone_number' , 'phone_number'],
+            ['phone_number' , 'normalized_phone_number'],
         ) as $blToken) {
             $entityName = $blToken[0];
             $banlistName = $blToken[1];
@@ -75,10 +78,12 @@ class banlist extends \CM3_Lib\database\Table
         }
 
         $result                           = $this->Search(array('id'), array(
-                new cm_SearchTerm('date_expired', null, 'IS'),
+                new cm_SearchTerm('', '', subSearch: [
+                    new cm_SearchTerm('date_expired', null, 'IS'),
+                    new cm_SearchTerm('date_expired', date('Y-m-d H:i:s') , '>','OR'),
+                ]),
                 new cm_SearchTerm('', null, subSearch: $whereTerms)
             ), limit: 1);
-
         return $result && count($result) > 0;
     }
 

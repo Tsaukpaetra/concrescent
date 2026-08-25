@@ -1584,6 +1584,7 @@ final class badgeinfo
                new SelectColumn('payable_onsite', Alias:'badge_type_payable_onsite', JoinedTableAlias:'typ'),
                new SelectColumn('payment_deferred', Alias:'badge_type_payment_deferred', JoinedTableAlias:'typ'),
                new SelectColumn('email_address', Alias:'contact_email_address', JoinedTableAlias:'con'),
+               'notes'
 
             ),
             array(
