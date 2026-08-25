@@ -34,7 +34,9 @@ COPY backend/ ./
 FROM php:8.2-fpm AS production
 WORKDIR /var/www/html
 
-RUN docker-php-ext-install pdo_mysql mysqli zip bcmath 
+RUN apt-get update && apt-get install -y \
+    git unzip libzip-dev libonig-dev \
+    && docker-php-ext-install zip bcmath 
 
 # Copy compiled frontend assets
 COPY --chown=www-data:www-data --from=frontend-builder /app/frontend/dist /var/www/html
