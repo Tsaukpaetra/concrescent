@@ -36,7 +36,9 @@ WORKDIR /var/www/html
 
 RUN apt-get update && apt-get install -y \
     git unzip libzip-dev libonig-dev \
-    && docker-php-ext-install pdo_mysql mysqli zip bcmath 
+    libfreetype6-dev libjpeg62-turbo-dev libpng-dev libwebp-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+    && docker-php-ext-install pdo_mysql mysqli zip bcmath gd
 
 # Copy compiled frontend assets
 COPY --chown=www-data:www-data --from=frontend-builder /app/frontend/dist /var/www/html
