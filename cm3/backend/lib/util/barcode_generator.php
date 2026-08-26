@@ -28,7 +28,7 @@ DEALINGS IN THE SOFTWARE.
 
 \****************************************************************************/
 
-if (realpath(__FILE__) == realpath($_SERVER['SCRIPT_FILENAME'])) {
+if (\realpath(__FILE__) == \realpath($_SERVER['SCRIPT_FILENAME'])) {
     if (isset($_POST['s']) && isset($_POST['d'])) {
         $generator = new barcode_generator();
         $format = (isset($_POST['f']) ? $_POST['f'] : 'png');
@@ -47,27 +47,27 @@ class barcode_generator
 {
     public function output_image($format, $symbology, $data, $options)
     {
-        switch (strtolower(preg_replace('/[^A-Za-z0-9]/', '', $format))) {
+        switch (strtolower(\preg_replace('/[^A-Za-z0-9]/', '', $format))) {
             case 'png':
-                header('Content-Type: image/png');
+                \header('Content-Type: image/png');
                 $image = $this->render_image($symbology, $data, $options);
-                imagepng($image);
-                imagedestroy($image);
+                \imagepng($image);
+                \imagedestroy($image);
                 break;
             case 'gif':
-                header('Content-Type: image/gif');
+                \header('Content-Type: image/gif');
                 $image = $this->render_image($symbology, $data, $options);
-                imagegif($image);
-                imagedestroy($image);
+                \imagegif($image);
+                \imagedestroy($image);
                 break;
             case 'jpg': case 'jpe': case 'jpeg':
-                header('Content-Type: image/jpeg');
+                \header('Content-Type: image/jpeg');
                 $image = $this->render_image($symbology, $data, $options);
-                imagejpeg($image);
-                imagedestroy($image);
+                \imagejpeg($image);
+                \imagedestroy($image);
                 break;
             case 'svg':
-                header('Content-Type: image/svg+xml');
+                \header('Content-Type: image/svg+xml');
                 echo $this->render_svg($symbology, $data, $options);
                 break;
         }
@@ -77,11 +77,11 @@ class barcode_generator
     {
         list($code, $widths, $width, $height, $x, $y, $w, $h) =
             $this->encode_and_calculate_size($symbology, $data, $options);
-        $image = imagecreatetruecolor($width, $height);
-        imagesavealpha($image, true);
+        $image = \imagecreatetruecolor($width, $height);
+        \imagesavealpha($image, true);
         $bgcolor = (isset($options['bc']) ? $options['bc'] : 'FFF');
         $bgcolor = $this->allocate_color($image, $bgcolor);
-        imagefill($image, 0, 0, $bgcolor);
+        \imagefill($image, 0, 0, $bgcolor);
         $colors = array(
             (isset($options['cs']) ? $options['cs'] : ''),
             (isset($options['cm']) ? $options['cm'] : '000'),
@@ -123,7 +123,7 @@ class barcode_generator
         if ($bgcolor) {
             $svg .= '<rect x="0" y="0"';
             $svg .= ' width="' . $width . '" height="' . $height . '"';
-            $svg .= ' fill="' . htmlspecialchars($bgcolor) . '"/>';
+            $svg .= ' fill="' . \htmlspecialchars($bgcolor) . '"/>';
         }
         $colors = array(
             (isset($options['cs']) ? $options['cs'] : ''),
@@ -181,8 +181,8 @@ class barcode_generator
         $left = (isset($options['pl']) ? (int)$options['pl'] : $horiz);
         $right = (isset($options['pr']) ? (int)$options['pr'] : $horiz);
         $bottom = (isset($options['pb']) ? (int)$options['pb'] : $vert);
-        $dwidth = ceil($size[0] * $scalex) + $left + $right;
-        $dheight = ceil($size[1] * $scaley) + $top + $bottom;
+        $dwidth = \ceil($size[0] * $scalex) + $left + $right;
+        $dheight = \ceil($size[1] * $scaley) + $top + $bottom;
         $iwidth = (isset($options['w']) ? (int)$options['w'] : $dwidth);
         $iheight = (isset($options['h']) ? (int)$options['h'] : $dheight);
         $swidth = $iwidth - $left - $right;
@@ -195,40 +195,40 @@ class barcode_generator
 
     private function allocate_color($image, $color)
     {
-        $color = preg_replace('/[^0-9A-Fa-f]/', '', $color);
-        switch (strlen($color)) {
+        $color = \preg_replace('/[^0-9A-Fa-f]/', '', $color);
+        switch (\strlen($color)) {
             case 1:
-                $v = hexdec($color) * 17;
-                return imagecolorallocate($image, $v, $v, $v);
+                $v = \hexdec($color) * 17;
+                return \imagecolorallocate($image, $v, $v, $v);
             case 2:
-                $v = hexdec($color);
-                return imagecolorallocate($image, $v, $v, $v);
+                $v = \hexdec($color);
+                return \imagecolorallocate($image, $v, $v, $v);
             case 3:
-                $r = hexdec(substr($color, 0, 1)) * 17;
-                $g = hexdec(substr($color, 1, 1)) * 17;
-                $b = hexdec(substr($color, 2, 1)) * 17;
-                return imagecolorallocate($image, $r, $g, $b);
+                $r = \hexdec(\substr($color, 0, 1)) * 17;
+                $g = \hexdec(\substr($color, 1, 1)) * 17;
+                $b = \hexdec(\substr($color, 2, 1)) * 17;
+                return \imagecolorallocate($image, $r, $g, $b);
             case 4:
-                $a = hexdec(substr($color, 0, 1)) * 17;
-                $r = hexdec(substr($color, 1, 1)) * 17;
-                $g = hexdec(substr($color, 2, 1)) * 17;
-                $b = hexdec(substr($color, 3, 1)) * 17;
-                $a = round((255 - $a) * 127 / 255);
-                return imagecolorallocatealpha($image, $r, $g, $b, $a);
+                $a = \hexdec(\substr($color, 0, 1)) * 17;
+                $r = \hexdec(\substr($color, 1, 1)) * 17;
+                $g = \hexdec(\substr($color, 2, 1)) * 17;
+                $b = \hexdec(\substr($color, 3, 1)) * 17;
+                $a = \round((255 - $a) * 127 / 255);
+                return \imagecolorallocatealpha($image, $r, $g, $b, $a);
             case 6:
-                $r = hexdec(substr($color, 0, 2));
-                $g = hexdec(substr($color, 2, 2));
-                $b = hexdec(substr($color, 4, 2));
-                return imagecolorallocate($image, $r, $g, $b);
+                $r = \hexdec(\substr($color, 0, 2));
+                $g = \hexdec(\substr($color, 2, 2));
+                $b = \hexdec(\substr($color, 4, 2));
+                return \imagecolorallocate($image, $r, $g, $b);
             case 8:
-                $a = hexdec(substr($color, 0, 2));
-                $r = hexdec(substr($color, 2, 2));
-                $g = hexdec(substr($color, 4, 2));
-                $b = hexdec(substr($color, 6, 2));
-                $a = round((255 - $a) * 127 / 255);
-                return imagecolorallocatealpha($image, $r, $g, $b, $a);
+                $a = \hexdec(\substr($color, 0, 2));
+                $r = \hexdec(\substr($color, 2, 2));
+                $g = \hexdec(\substr($color, 4, 2));
+                $b = \hexdec(\substr($color, 6, 2));
+                $a = \round((255 - $a) * 127 / 255);
+                return \imagecolorallocatealpha($image, $r, $g, $b, $a);
             default:
-                return imagecolorallocatealpha($image, 0, 0, 0, 127);
+                return \imagecolorallocatealpha($image, 0, 0, 0, 127);
         }
     }
 
@@ -236,7 +236,7 @@ class barcode_generator
 
     private function dispatch_encode($symbology, $data, $options)
     {
-        switch (strtolower(preg_replace('/[^A-Za-z0-9]/', '', $symbology))) {
+        switch (strtolower(\preg_replace('/[^A-Za-z0-9]/', '', $symbology))) {
             case 'upca': return $this->upc_a_encode($data);
             case 'upce': return $this->upc_e_encode($data);
             case 'ean13': return $this->ean_13_encode($data);
@@ -406,20 +406,20 @@ class barcode_generator
         }
         if ($width) {
             $scale = $w / $width;
-            $scale = (($scale > 1) ? floor($scale) : 1);
-            $x = floor($x + ($w - $width * $scale) / 2);
+            $scale = (($scale > 1) ? \floor($scale) : 1);
+            $x = \floor($x + ($w - $width * $scale) / 2);
         } else {
             $scale = 1;
-            $x = floor($x + $w / 2);
+            $x = \floor($x + $w / 2);
         }
         foreach ($code['b'] as $block) {
             if (isset($block['l'])) {
                 $label = $block['l'][0];
                 $ly = (isset($block['l'][1]) ? (float)$block['l'][1] : 1);
                 $lx = (isset($block['l'][2]) ? (float)$block['l'][2] : 0.5);
-                $my = round($y + min($h, $h + ($ly - 1) * $textheight));
+                $my = \round($y + \min($h, $h + ($ly - 1) * $textheight));
                 $ly = ($y + $h + $ly * $textheight);
-                $ly = round($ly - imagefontheight($textsize));
+                $ly = \round($ly - \imagefontheight($textsize));
             } else {
                 $label = null;
                 $my = $y + $h;
@@ -428,14 +428,14 @@ class barcode_generator
             foreach ($block['m'] as $module) {
                 $mc = $colors[$module[0]];
                 $mw = $mx + $module[1] * $widths[$module[2]] * $scale;
-                imagefilledrectangle($image, $mx, $y, $mw - 1, $my - 1, $mc);
+                \imagefilledrectangle($image, $mx, $y, $mw - 1, $my - 1, $mc);
                 $mx = $mw;
             }
             if (!is_null($label)) {
                 $lx = ($x + ($mx - $x) * $lx);
-                $lw = imagefontwidth($textsize) * strlen($label);
-                $lx = round($lx - $lw / 2);
-                imagestring($image, $textsize, $lx, $ly, $label, $textcolor);
+                $lw = \imagefontwidth($textsize) * \strlen($label);
+                $lx = \round($lx - $lw / 2);
+                \imagestring($image, $textsize, $lx, $ly, $label, $textcolor);
             }
             $x = $mx;
         }
@@ -464,25 +464,25 @@ class barcode_generator
         if ($width) {
             $scale = $w / $width;
             if ($scale > 1) {
-                $scale = floor($scale);
-                $x = floor($x + ($w - $width * $scale) / 2);
+                $scale = \floor($scale);
+                $x = \floor($x + ($w - $width * $scale) / 2);
             }
         } else {
             $scale = 1;
-            $x = floor($x + $w / 2);
+            $x = \floor($x + $w / 2);
         }
         $tx = 'translate(' . $x . ' ' . $y . ')';
         if ($scale != 1) {
             $tx .= ' scale(' . $scale . ' 1)';
         }
-        $svg = '<g transform="' . htmlspecialchars($tx) . '">';
+        $svg = '<g transform="' . \htmlspecialchars($tx) . '">';
         $x = 0;
         foreach ($code['b'] as $block) {
             if (isset($block['l'])) {
                 $label = $block['l'][0];
                 $ly = (isset($block['l'][1]) ? (float)$block['l'][1] : 1);
                 $lx = (isset($block['l'][2]) ? (float)$block['l'][2] : 0.5);
-                $mh = min($h, $h + ($ly - 1) * $textheight);
+                $mh = \min($h, $h + ($ly - 1) * $textheight);
                 $ly = $h + $ly * $textheight;
             } else {
                 $label = null;
@@ -491,7 +491,7 @@ class barcode_generator
             $svg .= '<g>';
             $mx = $x;
             foreach ($block['m'] as $module) {
-                $mc = htmlspecialchars($colors[$module[0]]);
+                $mc = \htmlspecialchars($colors[$module[0]]);
                 $mw = $module[1] * $widths[$module[2]];
                 if ($mc) {
                     $svg .= '<rect';
@@ -507,10 +507,10 @@ class barcode_generator
                 $svg .= '<text';
                 $svg .= ' x="' . $lx . '" y="' . $ly . '"';
                 $svg .= ' text-anchor="middle"';
-                $svg .= ' font-family="'.htmlspecialchars($textfont).'"';
-                $svg .= ' font-size="'.htmlspecialchars($textsize).'"';
-                $svg .= ' fill="'.htmlspecialchars($textcolor).'">';
-                $svg .= htmlspecialchars($label);
+                $svg .= ' font-family="'.\htmlspecialchars($textfont).'"';
+                $svg .= ' font-size="'.\htmlspecialchars($textsize).'"';
+                $svg .= ' fill="'.\htmlspecialchars($textcolor).'">';
+                $svg .= \htmlspecialchars($label);
                 $svg .= '</text>';
             }
             $svg .= '</g>';
@@ -551,14 +551,14 @@ class barcode_generator
         $density = (isset($options['md']) ? (float)$options['md'] : 1);
         list($width, $height) = $this->matrix_calculate_size($code, $widths);
         if ($width && $height) {
-            $scale = min($w / $width, $h / $height);
-            $scale = (($scale > 1) ? floor($scale) : 1);
-            $x = floor($x + ($w - $width * $scale) / 2);
-            $y = floor($y + ($h - $height * $scale) / 2);
+            $scale = \min($w / $width, $h / $height);
+            $scale = (($scale > 1) ? \floor($scale) : 1);
+            $x = \floor($x + ($w - $width * $scale) / 2);
+            $y = \floor($y + ($h - $height * $scale) / 2);
         } else {
             $scale = 1;
-            $x = floor($x + $w / 2);
-            $y = floor($y + $h / 2);
+            $x = \floor($x + $w / 2);
+            $y = \floor($y + $h / 2);
         }
         $x += $code['q'][3] * $widths[0] * $scale;
         $y += $code['q'][0] * $widths[0] * $scale;
@@ -596,22 +596,22 @@ class barcode_generator
         $density = (isset($options['md']) ? (float)$options['md'] : 1);
         list($width, $height) = $this->matrix_calculate_size($code, $widths);
         if ($width && $height) {
-            $scale = min($w / $width, $h / $height);
+            $scale = \min($w / $width, $h / $height);
             if ($scale > 1) {
-                $scale = floor($scale);
+                $scale = \floor($scale);
             }
-            $x = floor($x + ($w - $width * $scale) / 2);
-            $y = floor($y + ($h - $height * $scale) / 2);
+            $x = \floor($x + ($w - $width * $scale) / 2);
+            $y = \floor($y + ($h - $height * $scale) / 2);
         } else {
             $scale = 1;
-            $x = floor($x + $w / 2);
-            $y = floor($y + $h / 2);
+            $x = \floor($x + $w / 2);
+            $y = \floor($y + $h / 2);
         }
         $tx = 'translate(' . $x . ' ' . $y . ')';
         if ($scale != 1) {
             $tx .= ' scale(' . $scale . ' ' . $scale . ')';
         }
-        $svg = '<g transform="' . htmlspecialchars($tx) . '">';
+        $svg = '<g transform="' . \htmlspecialchars($tx) . '">';
         $x = $code['q'][3] * $widths[0];
         $y = $code['q'][0] * $widths[0];
         $wh = $widths[1];
@@ -640,26 +640,26 @@ class barcode_generator
     {
         switch ($ms) {
             default:
-                $x = floor($x + (1 - $md) * $w / 2);
-                $y = floor($y + (1 - $md) * $h / 2);
-                $w = ceil($w * $md);
-                $h = ceil($h * $md);
-                imagefilledrectangle($image, $x, $y, $x+$w-1, $y+$h-1, $mc);
+                $x = \floor($x + (1 - $md) * $w / 2);
+                $y = \floor($y + (1 - $md) * $h / 2);
+                $w = \ceil($w * $md);
+                $h = \ceil($h * $md);
+                \imagefilledrectangle($image, $x, $y, $x+$w-1, $y+$h-1, $mc);
                 break;
             case 'r':
-                $cx = floor($x + $w / 2);
-                $cy = floor($y + $h / 2);
-                $dx = ceil($w * $md);
-                $dy = ceil($h * $md);
-                imagefilledellipse($image, $cx, $cy, $dx, $dy, $mc);
+                $cx = \floor($x + $w / 2);
+                $cy = \floor($y + $h / 2);
+                $dx = \ceil($w * $md);
+                $dy = \ceil($h * $md);
+                \imagefilledellipse($image, $cx, $cy, $dx, $dy, $mc);
                 break;
             case 'x':
-                $x = floor($x + (1 - $md) * $w / 2);
-                $y = floor($y + (1 - $md) * $h / 2);
-                $w = ceil($w * $md);
-                $h = ceil($h * $md);
-                imageline($image, $x, $y, $x+$w-1, $y+$h-1, $mc);
-                imageline($image, $x, $y+$h-1, $x+$w-1, $y, $mc);
+                $x = \floor($x + (1 - $md) * $w / 2);
+                $y = \floor($y + (1 - $md) * $h / 2);
+                $w = \ceil($w * $md);
+                $h = \ceil($h * $md);
+                \imageline($image, $x, $y, $x+$w-1, $y+$h-1, $mc);
+                \imageline($image, $x, $y+$h-1, $x+$w-1, $y, $mc);
                 break;
         }
     }
@@ -709,7 +709,7 @@ class barcode_generator
         $data = $this->upc_a_normalize($data);
         $blocks = array();
         /* Quiet zone, start, first digit. */
-        $digit = substr($data, 0, 1);
+        $digit = \substr($data, 0, 1);
         $blocks[] = array(
             'm' => array(array(0, 9, 0)),
             'l' => array($digit, 0, 1/3)
@@ -731,7 +731,7 @@ class barcode_generator
         );
         /* Left zone. */
         for ($i = 1; $i < 6; $i++) {
-            $digit = substr($data, $i, 1);
+            $digit = \substr($data, $i, 1);
             $blocks[] = array(
                 'm' => array(
                     array(0, $this->upc_alphabet[$digit][0], 1),
@@ -754,7 +754,7 @@ class barcode_generator
         );
         /* Right zone. */
         for ($i = 6; $i < 11; $i++) {
-            $digit = substr($data, $i, 1);
+            $digit = \substr($data, $i, 1);
             $blocks[] = array(
                 'm' => array(
                     array(1, $this->upc_alphabet[$digit][0], 1),
@@ -766,7 +766,7 @@ class barcode_generator
             );
         }
         /* Last digit, end, quiet zone. */
-        $digit = substr($data, 11, 1);
+        $digit = \substr($data, 11, 1);
         $blocks[] = array(
             'm' => array(
                 array(1, $this->upc_alphabet[$digit][0], 1),
@@ -806,11 +806,11 @@ class barcode_generator
             )
         );
         /* Digits */
-        $system = substr($data, 0, 1) & 1;
-        $check = substr($data, 7, 1);
+        $system = \substr($data, 0, 1) & 1;
+        $check = \substr($data, 7, 1);
         $pbits = $this->upc_parity[$check];
         for ($i = 1; $i < 7; $i++) {
-            $digit = substr($data, $i, 1);
+            $digit = \substr($data, $i, 1);
             $pbit = $pbits[$i - 1] ^ $system;
             $blocks[] = array(
                 'm' => array(
@@ -845,7 +845,7 @@ class barcode_generator
         $data = $this->ean_13_normalize($data);
         $blocks = array();
         /* Quiet zone, start, first digit (as parity). */
-        $system = substr($data, 0, 1);
+        $system = \substr($data, 0, 1);
         $pbits = (
             (int)$system ?
             $this->upc_parity[$system] :
@@ -864,7 +864,7 @@ class barcode_generator
         );
         /* Left zone. */
         for ($i = 1; $i < 7; $i++) {
-            $digit = substr($data, $i, 1);
+            $digit = \substr($data, $i, 1);
             $pbit = $pbits[$i - 1];
             $blocks[] = array(
                 'm' => array(
@@ -888,7 +888,7 @@ class barcode_generator
         );
         /* Right zone. */
         for ($i = 7; $i < 13; $i++) {
-            $digit = substr($data, $i, 1);
+            $digit = \substr($data, $i, 1);
             $blocks[] = array(
                 'm' => array(
                     array(1, $this->upc_alphabet[$digit][0], 1),
@@ -933,7 +933,7 @@ class barcode_generator
         );
         /* Left zone. */
         for ($i = 0; $i < 4; $i++) {
-            $digit = substr($data, $i, 1);
+            $digit = \substr($data, $i, 1);
             $blocks[] = array(
                 'm' => array(
                     array(0, $this->upc_alphabet[$digit][0], 1),
@@ -956,7 +956,7 @@ class barcode_generator
         );
         /* Right zone. */
         for ($i = 4; $i < 8; $i++) {
-            $digit = substr($data, $i, 1);
+            $digit = \substr($data, $i, 1);
             $blocks[] = array(
                 'm' => array(
                     array(1, $this->upc_alphabet[$digit][0], 1),
@@ -985,43 +985,43 @@ class barcode_generator
 
     private function upc_a_normalize($data)
     {
-        $data = preg_replace('/[^0-9*]/', '', $data);
+        $data = \preg_replace('/[^0-9*]/', '', $data);
         /* Set length to 12 digits. */
-        if (strlen($data) < 5) {
+        if (\strlen($data) < 5) {
             $data = str_repeat('0', 12);
-        } elseif (strlen($data) < 12) {
-            $system = substr($data, 0, 1);
-            $edata = substr($data, 1, -2);
-            $epattern = (int)substr($data, -2, 1);
-            $check = substr($data, -1);
+        } elseif (\strlen($data) < 12) {
+            $system = \substr($data, 0, 1);
+            $edata = \substr($data, 1, -2);
+            $epattern = (int)\substr($data, -2, 1);
+            $check = \substr($data, -1);
             if ($epattern < 3) {
-                $left = $system . substr($edata, 0, 2) . $epattern;
-                $right = substr($edata, 2) . $check;
-            } elseif ($epattern < strlen($edata)) {
-                $left = $system . substr($edata, 0, $epattern);
-                $right = substr($edata, $epattern) . $check;
+                $left = $system . \substr($edata, 0, 2) . $epattern;
+                $right = \substr($edata, 2) . $check;
+            } elseif ($epattern < \strlen($edata)) {
+                $left = $system . \substr($edata, 0, $epattern);
+                $right = \substr($edata, $epattern) . $check;
             } else {
                 $left = $system . $edata;
                 $right = $epattern . $check;
             }
-            $center = str_repeat('0', 12 - strlen($left . $right));
+            $center = str_repeat('0', 12 - \strlen($left . $right));
             $data = $left . $center . $right;
-        } elseif (strlen($data) > 12) {
-            $left = substr($data, 0, 6);
-            $right = substr($data, -6);
+        } elseif (\strlen($data) > 12) {
+            $left = \substr($data, 0, 6);
+            $right = \substr($data, -6);
             $data = $left . $right;
         }
         /* Replace * with missing or check digit. */
         while (($o = strrpos($data, '*')) !== false) {
             $checksum = 0;
             for ($i = 0; $i < 12; $i++) {
-                $digit = substr($data, $i, 1);
+                $digit = \substr($data, $i, 1);
                 $checksum += (($i % 2) ? 1 : 3) * $digit;
             }
             $checksum *= (($o % 2) ? 9 : 3);
-            $left = substr($data, 0, $o);
-            $center = substr($checksum, -1);
-            $right = substr($data, $o + 1);
+            $left = \substr($data, 0, $o);
+            $center = \substr($checksum, -1);
+            $right = \substr($data, $o + 1);
             $data = $left . $center . $right;
         }
         return $data;
@@ -1029,9 +1029,9 @@ class barcode_generator
 
     private function upc_e_normalize($data)
     {
-        $data = preg_replace('/[^0-9*]/', '', $data);
+        $data = \preg_replace('/[^0-9*]/', '', $data);
         /* If exactly 8 digits, use verbatim even if check digit is wrong. */
-        if (preg_match(
+        if (\preg_match(
             '/^([01])([0-9][0-9][0-9][0-9][0-9][0-9])([0-9])$/',
             $data,
             $m
@@ -1039,38 +1039,38 @@ class barcode_generator
             return $data;
         }
         /* If unknown check digit, use verbatim but calculate check digit. */
-        if (preg_match(
+        if (\preg_match(
             '/^([01])([0-9][0-9][0-9][0-9][0-9][0-9])([*])$/',
             $data,
             $m
         )) {
             $data = $this->upc_a_normalize($data);
-            return $m[1] . $m[2] . substr($data, -1);
+            return $m[1] . $m[2] . \substr($data, -1);
         }
         /* Otherwise normalize to UPC-A and convert back. */
         $data = $this->upc_a_normalize($data);
-        if (preg_match(
+        if (\preg_match(
             '/^([01])([0-9][0-9])([0-2])0000([0-9][0-9][0-9])([0-9])$/',
             $data,
             $m
         )) {
             return $m[1] . $m[2] . $m[4] . $m[3] . $m[5];
         }
-        if (preg_match(
+        if (\preg_match(
             '/^([01])([0-9][0-9][0-9])00000([0-9][0-9])([0-9])$/',
             $data,
             $m
         )) {
             return $m[1] . $m[2] . $m[3] . '3' . $m[4];
         }
-        if (preg_match(
+        if (\preg_match(
             '/^([01])([0-9][0-9][0-9][0-9])00000([0-9])([0-9])$/',
             $data,
             $m
         )) {
             return $m[1] . $m[2] . $m[3] . '4' . $m[4];
         }
-        if (preg_match(
+        if (\preg_match(
             '/^([01])([0-9][0-9][0-9][0-9][0-9])0000([5-9])([0-9])$/',
             $data,
             $m
@@ -1082,26 +1082,26 @@ class barcode_generator
 
     private function ean_13_normalize($data)
     {
-        $data = preg_replace('/[^0-9*]/', '', $data);
+        $data = \preg_replace('/[^0-9*]/', '', $data);
         /* Set length to 13 digits. */
-        if (strlen($data) < 13) {
+        if (\strlen($data) < 13) {
             return '0' . $this->upc_a_normalize($data);
-        } elseif (strlen($data) > 13) {
-            $left = substr($data, 0, 7);
-            $right = substr($data, -6);
+        } elseif (\strlen($data) > 13) {
+            $left = \substr($data, 0, 7);
+            $right = \substr($data, -6);
             $data = $left . $right;
         }
         /* Replace * with missing or check digit. */
         while (($o = strrpos($data, '*')) !== false) {
             $checksum = 0;
             for ($i = 0; $i < 13; $i++) {
-                $digit = substr($data, $i, 1);
+                $digit = \substr($data, $i, 1);
                 $checksum += (($i % 2) ? 3 : 1) * $digit;
             }
             $checksum *= (($o % 2) ? 3 : 9);
-            $left = substr($data, 0, $o);
-            $center = substr($checksum, -1);
-            $right = substr($data, $o + 1);
+            $left = \substr($data, 0, $o);
+            $center = \substr($checksum, -1);
+            $right = \substr($data, $o + 1);
             $data = $left . $center . $right;
         }
         return $data;
@@ -1109,30 +1109,30 @@ class barcode_generator
 
     private function ean_8_normalize($data)
     {
-        $data = preg_replace('/[^0-9*]/', '', $data);
+        $data = \preg_replace('/[^0-9*]/', '', $data);
         /* Set length to 8 digits. */
-        if (strlen($data) < 8) {
-            $midpoint = floor(strlen($data) / 2);
-            $left = substr($data, 0, $midpoint);
-            $center = str_repeat('0', 8 - strlen($data));
-            $right = substr($data, $midpoint);
+        if (\strlen($data) < 8) {
+            $midpoint = \floor(\strlen($data) / 2);
+            $left = \substr($data, 0, $midpoint);
+            $center = str_repeat('0', 8 - \strlen($data));
+            $right = \substr($data, $midpoint);
             $data = $left . $center . $right;
-        } elseif (strlen($data) > 8) {
-            $left = substr($data, 0, 4);
-            $right = substr($data, -4);
+        } elseif (\strlen($data) > 8) {
+            $left = \substr($data, 0, 4);
+            $right = \substr($data, -4);
             $data = $left . $right;
         }
         /* Replace * with missing or check digit. */
         while (($o = strrpos($data, '*')) !== false) {
             $checksum = 0;
             for ($i = 0; $i < 8; $i++) {
-                $digit = substr($data, $i, 1);
+                $digit = \substr($data, $i, 1);
                 $checksum += (($i % 2) ? 1 : 3) * $digit;
             }
             $checksum *= (($o % 2) ? 9 : 3);
-            $left = substr($data, 0, $o);
-            $center = substr($checksum, -1);
-            $right = substr($data, $o + 1);
+            $left = \substr($data, 0, $o);
+            $center = \substr($checksum, -1);
+            $right = \substr($data, $o + 1);
             $data = $left . $center . $right;
         }
         return $data;
@@ -1168,7 +1168,7 @@ class barcode_generator
 
     private function code_39_encode($data)
     {
-        $data = strtoupper(preg_replace('/[^0-9A-Za-z%$\/+ .-]/', '', $data));
+        $data = strtoupper(\preg_replace('/[^0-9A-Za-z%$\/+ .-]/', '', $data));
         $blocks = array();
         /* Start */
         $blocks[] = array(
@@ -1180,11 +1180,11 @@ class barcode_generator
             'l' => array('*')
         );
         /* Data */
-        for ($i = 0, $n = strlen($data); $i < $n; $i++) {
+        for ($i = 0, $n = \strlen($data); $i < $n; $i++) {
             $blocks[] = array(
                 'm' => array(array(0, 1, 3))
             );
-            $char = substr($data, $i, 1);
+            $char = \substr($data, $i, 1);
             $block = $this->code_39_alphabet[$char];
             $blocks[] = array(
                 'm' => array(
@@ -1232,8 +1232,8 @@ class barcode_generator
         $modules[] = array(1, 1, 1);
         /* Data */
         $label = '';
-        for ($i = 0, $n = strlen($data); $i < $n; $i++) {
-            $char = substr($data, $i, 1);
+        for ($i = 0, $n = \strlen($data); $i < $n; $i++) {
+            $char = \substr($data, $i, 1);
             $ch = ord($char);
             if ($ch < 128) {
                 if ($ch < 32 || $ch >= 127) {
@@ -1242,8 +1242,8 @@ class barcode_generator
                     $label .= $char;
                 }
                 $ch = $this->code_39_asciibet[$ch];
-                for ($j = 0, $m = strlen($ch); $j < $m; $j++) {
-                    $c = substr($ch, $j, 1);
+                for ($j = 0, $m = \strlen($ch); $j < $m; $j++) {
+                    $c = \substr($ch, $j, 1);
                     $b = $this->code_39_alphabet[$c];
                     $modules[] = array(0, 1, 3);
                     $modules[] = array(1, 1, $b[0]);
@@ -1276,7 +1276,7 @@ class barcode_generator
 
     private function code_93_encode($data)
     {
-        $data = strtoupper(preg_replace('/[^0-9A-Za-z%+\/$ .-]/', '', $data));
+        $data = strtoupper(\preg_replace('/[^0-9A-Za-z%+\/$ .-]/', '', $data));
         $modules = array();
         /* Start */
         $modules[] = array(1, 1, 1);
@@ -1287,8 +1287,8 @@ class barcode_generator
         $modules[] = array(0, 1, 1);
         /* Data */
         $values = array();
-        for ($i = 0, $n = strlen($data); $i < $n; $i++) {
-            $char = substr($data, $i, 1);
+        for ($i = 0, $n = \strlen($data); $i < $n; $i++) {
+            $char = \substr($data, $i, 1);
             $block = $this->code_93_alphabet[$char];
             $modules[] = array(1, $block[0], 1);
             $modules[] = array(0, $block[1], 1);
@@ -1300,7 +1300,7 @@ class barcode_generator
         }
         /* Check Digits */
         for ($i = 0; $i < 2; $i++) {
-            $index = count($values);
+            $index = \count($values);
             $weight = 0;
             $checksum = 0;
             while ($index) {
@@ -1313,7 +1313,7 @@ class barcode_generator
             $values[] = $checksum;
         }
         $alphabet = array_values($this->code_93_alphabet);
-        for ($i = count($values) - 2, $n = count($values); $i < $n; $i++) {
+        for ($i = \count($values) - 2, $n = \count($values); $i < $n; $i++) {
             $block = $alphabet[$values[$i]];
             $modules[] = array(1, $block[0], 1);
             $modules[] = array(0, $block[1], 1);
@@ -1348,8 +1348,8 @@ class barcode_generator
         /* Data */
         $label = '';
         $values = array();
-        for ($i = 0, $n = strlen($data); $i < $n; $i++) {
-            $char = substr($data, $i, 1);
+        for ($i = 0, $n = \strlen($data); $i < $n; $i++) {
+            $char = \substr($data, $i, 1);
             $ch = ord($char);
             if ($ch < 128) {
                 if ($ch < 32 || $ch >= 127) {
@@ -1358,8 +1358,8 @@ class barcode_generator
                     $label .= $char;
                 }
                 $ch = $this->code_93_asciibet[$ch];
-                for ($j = 0, $m = strlen($ch); $j < $m; $j++) {
-                    $c = substr($ch, $j, 1);
+                for ($j = 0, $m = \strlen($ch); $j < $m; $j++) {
+                    $c = \substr($ch, $j, 1);
                     $b = $this->code_93_alphabet[$c];
                     $modules[] = array(1, $b[0], 1);
                     $modules[] = array(0, $b[1], 1);
@@ -1373,7 +1373,7 @@ class barcode_generator
         }
         /* Check Digits */
         for ($i = 0; $i < 2; $i++) {
-            $index = count($values);
+            $index = \count($values);
             $weight = 0;
             $checksum = 0;
             while ($index) {
@@ -1386,7 +1386,7 @@ class barcode_generator
             $values[] = $checksum;
         }
         $alphabet = array_values($this->code_93_alphabet);
-        for ($i = count($values) - 2, $n = count($values); $i < $n; $i++) {
+        for ($i = \count($values) - 2, $n = \count($values); $i < $n; $i++) {
             $block = $alphabet[$values[$i]];
             $modules[] = array(1, $block[0], 1);
             $modules[] = array(0, $block[1], 1);
@@ -1548,11 +1548,11 @@ class barcode_generator
 
     private function code_128_encode($data, $dstate, $fnc1)
     {
-        $data = preg_replace('/[\x80-\xFF]/', '', $data);
-        $label = preg_replace('/[\x00-\x1F\x7F]/', ' ', $data);
+        $data = \preg_replace('/[\x80-\xFF]/', '', $data);
+        $label = \preg_replace('/[\x00-\x1F\x7F]/', ' ', $data);
         $chars = $this->code_128_normalize($data, $dstate, $fnc1);
         $checksum = $chars[0] % 103;
-        for ($i = 1, $n = count($chars); $i < $n; $i++) {
+        for ($i = 1, $n = \count($chars); $i < $n; $i++) {
             $checksum += $i * $chars[$i];
             $checksum %= 103;
         }
@@ -1578,15 +1578,15 @@ class barcode_generator
         $detectba = '/([\x60-\x7F])|([\x00-\x1F])/';
         $consumec = '/(^[0-9]{2})/';
         $state = (($dstate > 0 && $dstate < 4) ? $dstate : 0);
-        $abstate = ((abs($dstate) == 2) ? 2 : 1);
+        $abstate = ((\abs($dstate) == 2) ? 2 : 1);
         $chars = array(102 + ($state ? $state : $abstate));
         if ($fnc1) {
             $chars[] = 102;
         }
-        while (strlen($data)) {
+        while (\strlen($data)) {
             switch ($state) {
                 case 0:
-                    if (preg_match($detectcba, $data, $m)) {
+                    if (\preg_match($detectcba, $data, $m)) {
                         if ($m[1]) {
                             $state = 3;
                         } elseif ($m[2]) {
@@ -1603,22 +1603,22 @@ class barcode_generator
                     }
                     break;
                 case 1:
-                    if ($dstate <= 0 && preg_match($detectc, $data, $m)) {
-                        if (strlen($m[0]) % 2) {
-                            $data = substr($data, 1);
-                            $chars[] = 16 + substr($m[0], 0, 1);
+                    if ($dstate <= 0 && \preg_match($detectc, $data, $m)) {
+                        if (\strlen($m[0]) % 2) {
+                            $data = \substr($data, 1);
+                            $chars[] = 16 + \substr($m[0], 0, 1);
                         }
                         $state = 3;
                         $chars[] = 99;
                     } else {
-                        $ch = ord(substr($data, 0, 1));
-                        $data = substr($data, 1);
+                        $ch = ord(\substr($data, 0, 1));
+                        $data = \substr($data, 1);
                         if ($ch < 32) {
                             $chars[] = $ch + 64;
                         } elseif ($ch < 96) {
                             $chars[] = $ch - 32;
                         } else {
-                            if (preg_match($detectba, $data, $m)) {
+                            if (\preg_match($detectba, $data, $m)) {
                                 if ($m[1]) {
                                     $state = 2;
                                     $chars[] = 100;
@@ -1633,20 +1633,20 @@ class barcode_generator
                     }
                     break;
                 case 2:
-                    if ($dstate <= 0 && preg_match($detectc, $data, $m)) {
-                        if (strlen($m[0]) % 2) {
-                            $data = substr($data, 1);
-                            $chars[] = 16 + substr($m[0], 0, 1);
+                    if ($dstate <= 0 && \preg_match($detectc, $data, $m)) {
+                        if (\strlen($m[0]) % 2) {
+                            $data = \substr($data, 1);
+                            $chars[] = 16 + \substr($m[0], 0, 1);
                         }
                         $state = 3;
                         $chars[] = 99;
                     } else {
-                        $ch = ord(substr($data, 0, 1));
-                        $data = substr($data, 1);
+                        $ch = ord(\substr($data, 0, 1));
+                        $data = \substr($data, 1);
                         if ($ch >= 32) {
                             $chars[] = $ch - 32;
                         } else {
-                            if (preg_match($detectba, $data, $m)) {
+                            if (\preg_match($detectba, $data, $m)) {
                                 if ($m[2]) {
                                     $state = 1;
                                     $chars[] = 101;
@@ -1661,11 +1661,11 @@ class barcode_generator
                     }
                     break;
                 case 3:
-                    if (preg_match($consumec, $data, $m)) {
-                        $data = substr($data, 2);
+                    if (\preg_match($consumec, $data, $m)) {
+                        $data = \substr($data, 2);
                         $chars[] = (int)$m[0];
                     } else {
-                        if (preg_match($detectba, $data, $m)) {
+                        if (\preg_match($detectba, $data, $m)) {
                             if ($m[1]) {
                                 $state = 2;
                             } else {
@@ -1743,19 +1743,19 @@ class barcode_generator
 
     private function codabar_encode($data)
     {
-        $data = strtoupper(preg_replace(
+        $data = strtoupper(\preg_replace(
             '/[^0-9ABCDENTabcdent*.\/:+$-]/',
             '',
             $data
         ));
         $blocks = array();
-        for ($i = 0, $n = strlen($data); $i < $n; $i++) {
+        for ($i = 0, $n = \strlen($data); $i < $n; $i++) {
             if ($blocks) {
                 $blocks[] = array(
                     'm' => array(array(0, 1, 3))
                 );
             }
-            $char = substr($data, $i, 1);
+            $char = \substr($data, $i, 1);
             $block = $this->codabar_alphabet[$char];
             $blocks[] = array(
                 'm' => array(
@@ -1804,8 +1804,8 @@ class barcode_generator
 
     private function itf_encode($data)
     {
-        $data = preg_replace('/[^0-9]/', '', $data);
-        if (strlen($data) % 2) {
+        $data = \preg_replace('/[^0-9]/', '', $data);
+        if (\strlen($data) % 2) {
             $data = '0' . $data;
         }
         $blocks = array();
@@ -1822,9 +1822,9 @@ class barcode_generator
             )
         );
         /* Data. */
-        for ($i = 0, $n = strlen($data); $i < $n; $i += 2) {
-            $c1 = substr($data, $i, 1);
-            $c2 = substr($data, $i+1, 1);
+        for ($i = 0, $n = \strlen($data); $i < $n; $i += 2) {
+            $c1 = \substr($data, $i, 1);
+            $c2 = \substr($data, $i+1, 1);
             $b1 = $this->itf_alphabet[$c1];
             $b2 = $this->itf_alphabet[$c2];
             $blocks[] = array(
@@ -1899,7 +1899,7 @@ class barcode_generator
         if ($mode == 3) {
             $max_chars <<= 1;
         }
-        $data = substr($data, 0, $max_chars);
+        $data = \substr($data, 0, $max_chars);
         /* Convert from character level to bit level. */
         switch ($mode) {
             case 0:
@@ -1918,12 +1918,12 @@ class barcode_generator
         for ($i = 0; $i < 4; $i++) {
             $code[] = 0;
         }
-        while (count($code) % 8) {
+        while (\count($code) % 8) {
             $code[] = 0;
         }
         /* Convert from bit level to byte level. */
         $data = array();
-        for ($i = 0, $n = count($code); $i < $n; $i += 8) {
+        for ($i = 0, $n = \count($code); $i < $n; $i += 8) {
             $byte = 0;
             if ($code[$i + 0]) {
                 $byte |= 0x80;
@@ -1952,7 +1952,7 @@ class barcode_generator
             $data[] = $byte;
         }
         for (
-            $i = count($data), $a = 1, $n = $ec_params[0];
+            $i = \count($data), $a = 1, $n = $ec_params[0];
             $i < $n; $i++, $a ^= 1
         ) {
             $data[] = $a ? 236 : 17;
@@ -1966,13 +1966,13 @@ class barcode_generator
         $numeric = '/^[0-9]*$/';
         $alphanumeric = '/^[0-9A-Z .\/:$%*+-]*$/';
         $kanji = '/^([\x81-\x9F\xE0-\xEA][\x40-\xFC]|[\xEB][\x40-\xBF])*$/';
-        if (preg_match($numeric, $data)) {
+        if (\preg_match($numeric, $data)) {
             return 0;
         }
-        if (preg_match($alphanumeric, $data)) {
+        if (\preg_match($alphanumeric, $data)) {
             return 1;
         }
-        if (preg_match($kanji, $data)) {
+        if (\preg_match($kanji, $data)) {
             return 3;
         }
         return 2;
@@ -1980,7 +1980,7 @@ class barcode_generator
 
     private function qr_detect_version($data, $mode, $ecl)
     {
-        $length = strlen($data);
+        $length = \strlen($data);
         if ($mode == 3) {
             $length >>= 1;
         }
@@ -1995,7 +1995,7 @@ class barcode_generator
     private function qr_encode_numeric($data, $version_group)
     {
         $code = array(0, 0, 0, 1);
-        $length = strlen($data);
+        $length = \strlen($data);
         switch ($version_group) {
             case 2:  /* 27 - 40 */
                 $code[] = $length & 0x2000;
@@ -2018,8 +2018,8 @@ class barcode_generator
                 $code[] = $length & 0x0001;
         }
         for ($i = 0; $i < $length; $i += 3) {
-            $group = substr($data, $i, 3);
-            switch (strlen($group)) {
+            $group = \substr($data, $i, 3);
+            switch (\strlen($group)) {
                 case 3:
                     $code[] = $group & 0x200;
                     $code[] = $group & 0x100;
@@ -2044,7 +2044,7 @@ class barcode_generator
     {
         $alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:';
         $code = array(0, 0, 1, 0);
-        $length = strlen($data);
+        $length = \strlen($data);
         switch ($version_group) {
             case 2:  /* 27 - 40 */
                 $code[] = $length & 0x1000;
@@ -2066,10 +2066,10 @@ class barcode_generator
                 $code[] = $length & 0x0001;
         }
         for ($i = 0; $i < $length; $i += 2) {
-            $group = substr($data, $i, 2);
-            if (strlen($group) > 1) {
-                $c1 = strpos($alphabet, substr($group, 0, 1));
-                $c2 = strpos($alphabet, substr($group, 1, 1));
+            $group = \substr($data, $i, 2);
+            if (\strlen($group) > 1) {
+                $c1 = strpos($alphabet, \substr($group, 0, 1));
+                $c2 = strpos($alphabet, \substr($group, 1, 1));
                 $ch = $c1 * 45 + $c2;
                 $code[] = $ch & 0x400;
                 $code[] = $ch & 0x200;
@@ -2098,7 +2098,7 @@ class barcode_generator
     private function qr_encode_binary($data, $version_group)
     {
         $code = array(0, 1, 0, 0);
-        $length = strlen($data);
+        $length = \strlen($data);
         switch ($version_group) {
             case 2:  /* 27 - 40 */
             case 1:  /* 10 - 26 */
@@ -2122,7 +2122,7 @@ class barcode_generator
                 $code[] = $length & 0x0001;
         }
         for ($i = 0; $i < $length; $i++) {
-            $ch = ord(substr($data, $i, 1));
+            $ch = ord(\substr($data, $i, 1));
             $code[] = $ch & 0x80;
             $code[] = $ch & 0x40;
             $code[] = $ch & 0x20;
@@ -2138,7 +2138,7 @@ class barcode_generator
     private function qr_encode_kanji($data, $version_group)
     {
         $code = array(1, 0, 0, 0);
-        $length = strlen($data);
+        $length = \strlen($data);
         switch ($version_group) {
             case 2:  /* 27 - 40 */
                 $code[] = $length & 0x1000;
@@ -2159,9 +2159,9 @@ class barcode_generator
                 $code[] = $length & 0x0002;
         }
         for ($i = 0; $i < $length; $i += 2) {
-            $group = substr($data, $i, 2);
-            $c1 = ord(substr($group, 0, 1));
-            $c2 = ord(substr($group, 1, 1));
+            $group = \substr($data, $i, 2);
+            $c1 = ord(\substr($group, 0, 1));
+            $c2 = ord(\substr($group, 1, 1));
             if ($c1 >= 0x81 && $c1 <= 0x9F && $c2 >= 0x40 && $c2 <= 0xFC) {
                 $ch = ($c1 - 0x81) * 0xC0 + ($c2 - 0x40);
             } elseif (
@@ -2193,7 +2193,7 @@ class barcode_generator
     {
         $blocks = $this->qr_ec_split($data, $ec_params);
         $ec_blocks = array();
-        for ($i = 0, $n = count($blocks); $i < $n; $i++) {
+        for ($i = 0, $n = \count($blocks); $i < $n; $i++) {
             $ec_blocks[] = $this->qr_ec_divide($blocks[$i], $ec_params);
         }
         $data = $this->qr_ec_interleave($blocks);
@@ -2242,7 +2242,7 @@ class barcode_generator
 
     private function qr_ec_divide($data, $ec_params)
     {
-        $num_data = count($data);
+        $num_data = \count($data);
         $num_error = $ec_params[1];
         $generator = $this->qr_ec_polynomials[$num_error];
         $message = $data;
@@ -2264,7 +2264,7 @@ class barcode_generator
     private function qr_ec_interleave($blocks)
     {
         $data = array();
-        $num_blocks = count($blocks);
+        $num_blocks = \count($blocks);
         for ($offset = 0; true; $offset++) {
             $break = true;
             for ($i = 0; $i < $num_blocks; $i++) {
@@ -2310,7 +2310,7 @@ class barcode_generator
                     if (!$matrix[$i][$j]) {
                         for ($ii = -2; $ii <= 2; $ii++) {
                             for ($jj = -2; $jj <= 2; $jj++) {
-                                $m = (max(abs($ii), abs($jj)) & 1) ^ 3;
+                                $m = (\max(\abs($ii), \abs($jj)) & 1) ^ 3;
                                 $matrix[$i + $ii][$j + $jj] = $m;
                             }
                         }
@@ -2354,7 +2354,7 @@ class barcode_generator
         $row = $size - 1;
         $dir = -1;
         $offset = 0;
-        $length = count($data);
+        $length = \count($data);
         while ($col > 0 && $offset < $length) {
             if (!$matrix[$row][$col]) {
                 $matrix[$row][$col] = $data[$offset] ? 5 : 4;
@@ -2415,7 +2415,7 @@ class barcode_generator
             case 1: return !(($r) % 2);
             case 2: return !(($c) % 3);
             case 3: return !(($r + $c) % 3);
-            case 4: return !((floor(($r) / 2) + floor(($c) / 3)) % 2);
+            case 4: return !((\floor(($r) / 2) + \floor(($c) / 3)) % 2);
             case 5: return !(((($r * $c) % 2) + (($r * $c) % 3)));
             case 6: return !(((($r * $c) % 2) + (($r * $c) % 3)) % 2);
             case 7: return !(((($r + $c) % 2) + (($r * $c) % 3)) % 2);
@@ -2538,9 +2538,9 @@ class barcode_generator
         }
         $dark *= 20;
         $dark /= $size * $size;
-        $a = abs(floor($dark) - 10);
-        $b = abs(ceil($dark) - 10);
-        return min($a, $b) * 10;
+        $a = \abs(\floor($dark) - 10);
+        $b = \abs(\ceil($dark) - 10);
+        return \min($a, $b) * 10;
     }
 
     private function qr_finalize_matrix(
@@ -2587,7 +2587,7 @@ class barcode_generator
             $version = $this->qr_version_info[$version - 7];
             for ($i = 0; $i < 18; $i++) {
                 $r = $size - 9 - ($i % 3);
-                $c = 5 - floor($i / 3);
+                $c = 5 - \floor($i / 3);
                 $matrix[$r][$c] = $version[$i];
                 $matrix[$c][$r] = $version[$i];
             }
@@ -3128,13 +3128,13 @@ class barcode_generator
     {
         /* Convert to data codewords. */
         $edata = ($fnc1 ? array(232) : array());
-        $length = strlen($data);
+        $length = \strlen($data);
         $offset = 0;
         while ($offset < $length) {
-            $ch1 = ord(substr($data, $offset, 1));
+            $ch1 = ord(\substr($data, $offset, 1));
             $offset++;
             if ($ch1 >= 0x30 && $ch1 <= 0x39) {
-                $ch2 = ord(substr($data, $offset, 1));
+                $ch2 = ord(\substr($data, $offset, 1));
                 if ($ch2 >= 0x30 && $ch2 <= 0x39) {
                     $offset++;
                     $edata[] = (($ch1 - 0x30) * 10) + ($ch2 - 0x30) + 130;
@@ -3149,7 +3149,7 @@ class barcode_generator
             }
         }
         /* Add padding. */
-        $length = count($edata);
+        $length = \count($edata);
         $ec_params = $this->dmtx_detect_version($length, $rect);
         if ($length > $ec_params[0]) {
             $length = $ec_params[0];
@@ -3183,7 +3183,7 @@ class barcode_generator
     private function dmtx_encode_ec($data, $ec_params)
     {
         $blocks = $this->dmtx_ec_split($data, $ec_params);
-        for ($i = 0, $n = count($blocks); $i < $n; $i++) {
+        for ($i = 0, $n = \count($blocks); $i < $n; $i++) {
             $ec_block = $this->dmtx_ec_divide($blocks[$i], $ec_params);
             $blocks[$i] = array_merge($blocks[$i], $ec_block);
         }
@@ -3197,7 +3197,7 @@ class barcode_generator
         for ($i = 0; $i < $num_blocks; $i++) {
             $blocks[$i] = array();
         }
-        for ($i = 0, $length = count($data); $i < $length; $i++) {
+        for ($i = 0, $length = \count($data); $i < $length; $i++) {
             $blocks[$i % $num_blocks][] = $data[$i];
         }
         return $blocks;
@@ -3205,7 +3205,7 @@ class barcode_generator
 
     private function dmtx_ec_divide($data, $ec_params)
     {
-        $num_data = count($data);
+        $num_data = \count($data);
         $num_error = $ec_params[1];
         $generator = $this->dmtx_ec_polynomials[$num_error];
         $message = $data;
@@ -3227,7 +3227,7 @@ class barcode_generator
     private function dmtx_ec_interleave($blocks)
     {
         $data = array();
-        $num_blocks = count($blocks);
+        $num_blocks = \count($blocks);
         for ($offset = 0; true; $offset++) {
             $break = true;
             for ($i = 0; $i < $num_blocks; $i++) {
@@ -3301,7 +3301,7 @@ class barcode_generator
         $row = 4;
         $col = 0;
         $offset = 0;
-        $length = count($data);
+        $length = \count($data);
         while (($row < $rows || $col < $cols) && $offset < $length) {
             /* Corner cases. Literally. */
             if ($row == $rows && $col == 0) {
