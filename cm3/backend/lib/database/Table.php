@@ -107,9 +107,21 @@ abstract class Table
                 }
                 //It was provided. Is it good?
                 if (gettype($entrydata[$columnName]) == 'array') {
-                    //We don't support arrays as parameters
-                    $errors[] ="Column $columnName was given an array value but that's not supported.";
-                    $failCheck = true;
+                    //If  we're updating and working with a primary key that's not auto-increment, and we have exactly two values
+                    if (!$isNew && isset($this->PrimaryKeys[$columnName]) && !$columnDef->isAutoIncrement && \count($entrydata[$columnName]) == 2) {
+                        //First value is the current value
+                        $paramWhereNames[] = $columnName;
+                        $paramWhereCodes .= $columnDef->GetBindParamCode();
+                        $paramWhereData[] = &$entrydata[$columnName][0];
+                        //Second value is the new value
+                        $paramNames[] = $columnName;
+                        $paramCodes .= $columnDef->GetBindParamCode();
+                        $paramData[] = &$entrydata[$columnName][1];
+                    } else {
+                        //We don't support arrays as parameters any other way
+                        $errors[] ="Column $columnName was given an array value but that's not supported in this way.";
+                        $failCheck = true;
+                    }
                 }
                 if ($columnDef->isAutoIncrement && $isNew) {
                     $errors[] ="Column $columnName was given a value despite being AutoIncrement, and we're not supposed to.";
