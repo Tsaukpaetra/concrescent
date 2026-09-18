@@ -45,7 +45,7 @@ final class Search
         $results = $this->Mail->ListTemplates($context);
 
         //Do the sort
-        $results = $this->doSort($results,$this->getOrder($qp['sort']));
+        $results = $this->doSort($results,$this->getOrder($qp['sortBy']??''));
 
         // Build the HTTP response
         return $this->responder
