@@ -4,29 +4,28 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "6005cc4666355f38951d2651db583e0f",
+    "content-hash": "4604968539e1a4e4264769f2134837ed",
     "packages": [
         {
             "name": "cruxinator/php-bitmask",
-            "version": "v0.1.3",
+            "version": "0.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/cruxinator/php-bitmask.git",
-                "reference": "672661f2bcf5cab9497988f5793783d6f65c798c"
+                "reference": "3790842185fc6a2d16ee49ff9978e2893d80bd67"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/cruxinator/php-bitmask/zipball/672661f2bcf5cab9497988f5793783d6f65c798c",
-                "reference": "672661f2bcf5cab9497988f5793783d6f65c798c",
+                "url": "https://api.github.com/repos/cruxinator/php-bitmask/zipball/3790842185fc6a2d16ee49ff9978e2893d80bd67",
+                "reference": "3790842185fc6a2d16ee49ff9978e2893d80bd67",
                 "shasum": ""
             },
             "require": {
-                "myclabs/php-enum": "1.7.*",
-                "php": ">=7.1"
+                "myclabs/php-enum": "^1.7",
+                "php": ">=7.1 | >=8.0"
             },
             "require-dev": {
-                "php-coveralls/php-coveralls": "^2.2",
-                "phpunit/phpunit": "^8.5"
+                "phpunit/phpunit": "^9.5"
             },
             "type": "library",
             "autoload": {
@@ -56,9 +55,9 @@
             ],
             "support": {
                 "issues": "https://github.com/cruxinator/php-bitmask/issues",
-                "source": "https://github.com/cruxinator/php-bitmask/tree/v0.1.3"
+                "source": "https://github.com/cruxinator/php-bitmask/tree/0.2.0"
             },
-            "time": "2022-07-18T04:12:46+00:00"
+            "time": "2023-09-16T06:46:26+00:00"
         },
         {
             "name": "dflydev/dot-access-data",
@@ -932,32 +931,35 @@
         },
         {
             "name": "myclabs/php-enum",
-            "version": "1.7.7",
+            "version": "1.8.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/myclabs/php-enum.git",
-                "reference": "d178027d1e679832db9f38248fcc7200647dc2b7"
+                "reference": "e7be26966b7398204a234f8673fdad5ac6277802"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/myclabs/php-enum/zipball/d178027d1e679832db9f38248fcc7200647dc2b7",
-                "reference": "d178027d1e679832db9f38248fcc7200647dc2b7",
+                "url": "https://api.github.com/repos/myclabs/php-enum/zipball/e7be26966b7398204a234f8673fdad5ac6277802",
+                "reference": "e7be26966b7398204a234f8673fdad5ac6277802",
                 "shasum": ""
             },
             "require": {
                 "ext-json": "*",
-                "php": ">=7.1"
+                "php": "^7.3 || ^8.0"
             },
             "require-dev": {
-                "phpunit/phpunit": "^7",
+                "phpunit/phpunit": "^9.5",
                 "squizlabs/php_codesniffer": "1.*",
-                "vimeo/psalm": "^3.8"
+                "vimeo/psalm": "^4.6.2 || ^5.2"
             },
             "type": "library",
             "autoload": {
                 "psr-4": {
                     "MyCLabs\\Enum\\": "src/"
-                }
+                },
+                "classmap": [
+                    "stubs/Stringable.php"
+                ]
             },
             "notification-url": "https://packagist.org/downloads/",
             "license": [
@@ -970,13 +972,13 @@
                 }
             ],
             "description": "PHP Enum implementation",
-            "homepage": "http://github.com/myclabs/php-enum",
+            "homepage": "https://github.com/myclabs/php-enum",
             "keywords": [
                 "enum"
             ],
             "support": {
                 "issues": "https://github.com/myclabs/php-enum/issues",
-                "source": "https://github.com/myclabs/php-enum/tree/1.7.7"
+                "source": "https://github.com/myclabs/php-enum/tree/1.8.5"
             },
             "funding": [
                 {
@@ -988,7 +990,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2020-11-14T18:14:52+00:00"
+            "time": "2025-01-14T11:49:03+00:00"
         },
         {
             "name": "nette/schema",

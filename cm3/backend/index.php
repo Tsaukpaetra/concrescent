@@ -9,7 +9,13 @@ require __DIR__ . '/vendor/autoload.php';
 $container = (new \CM3_Lib\Factory\ContainerFactory())->createInstance();
 
 //And prepare it
-$app = $container->get(\Slim\App::class);
+try {
+    //code...
+    $app = $container->get(\Slim\App::class);
+} catch (\Throwable $th) {
+    //throw $th;
+    print('App instantiate error: '.$th->getMessage() . "\n" . $th->getTraceAsString());
+}
 
 // 2. Grab whatever junk output was generated (like deprecation warnings)
 $bootstrapper_output = ob_get_clean();
@@ -33,4 +39,20 @@ try {
     }
 }
 
-$app->run();
+if(!isset($app)){
+    header('HTTP/1.1 500 Internal Server Error');
+    header('Content-Type: application/json; charset=utf-8');
+    
+    // 3. Log a generic warning to your PHP container terminal
+    error_log("BOOTSTRAP FAILED: \$app variable returned null during initialization.");
+
+    // 4. Output the production-safe JSON response
+    echo json_encode([
+        'message' => 'The application failed to initialize. Please check the bootstrap log.'
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    
+    exit(1);
+} else {
+
+    $app->run();
+}
