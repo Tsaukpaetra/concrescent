@@ -4,6 +4,10 @@
         <profileForm v-model="editingProfileData" />
     </v-card>
 
+    <v-card>
+        <contact_sessions></contact_sessions>
+    </v-card>
+
     <v-snackbar v-model="saved"
                 color="primary"
                 :timeout="4000">
@@ -93,10 +97,12 @@ import {
     mapActions
 } from 'vuex'
 import profileForm from '@/components/profileForm.vue';
+import contact_sessions from '@/components/contact_sessions.vue';
 
 export default {
     components: {
         profileForm,
+        contact_sessions
     },
     data: () => ({
         editingProfileData: {},

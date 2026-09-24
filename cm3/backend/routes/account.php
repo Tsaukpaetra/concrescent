@@ -94,6 +94,21 @@ return function (App $app, $container) {
                     PermOAuth::WRITE_CART
                 ]));
 
+            // Manage sessions
+            $app->group(
+                '/session',
+                function (RouteCollectorProxy $app) use ($PermOAuth) {
+                    $app->get('', \CM3_Lib\Action\Account\Session\Search::class)
+                    ->add($PermOAuth);
+                    $app->get('/{token_timestamp}', \CM3_Lib\Action\Account\Session\Read::class)
+                    ->add($PermOAuth);
+                    $app->post('/{token_timestamp}', \CM3_Lib\Action\Account\Session\Update::class)
+                    ->add($PermOAuth);
+                    $app->delete('/{token_timestamp}', \CM3_Lib\Action\Account\Session\Delete::class)
+                    ->add($PermOAuth);
+                }
+            );
+
         }
     );
 };

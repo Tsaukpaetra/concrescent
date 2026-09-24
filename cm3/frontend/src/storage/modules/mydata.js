@@ -134,19 +134,19 @@ const actions = {
         rootState
     }, token) {
         return new Promise((resolve) => {
-            shop.switchEvent(token, rootState.products.selectedEventId, (data) => {
+            shop.switchEvent(token, rootState.products.selectedEventId, async (data) => {
                     commit('setToken', data.token);
                     commit('setPermissions', data.permissions);
                     commit('setUsername', data.username);
                     commit('setPreferences', data.preferences);
                     commit('setAdminMode', state.permissions != null && state.permissions != undefined &&state.adminMode)
-                    dispatch('products/selectEventId', data.event_id, {
+                    await dispatch('products/selectEventId', data.event_id, {
                         root: true
                     });
-                    dispatch('refreshContactInfo');
+                    await dispatch('refreshContactInfo');
                     commit('setOwnedBadges', []);
-                    dispatch('retrieveBadges');
-                    dispatch('retrieveApplications');
+                    await dispatch('retrieveBadges');
+                    await dispatch('retrieveApplications');
                     resolve(true);
                 },
                 (error) => {
@@ -169,16 +169,16 @@ const actions = {
         state
     }, credentials) {
         return new Promise((resolve) => {
-            shop.loginAccount(credentials, (data) => {
+            shop.loginAccount(credentials, async (data) => {
                 commit('setToken', data.token);
                 commit('setPermissions', data.permissions);
                 commit('setUsername', data.username);
                 commit('setPreferences', data.preferences);
                 commit('setAdminMode', data.permissions != undefined)
-                dispatch('products/selectEventId', data.event_id, {
+                await dispatch('products/selectEventId', data.event_id, {
                     root: true
                 });
-                dispatch('refreshContactInfo');
+                await dispatch('refreshContactInfo');
                 resolve(true);
             }, (error) => {
                 resolve(error.error?.message);
@@ -235,10 +235,11 @@ const actions = {
         commit,
         state
     }) {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             shop.getContactInfo(state.token, (data) => {
                 commit('setContactInfo', data);
-            })
+                resolve();
+            }, (err) => reject())
         })
     },
     fetchCarts({

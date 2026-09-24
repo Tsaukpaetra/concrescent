@@ -30,6 +30,21 @@ return function (App $app, $container) {
             ->add($fullContactPerm);
             $app->delete('/{id}', \CM3_Lib\Action\Contact\Delete::class)
             ->add($accessPerm); //Only global admins can delete
+
+            // Manage sessions.
+            $app->group(
+                '/{contact_id}/session',
+                function (RouteCollectorProxy $app) use ($accessPerm) {
+                    $app->get('', \CM3_Lib\Action\Contact\Session\Search::class)
+                    ->add($accessPerm);
+                    $app->get('/{token_timestamp}', \CM3_Lib\Action\Contact\Session\Read::class)
+                    ->add($accessPerm);
+                    $app->post('/{token_timestamp}', \CM3_Lib\Action\Contact\Session\Update::class)
+                    ->add($accessPerm);
+                    $app->delete('/{token_timestamp}', \CM3_Lib\Action\Contact\Session\Delete::class)
+                    ->add($accessPerm);
+                }
+            );
         }
     );
 };

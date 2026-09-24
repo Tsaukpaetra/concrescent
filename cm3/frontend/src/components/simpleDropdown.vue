@@ -131,7 +131,7 @@ export default {
                 'page': 1,
                 'itemsPerPage': 10
             };
-            admin.genericGetList(this.authToken, this.apiPath, {
+            admin.genericGetList(this.apiPath, {
                 "find": this.searchText,
                 ...pageOptions
             }, (results, total) => {

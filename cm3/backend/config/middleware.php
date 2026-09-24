@@ -36,9 +36,24 @@ return function (App $app, $s_config) {
             //Load the CurrentUserInfo with the token data
             $CurrentUserInfo = $app->getContainer()->get(CM3_Lib\util\CurrentUserInfo::class);
             $CurrentUserInfo->fromToken($arguments['decoded']);
+            //Get the expiration
+            $branca = $app->getContainer()->get(Branca\Branca::class);
+            $token_timestamp = $branca->timestamp($arguments['token']);
+
+            //Check if the session info is still valid
+            $contactsessionTable = $app->getContainer()->get(CM3_Lib\models\contact_session::class);
+            $sessionData = $contactsessionTable->GetByID(['contact_id' => $CurrentUserInfo->GetContactId(),
+            'token_timestamp' => $token_timestamp]);
+            if($sessionData === false) {
+                //Session revoked, go away
+                throw new Slim\Exception\HttpUnauthorizedException($request, 'Token Revoked');
+            }
+
+            // TODO: Maybe check that the session wasn't hijacked?
 
             //Throw the result in as attributes
             return $request
+              ->withAttribute("session", $sessionData)
               ->withAttribute("contact_id", $CurrentUserInfo->GetContactId())
               ->withAttribute("event_id", $CurrentUserInfo->GetEventId())
               ->withAttribute("perms", $CurrentUserInfo->GetPerms())

@@ -2,6 +2,9 @@
 
 namespace CM3_Lib\util;
 
+use CM3_Lib\database\Column as cm_Column;
+use CM3_Lib\database\SelectColumn as cm_SelectColumn;
+use CM3_Lib\database\View as cm_View;
 use CM3_Lib\database\SearchTerm;
 use CM3_Lib\models\admin\user;
 use CM3_Lib\models\eventinfo;
@@ -9,6 +12,7 @@ use CM3_Lib\models\application\group;
 use CM3_Lib\util\Permissions;
 use CM3_Lib\util\EventPermissions;
 use CM3_Lib\AppConfig;
+use CM3_Lib\models\contact_session;
 
 use Branca\Branca;
 use MessagePack\Packer;
@@ -16,7 +20,7 @@ use MessagePack\BufferUnpacker;
 
 class TokenGenerator
 {
-    public function __construct(private user $user, private eventinfo $eventinfo, private group $group, private Branca $Branca, private AppConfig $config)
+    public function __construct(private user $user, private eventinfo $eventinfo, private group $group, private Branca $Branca, private AppConfig $config, private contact_session $contactSessionModel)
     {
     }
 
@@ -24,42 +28,48 @@ class TokenGenerator
     {
         $event_id = $this->checkEventID($event_id, $contact_id);
 
-        //Generate the token proper
+        // Generate the token proper
         $packer = (new Packer())
             ->extendWith(new EventPermissions());
-        //Initialize payload
+        // Initialize payload
         $tokenPayload = $packer->pack($contact_id)
           . $packer->pack($event_id);
-        return $this->Branca->encode($tokenPayload);
+        $token = $this->Branca->encode($tokenPayload);
+
+        // Insert a new session record
+        $this->Branca->decode($token);
+        $timestamp = $this->Branca->timestamp('');
+        $this->createSessionRecord($contact_id, $event_id, 'ephemeral_login_only', $timestamp);
+
+        return $token;
     }
 
-    public function forUser($contact_id, $event_id)
+    public function forUser($contact_id, $event_id, $existingSessionTimestamp = null)
     {
         $username = '';
         $preferences = '';
-        //Decode and load their Permissions
+        // Decode and load their Permissions
         $eperms = $this->loadPermissionsAndPreferences($contact_id, $username, $preferences);
 
-
-        //Fetch the permissions for the selected event
+        // Fetch the permissions for the selected event
         if (isset($eperms->EventPerms[$event_id])) {
             $perms = $eperms->EventPerms[$event_id];
         } else {
             $perms = new EventPermissions();
-            //Check if thery're global admin anywhere
+            // Check if they're global admin anywhere
             if ($eperms->IsGlobalAdmin()) {
                 $perms->EventPerms->setGlobalAdmin(true);
             }
         }
 
         if ($eperms->IsGlobalAdmin()) {
-            //Flag them as GlobalAdmin
+            // Flag them as GlobalAdmin
             $perms->EventPerms->setGlobalAdmin(true);
-            //Load groups for the selected event
+            // Load groups for the selected event
             $eventgroups = array_column($this->group->Search(array('id'), array(
                 new SearchTerm('event_id', $event_id)
             )), 'id');
-            //Ensure they have all groups
+            // Ensure they have all groups
             foreach ($eventgroups as $group) {
                 if (!isset($perms->GroupPerms[$group])) {
                     $perms->GroupPerms[$group] = new PermGroup(0);
@@ -67,19 +77,19 @@ class TokenGenerator
             }
         }
         if ($perms->EventPerms->isNoPermission() && empty($eperms->EventPerms)) {
-            //They don't have permissions elsewhere either
+            // They don't have permissions elsewhere either
             $perms = null;
         }
         
-        //Don't check the event if they have permission for the event requested
-        if ($perms == null || ($perms != null &&$perms->EventPerms->isNoPermission()) && empty($eperms->EventPerms)) {
+        // Don't check the event if they have permission for the event requested
+        if ($perms == null || ($perms != null && $perms->EventPerms->isNoPermission()) && empty($eperms->EventPerms)) {
             $event_id = $this->checkEventID($event_id, 0);
         }
 
-        //Generate the token proper
+        // Generate the token proper
         $packer = (new Packer())
             ->extendWith(new EventPermissions());
-        //Initialize payload
+        // Initialize payload
         $tokenPayload = $packer->pack($contact_id)
           . $packer->pack($event_id)
           . ($perms != null ? $packer->pack($perms) : '');
@@ -93,30 +103,43 @@ class TokenGenerator
             $result['preferences'] = $preferences;
             $result['permissions'] = $perms->getPermEnumeration();
         }
+        $this->Branca->decode($result['token']);
+        $timestamp = $this->Branca->timestamp('');
+        if($timestamp == $existingSessionTimestamp) {
+            throw new \Exception('Created a token with the same timestamp as the current one? ' . $timestamp);
+        }
+
+        // Insert a new session record
+        $this->createSessionRecord($contact_id, $event_id, 'user', $timestamp,[],$existingSessionTimestamp);
 
         return $result;
     }
-    
+
     public function forOAuth($contact_id, $event_id, $oauthPerm, $ttl = 0)
     {
         $event_id = $this->checkEventID($event_id, $contact_id);
 
-        //Generate the token proper
+        // Generate the token proper
         $packer = (new Packer())
             ->extendWith(new OAuthPermissions());
-        //Initialize payload
+        // Initialize payload
         $tokenPayload = $packer->pack($contact_id)
           . $packer->pack($event_id)
           . $packer->pack($oauthPerm);
-          
+
         $result = array();
         $result['event_id'] = $event_id;
 
         $conf_ttl = $ttl ? time() - \intval($this->config->get('environment')['token_life']) + $ttl : 0;
 
-        $result['token'] = $this->Branca->encode($tokenPayload,  $conf_ttl );
+        $result['token'] = $this->Branca->encode($tokenPayload, $conf_ttl );
 
         $result['permissions'] = $oauthPerm->getKey();
+
+        // Insert a new session record
+        $this->Branca->decode($result['token']);
+        $timestamp = $this->Branca->timestamp('');
+        $this->createSessionRecord($contact_id, $event_id, 'oauth', $timestamp);
 
         return $result;
     }
@@ -158,6 +181,7 @@ class TokenGenerator
         $unpacker->reset($perms);
         return $unpacker->unpack();
     }
+
     public function packPermissions(UserPermissions $Perms)
     {
         $packer = (new Packer())
@@ -211,6 +235,33 @@ class TokenGenerator
         }
     }
 
+    private function createSessionRecord($contact_id, $event_id, $session_type, $timestamp, $meta =[], $existing_timestamp = null)
+    {
+        //If a session with the current timestamp is already created, just set up the action as an update
+        if (
+            false !== $this->contactSessionModel->GetByID([
+                'contact_id' => $contact_id,
+                'token_timestamp' => $timestamp
+            ], ['contact_id'])
+        ) {
+            $existing_timestamp = $timestamp;
+        }
+        $ip_address = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        $new_timestamp = $timestamp;
+
+        $data = [
+            'contact_id' => $contact_id,
+            'token_timestamp' => is_null($existing_timestamp) ? $new_timestamp: [$existing_timestamp, $new_timestamp] ,
+            'description' => "Session for event $event_id",
+            'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown',
+            'ip_address' => $ip_address,
+            'session_type' => $session_type,
+            'metadata' => json_encode($meta)
+        ];
+
+        if(!$timestamp) throw new \Exception('Attempting to create session with zero timestamp?');
+        $this->contactSessionModel->{is_null($existing_timestamp) ? 'Create' : 'Update'}($data);
+    }
     public function checkEventID($event_id, $contact_id)
     {
         //Determine the event ID if not provided

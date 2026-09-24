@@ -57,6 +57,8 @@
             </v-card-title>
             <v-card-text class="pa-0">
                 <profileForm v-model="bSelected" />
+                <h3>Sessions</h3>
+                <contact_sessions :contact_id="bSelected.id"></contact_sessions>
             </v-card-text>
         </v-card>
     </v-dialog>
@@ -255,6 +257,7 @@ import promoCodeForm from '@/components/promoCodeForm.vue';
 import addonTypeForm from '@/components/addonTypeForm.vue';
 import formQuestionEditList from '@/components/formQuestionEditList.vue';
 import profileForm from '@/components/profileForm.vue';
+import contact_sessions from '@/components/contact_sessions.vue';
 
 export default {
     components: {
@@ -265,7 +268,8 @@ export default {
         promoCodeForm,
         addonTypeForm,
         formQuestionEditList,
-        profileForm
+        profileForm,
+        contact_sessions
     },
     props: [
         'subTabIx'

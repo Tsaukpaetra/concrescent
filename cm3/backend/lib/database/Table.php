@@ -136,7 +136,7 @@ abstract class Table
                     $paramNames[] = $columnName;
                     $paramCodes .= $columnDef->GetBindParamCode();
                     $paramData[] = &$entrydata[$columnName];
-                } else {
+                } elseif (gettype($entrydata[$columnName]) != 'array') {
                     $paramWhereNames[] = $columnName;
                     $paramWhereCodes .= $columnDef->GetBindParamCode();
                     $paramWhereData[] = &$entrydata[$columnName];
@@ -227,6 +227,12 @@ abstract class Table
                 $stmt->send_long_data($ix, fread($fp, 65536));
             }
             fclose($fp);
+        }
+        
+        if ($this->debugThrowBeforeSelect) {
+            $errors[] = 'Throwing intentionally due to debugThrowBeforeSelect';
+            $errors[] = 'Submitted data:\n' . print_r($entrydata, true);
+            $this->checkAndThrowError("Error while attempting to generate " . ($isNew ? 'create' : 'update') . "  query for $this->TableName.", $errors, $sqlText);
         }
         //Do it!
         try {

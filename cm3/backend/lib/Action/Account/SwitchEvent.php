@@ -42,8 +42,12 @@ class SwitchEvent
     {
         $data = (array)$request->getParsedBody();
         $event_id = $data['event_id'] ?? $request->getAttribute('event_id') ?? null;
+        $session = $request->getAttribute('session') ?? null;
 
-        $result = $this->TokenGenerator->forUser($request->getAttribute('contact_id'), $event_id);
+        $exp = $session ? $session['token_timestamp'] : null;
+
+        $result = $this->TokenGenerator->forUser($request->getAttribute('contact_id'), $event_id, $exp);
+        $result['priorsession'] = $session;
 
         // Build the HTTP response
         return $this->responder
