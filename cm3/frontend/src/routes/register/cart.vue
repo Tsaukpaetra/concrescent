@@ -642,7 +642,7 @@ export default {
                     preText = 'This';
                 break;
                 default:
-                    var qText = this.questions[badgeData.context_code][badgeData.badge_type_id].find(q => q.id == msgAr[0])?.title;
+                    var qText = this.questions[badgeData.context_code]?.[badgeData.badge_type_id]?.find(q => q.id == msgAr[0])?.title;
                     if(qText){
                         preText = 'Response to question "' + qText + '"'
                     } else {
