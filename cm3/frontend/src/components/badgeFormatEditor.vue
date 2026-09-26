@@ -309,7 +309,6 @@ export default Vue.extend({
     computed: {
         ...mapGetters('mydata', {
             'isLoggedIn': 'getIsLoggedIn',
-            'authToken': 'getAuthToken',
         }),
         ...mapGetters('products', {
             'badgeContexts': 'badgeContexts',
@@ -391,7 +390,7 @@ export default Vue.extend({
         },
         loadBadgeData() {
 
-            admin.genericGet(this.authToken, 'Badge/CheckIn/' + this.loadBadgeDataContext + '/' + this.loadBadgeDataID, null, (badgeData) => {
+            admin.genericGet('Badge/CheckIn/' + this.loadBadgeDataContext + '/' + this.loadBadgeDataID, null, (badgeData) => {
 
                 this.badgeData = badgeData;
                 this.loadBadgeDataDialog = false;

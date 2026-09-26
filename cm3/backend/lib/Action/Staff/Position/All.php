@@ -48,10 +48,6 @@ final class All
         $qp = $request->getQueryParams();
         //TODO: Actually do something with submitted data. Also, provide some sane defaults
 
-        $whereParts = array(
-          new SearchTerm('department_id', $params['department_id'])
-        );
-
 
 
         $pg = $this->badgeinfo->parseQueryParamsPagination($qp, 'id');

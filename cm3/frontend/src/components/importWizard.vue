@@ -232,9 +232,6 @@ export default {
       currentContext: 'selectedbadgecontext',
       contextBadges: 'contextBadges',
     }),
-    authToken: function () {
-      return this.$store.getters['mydata/getAuthToken'];
-    },
     canContinue: function () {
       var result = !this.loading;
       switch (this.step) {
@@ -369,7 +366,7 @@ export default {
       }
       this.fileDataSelection = null;
       this.loading = true;
-      admin.genericGetList(this.authToken, 'Form/Question/' + this.currentContext.context_code + '/' + this.selectedBadgeTypeId + '/Map', null, (results, total) => {
+      admin.genericGetList('Form/Question/' + this.currentContext.context_code + '/' + this.selectedBadgeTypeId + '/Map', null, (results, total) => {
         this.questionMap = results;
         this.loading = false;
       })
@@ -377,7 +374,7 @@ export default {
     refreshQuestions: function () {
       console.log('importWizard: refreshQuestions')
       this.loading = true;
-      admin.genericGetList(this.authToken, 'Form/Question/' + this.currentContext.context_code, null, (results, total) => {
+      admin.genericGetList('Form/Question/' + this.currentContext.context_code, null, (results, total) => {
         this.questions = results;
         this.loading = false;
       })
@@ -410,7 +407,7 @@ export default {
     },
     findContacts: function (createMissing = false) {
       return new Promise((resolve, reject) =>{
-        admin.genericPost(this.authToken, 'Contact/get' + (createMissing ? 'orcreate' : '') + 'batch',
+        admin.genericPost('Contact/get' + (createMissing ? 'orcreate' : '') + 'batch',
           this.importDataRaw.map(item => item[this.importColumnMap['contact_email_address']]),
           (contactMap) => {
             console.log('findcontacts', contactMap)
@@ -483,7 +480,7 @@ export default {
     simCreatePayments: function(){  
       return new Promise((resolve, reject) =>{
         this.loading = true;
-        admin.genericPost(this.authToken, 'Payment/simCreateBatch',
+        admin.genericPost('Payment/simCreateBatch',
           this.importSimData,
           (results) => {
             console.log('simCreatePayments', results)
@@ -497,7 +494,7 @@ export default {
       return new Promise((resolve, reject) =>{
         this.loading = true;
         //TODO: Maybe make this not do them all at once, in case email sending is rate-limited
-        admin.genericPost(this.authToken, 'Payment/CreateBatch?immediateApprove=' + (this.immediatelyApproved ? "true":"false") + '&sendEmail=' +(this.sendEmail ? "true":"false"),
+        admin.genericPost('Payment/CreateBatch?immediateApprove=' + (this.immediatelyApproved ? "true":"false") + '&sendEmail=' +(this.sendEmail ? "true":"false"),
           this.cartsSelectedForImport,
           (results) => {
             console.log('CreatePayments', results)

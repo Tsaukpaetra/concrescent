@@ -45,24 +45,6 @@ class PermCheckGroupByContextCode
         $perms = $request->getAttribute('perms');
         $hasPerm = false;
 
-        $context_code = $routeArguments[$this->AttributeName];
-        //Fetch group ID from context code
-        $matchedGroups = $this->g_group->Search(['id'], [
-                $this->CurrentUserInfo->EventIdSearchTerm(),
-                new SearchTerm('context_code', $context_code),
-            ]);
-        //Does a group with this context code exist?
-        if (count($matchedGroups)<1) {
-            throw new HttpUnauthorizedException($request, 'Context Code not accessible with current permissions or does not exist');
-        }
-
-        $desiredGroupID = $matchedGroups[0]['id'] ?? 0;
-
-        //Short circuit if we're global admin
-        if ($perms->EventPerms->isGlobalAdmin()) {
-            //Instant thumbs up
-            return  $handler->handle($request->withAttribute('group_id', $desiredGroupID));
-        }
 
         //If we have an AttributeName, check it
         if (is_null($this->AttributeName)) {
@@ -71,6 +53,26 @@ class PermCheckGroupByContextCode
         if (!isset($routeArguments[$this->AttributeName])) {
             throw new HttpInternalServerErrorException($request, "PermCheckGroupByContextCode called but no argument <$this->AttributeName> to check against?");
         } else {
+
+            $context_code = $routeArguments[$this->AttributeName];
+            //Fetch group ID from context code
+            $matchedGroups = $this->g_group->Search(['id'], [
+                $this->CurrentUserInfo->EventIdSearchTerm(),
+                new SearchTerm('context_code', $context_code),
+            ]);
+
+            $desiredGroupID = $matchedGroups[0]['id'] ?? 0;
+
+            //Short circuit if we're global admin
+            if ($perms->EventPerms->isGlobalAdmin() || $perms->EventPerms->isEventAdmin()) {
+                //Instant thumbs up
+                return $handler->handle($request->withAttribute('group_id', $desiredGroupID));
+            }
+            //Does a group with this context code exist?
+            if (count($matchedGroups) < 1 && !($context_code == 'A' || $context_code == 'S')) {
+                throw new HttpUnauthorizedException($request, 'Context Code not accessible with current permissions or does not exist');
+            }
+
 
             //Do they have permissions for the specified group at all?
             if (isset($perms->GroupPerms[$desiredGroupID])) {
@@ -86,6 +88,44 @@ class PermCheckGroupByContextCode
                     //We don't have any specific perms to check, pass this round
                     $hasPerm = true;
                 }
+            } elseif ($context_code == 'A' || $context_code == 'S') {
+                $gperms = $perms->GroupPerms[$desiredGroupID];
+                $eventPermsValue = $perms->EventPerms->getValue();
+
+                // Define the mapping configuration
+                // Key: PermGroup constant
+                // Value: Array of PermEvent constants it maps to
+                $mappings = [
+                    'A' => [
+                        PermGroup::Badge_View    => [PermEvent::Attendee_View],
+                        PermGroup::Badge_Edit    => [PermEvent::Attendee_Edit],
+                        PermGroup::Badge_Manage  => [PermEvent::Attendee_Manage],
+                        // Add View/Export/Refund mappings as defined in your business logic
+                    ],
+                    'S' => [
+                        PermGroup::Badge_View    => [PermEvent::Staff_View],
+                        PermGroup::Badge_Edit    => [PermEvent::Staff_Edit],
+                        PermGroup::Badge_Manage  => [PermEvent::Staff_Manage],
+                        // Add Staff-specific mappings here
+                    ],
+                ];
+
+                $currentMapping = $mappings[$desiredGroupID] ?? [];
+
+                foreach ($currentMapping as $groupBit => $eventBits) {
+                    // Check if the user has the specific Group permission
+                    if ($gperms->getValue() & $groupBit) {
+                        // Check if the user has ANY of the mapped Event permissions
+                        foreach ($eventBits as $eventBit) {
+                            if ($eventPermsValue & $eventBit) {
+                                $hasPerm = true;
+                                break 2; // Found a match, exit both loops
+                            }
+                        }
+                    }
+                }
+
+            
             } else {
                 throw new HttpUnauthorizedException($request, 'Context Code ' . $context_code . ' not accessible with missing permissions');
             }

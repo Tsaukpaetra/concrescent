@@ -102,7 +102,7 @@ export default {
                 return;
             this.runState = 'Polling'
 
-            admin.genericGetList(this.authToken, 'Badge/PrintJob', {
+            admin.genericGetList('Badge/PrintJob', {
                 full: true,
                 state: 'Queued',
                 stationName: this.printerName,
@@ -159,7 +159,7 @@ export default {
         },
         PostPrint: function (completedLocally) {
 
-            admin.genericPost(this.authToken, "Badge/PrintJob/" + this.cJob.id, {
+            admin.genericPost("Badge/PrintJob/" + this.cJob.id, {
                 state: 'Completed',
             }, (printJob) => {
                 this.queue.shift();
@@ -189,7 +189,7 @@ export default {
             if (this.cJob == undefined) return;
             console.log('Daemon: Fetching format', this.cJob.format_id)
 
-            admin.genericGet(this.authToken, 'Badge/Format/' + this.cJob.format_id, null, (format) => {
+            admin.genericGet('Badge/Format/' + this.cJob.format_id, null, (format) => {
                 console.log('Received format map', format)
                 this.cachedFormats.push(format);
                 console.log('cachedFormats', this.cachedFormats)
@@ -225,9 +225,6 @@ export default {
             printConfig: (state) => state.station.printConfig,
             printerName: (state) => state.station.servicePrintJobsAs,
         }),
-        authToken: function () {
-            return this.$store.getters['mydata/getAuthToken'];
-        },
         printIcon: function () {
             let result = 'printer-pos';
             switch (this.runState) {

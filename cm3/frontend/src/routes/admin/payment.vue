@@ -164,9 +164,6 @@ export default {
 
     }),
     computed: {
-        authToken: function() {
-            return this.$store.getters['mydata/getAuthToken'];
-        },
         listActions: function() {
             var result = [];
             result.push({
@@ -196,7 +193,7 @@ export default {
 
                 let that = this;
                 that.loading = false;
-                admin.genericGet(this.authToken, 'Payment/' + item.id, null, function(payment) {
+                admin.genericGet('Payment/' + item.id, null, function(payment) {
                     console.log('loaded payment', payment)
                     //Try to set the item's properties
                     for(const prop in payment){
@@ -213,7 +210,7 @@ export default {
             console.log("Edit user", selectedUser);
             let that = this;
             that.loading = false;
-            admin.genericGet(this.authToken, 'AdminUser/' + selectedUser.contact_id, null, function(editUser) {
+            admin.genericGet('AdminUser/' + selectedUser.contact_id, null, function(editUser) {
                 console.log('loaded user', editUser)
                 that.uSelected = editUser;
                 that.loading = false;
@@ -232,7 +229,7 @@ export default {
             this.loading = true;
             this.btDialog = true;
             var that = this;
-            admin.genericGet(this.authToken, 'Staff/BadgeType/' + selectedBadgeType.id, null, function(editBt) {
+            admin.genericGet('Staff/BadgeType/' + selectedBadgeType.id, null, function(editBt) {
 
                 that.btSelected = editBt;
                 that.loading = false;
@@ -251,7 +248,7 @@ export default {
             console.log("Saving user", this.uSelected)
             this.loading = true;
             var that = this;
-            admin.genericPost(this.authToken, url, data, function(editBt) {
+            admin.genericPost(url, data, function(editBt) {
 
                 that.loading = false;
                 that.uCreate = false;

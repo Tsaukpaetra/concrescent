@@ -44,9 +44,6 @@ export default {
             'allStaffPositions': 'allStaffPositions',
             'categoryList': 'locationCategories'
         }),
-        authToken: function () {
-            return this.$store.getters['mydata/getAuthToken'];
-        },
         position() {
             return (id) => {
                 return this.allStaffPositions.find(x => x.Position_Id == id) || {

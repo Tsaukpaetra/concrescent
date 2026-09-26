@@ -676,9 +676,6 @@ export default {
             currentContext: 'selectedbadgecontext',
             contextBadges: 'contextBadges',
         }),
-        authToken: function() {
-            return this.$store.getters['mydata/getAuthToken'];
-        },
         pageTitle: function() {
             return 'Group Applications - ' + this.currentContext.name;
         },
@@ -759,7 +756,7 @@ export default {
             console.log('edit submission from grid', selectedSubmission);
             let that = this;
             that.loading = true;
-            admin.genericGet(this.authToken, 'Application/' + this.context_code + '/Submission/' + selectedSubmission.id, null, function(editSubmission) {
+            admin.genericGet('Application/' + this.context_code + '/Submission/' + selectedSubmission.id, null, function(editSubmission) {
                 that.sSelected = editSubmission;
                 that.loading = false;
                 that.sEdit = true;
@@ -775,7 +772,7 @@ export default {
             console.log('saving submission', this.sSelected);
             let that = this;
             that.loading = true;
-            admin.genericPost(this.authToken, 'Application/' + this.context_code + '/Submission/' + this.sSelected.id + "?sendupdate=" + (sendStatus ? "true" : "false"), this.sSelected, function(SavedDetails) {
+            admin.genericPost('Application/' + this.context_code + '/Submission/' + this.sSelected.id + "?sendupdate=" + (sendStatus ? "true" : "false"), this.sSelected, function(SavedDetails) {
                 that.sSelected = {};
                 that.loading = false;
                 that.sEdit = false;
@@ -796,7 +793,7 @@ export default {
             console.log('edit badge selected from grid', selectedBadge);
             let that = this;
             that.loading = true;
-            admin.genericGet(this.authToken, 'Application/' + this.context_code + '/Submission/' + selectedBadge.application_id, null, function(editBadge) {
+            admin.genericGet('Application/' + this.context_code + '/Submission/' + selectedBadge.application_id, null, function(editBadge) {
                 that.bSelected = editBadge;
                 that.loading = false;
                 that.bEdit = true;
@@ -812,7 +809,7 @@ export default {
             console.log('saving badge', this.bSelected);
             let that = this;
             that.loading = true;
-            admin.genericPost(this.authToken, 'Application/' + this.context_code + '/Submission/' + this.bSelected.id + "?sendupdate=" + (sendStatus ? "true" : "false"), this.bSelected, function(SavedDetails) {
+            admin.genericPost('Application/' + this.context_code + '/Submission/' + this.bSelected.id + "?sendupdate=" + (sendStatus ? "true" : "false"), this.bSelected, function(SavedDetails) {
                 that.bSelected = {};
                 that.loading = false;
                 that.bEdit = false;
@@ -843,7 +840,7 @@ export default {
             this.loading = true;
             this.btDialog = true;
             var that = this;
-            admin.genericGet(this.authToken, 'Application/' + this.context_code + '/BadgeType/' + selectedBadgeType.id, null, function(editBt) {
+            admin.genericGet('Application/' + this.context_code + '/BadgeType/' + selectedBadgeType.id, null, function(editBt) {
 
                 that.btSelected = editBt;
                 that.loading = false;
@@ -857,7 +854,7 @@ export default {
                 url = url + '/' + this.btSelected.id;
             console.log("Saving badge type", this.btSelected)
             var that = this;
-            admin.genericPost(this.authToken, url, this.btSelected, function(editBt) {
+            admin.genericPost(url, this.btSelected, function(editBt) {
 
                 that.btSelected = editBt;
                 that.loading = false;
@@ -870,7 +867,7 @@ export default {
             this.loading = true;
             var url = 'Application/' + this.context_code + '/BadgeType/' + id;
             console.log("Saving badge type active state", id, active)
-            admin.genericPost(this.authToken, url, { active }, (result) => {
+            admin.genericPost(url, { active }, (result) => {
                 this.btDialog = false;
                 this.loading = false;
             }, () => {
@@ -884,7 +881,7 @@ export default {
         editDepartment: function(selectedDepartment) {
             this.loading = true;
             var that = this;
-            admin.genericGet(this.authToken, 'Application/' + this.context_code + '/Department/' + selectedDepartment.id, null, function(editBt) {
+            admin.genericGet('Application/' + this.context_code + '/Department/' + selectedDepartment.id, null, function(editBt) {
 
                 that.dSelected = editBt;
                 that.dDialog = true;
@@ -899,7 +896,7 @@ export default {
                 url = url + '/' + this.dSelected.id;
             console.log("Saving badge type", this.dSelected)
             var that = this;
-            admin.genericPost(this.authToken, url, this.dSelected, function(editBt) {
+            admin.genericPost(url, this.dSelected, function(editBt) {
 
                 //that.dSelected = editBt;
                 that.loading = false;
@@ -912,7 +909,7 @@ export default {
             console.log(selectedPromoCode);
             let that = this;
             that.loading = false;
-            admin.genericGet(this.authToken, 'Application/' + this.context_code + '/PromoCode/' + selectedPromoCode.id, null, function(editPromoCode) {
+            admin.genericGet('Application/' + this.context_code + '/PromoCode/' + selectedPromoCode.id, null, function(editPromoCode) {
                 console.log('loaded PromoCode', editPromoCode)
                 that.pSelected = editPromoCode;
                 that.loading = false;
@@ -927,7 +924,7 @@ export default {
                 url = url + '/' + this.pSelected.id;
             console.log("Saving Promo Code", this.pSelected)
             var that = this;
-            admin.genericPost(this.authToken, url, this.pSelected, function(editPC) {
+            admin.genericPost(url, this.pSelected, function(editPC) {
 
                 that.pSelected = editPC;
                 that.loading = false;
@@ -944,7 +941,7 @@ export default {
             this.loading = true;
             var url = 'Application/' + this.context_code + '/PromoCode/' + id;
             console.log("Saving PromoCode active state", id, active)
-            admin.genericPost(this.authToken, url, { active }, (result) => {
+            admin.genericPost(url, { active }, (result) => {
                 this.pEdit = false;
                 this.loading = false;
             }, () => {
@@ -956,7 +953,7 @@ export default {
             console.log(selectedAddon);
             let that = this;
             that.loading = false;
-            admin.genericGet(this.authToken, 'Application/' + this.context_code + '/Addon/' + selectedAddon.id, null, function(editAddon) {
+            admin.genericGet('Application/' + this.context_code + '/Addon/' + selectedAddon.id, null, function(editAddon) {
                 console.log('loaded Addon', editAddon)
                 that.aSelected = editAddon;
                 that.loading = false;
@@ -971,7 +968,7 @@ export default {
                 url = url + '/' + this.aSelected.id;
             console.log("Saving Addon", this.aSelected)
             var that = this;
-            admin.genericPost(this.authToken, url, this.aSelected, function(editA) {
+            admin.genericPost(url, this.aSelected, function(editA) {
 
                 that.aSelected = editA;
                 that.loading = false;
@@ -988,7 +985,7 @@ export default {
             this.loading = true;
             var url = 'Application/' + this.context_code + '/Addon/' + id;
             console.log("Saving badge type active state", id, active)
-            admin.genericPost(this.authToken, url, { active }, (result) => {
+            admin.genericPost(url, { active }, (result) => {
                 this.aEdit = false;
                 this.loading = false;
             }, () => {
@@ -999,7 +996,7 @@ export default {
             console.log('edit submission from addon grid', selectedSubmission);
             let that = this;
             that.loading = true;
-            admin.genericGet(this.authToken, 'Application/' + this.context_code + '/Submission/' + selectedSubmission.application_id, null, function(editSubmission) {
+            admin.genericGet('Application/' + this.context_code + '/Submission/' + selectedSubmission.application_id, null, function(editSubmission) {
                 that.sSelected = editSubmission;
                 that.loading = false;
                 that.sEdit = true;
@@ -1015,7 +1012,7 @@ export default {
         editEmailTemplate: function(selectedEmailTemplate) {
             console.log(selectedEmailTemplate);
             this.loading = false;
-            admin.genericGet(this.authToken, 'Mail/Template/' + this.context_code + '/' + selectedEmailTemplate.name, null, (editEmailTemplate) => {
+            admin.genericGet('Mail/Template/' + this.context_code + '/' + selectedEmailTemplate.name, null, (editEmailTemplate) => {
                 console.log('loaded EmailTemplate', editEmailTemplate)
                 this.eSelected = editEmailTemplate;
                 this.loading = false;
@@ -1029,7 +1026,7 @@ export default {
             var url = 'Mail/Template/' + this.context_code + '/' + this.eSelected.name;
             
             console.log("Saving Email Template", this.eSelected)
-            admin.genericPut(this.authToken, url, this.eSelected, (editET) => {
+            admin.genericPut(url, this.eSelected, (editET) => {
 
                 this.eSelected = editET;
                 this.loading = false;
@@ -1047,7 +1044,7 @@ export default {
             this.loading = true;
             var url = 'Mail/Template/' + this.context_code + '/' + name;
             console.log("Saving EmailTemplate active state", name, active)
-            admin.genericPut(this.authToken, url, { active }, (result) => {
+            admin.genericPut(url, { active }, (result) => {
                 this.eEdit = false;
                 this.loading = false;
             }, () => {
@@ -1061,7 +1058,7 @@ export default {
             this.loading = true;
             var url = 'Mail/Template/' + this.context_code + '/' + this.eSelected.name;
             console.log("Deleting EmailTemplate", this.eSelected.name)
-            admin.genericDelete(this.authToken, url, (result) => {
+            admin.genericDelete(url, (result) => {
                 this.eDelete = false;
                 this.loading = false;
                 this.eEdit = false;
@@ -1071,7 +1068,7 @@ export default {
         },
         eloadBadgeData() {
 
-            admin.genericGet(this.authToken, 'Badge/CheckIn/' + this.context_code + '/' + this.eloadBadgeDataID, null, (badgeData) => {
+            admin.genericGet('Badge/CheckIn/' + this.context_code + '/' + this.eloadBadgeDataID, null, (badgeData) => {
                 //Merge in the event info
                 badgeData['event'] = this.$store.state.products.selectedEvent
                 this.bSelected = badgeData;

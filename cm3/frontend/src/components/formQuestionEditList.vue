@@ -265,9 +265,6 @@ export default {
         importLoading:false,
     }),
     computed: {
-        authToken: function() {
-            return this.$store.getters['mydata/getAuthToken'];
-        },
         eQuestion: {
             get: state => function(id) {
                 if (this.editedQuestions[id] == undefined) {
@@ -297,17 +294,17 @@ export default {
                 return;
             }
             this.loading = true;
-            admin.genericGetList(this.authToken, 'Form/Question/' + this.context_code + '/' + this.selectedBadgeType + '/Map', null, (results, total) => {
+            admin.genericGetList('Form/Question/' + this.context_code + '/' + this.selectedBadgeType + '/Map', null, (results, total) => {
                 this.questionMap = results;
                 this.loading = false;
             })
         },
         refresh: function() {
             this.loading = true;
-            admin.genericGetList(this.authToken, 'Form/Question/' + this.context_code, null, (results, total) => {
+            admin.genericGetList('Form/Question/' + this.context_code, null, (results, total) => {
                 this.questions = results;
 
-                admin.genericGetList(this.authToken, admin.contextToPrefix(this.context_code) + '/BadgeType', null, (results, total) => {
+                admin.genericGetList(admin.contextToPrefix(this.context_code) + '/BadgeType', null, (results, total) => {
                     results.unshift({
                         "id": 0,
                         "active": 0,
@@ -335,13 +332,13 @@ export default {
         toggleQuestionActive: function(id) {
             if (this.bQuestionActive(id)) {
                 //Active, make it not so!
-                admin.genericDelete(this.authToken, 'Form/Question/' + this.context_code + '/' + this.selectedBadgeType + '/Map/' + id, (result) => {
+                admin.genericDelete('Form/Question/' + this.context_code + '/' + this.selectedBadgeType + '/Map/' + id, (result) => {
                     this.questionMap.splice(this.questionMap.findIndex(item => item.question_id == id), 1)
                 })
 
             } else {
                 //Not active, make it so!
-                admin.genericPost(this.authToken, 'Form/Question/' + this.context_code + '/' + this.selectedBadgeType + '/Map/' + id, {
+                admin.genericPost('Form/Question/' + this.context_code + '/' + this.selectedBadgeType + '/Map/' + id, {
                     required: false
                 }, (result) => {
                     this.questionMap.push({
@@ -357,7 +354,7 @@ export default {
             console.log("toggle listed", q)
             var question = this.questions[q];
             question.listed = question.listed == 0 ? 1 : 0;
-            admin.genericPost(this.authToken, 'Form/Question/' + this.context_code + '/' + id, {
+            admin.genericPost('Form/Question/' + this.context_code + '/' + id, {
                 id: id,
                 listed: question.listed
             }, (result) => {
@@ -370,7 +367,7 @@ export default {
         toggleQuestionRequired: function(id) {
             console.log("toggle required", this.questionMap.find(item => item.question_id == id))
             if (this.bQuestionActive(id)) {
-                admin.genericPost(this.authToken, 'Form/Question/' + this.context_code + '/' + this.selectedBadgeType + '/Map/' + id, {
+                admin.genericPost('Form/Question/' + this.context_code + '/' + this.selectedBadgeType + '/Map/' + id, {
                     required: this.questionMap.find(item => item.question_id == id).required == 0 ? 1 : 0
                 }, (result) => {
                     this.$set(this.questionMap, this.questionMap.findIndex(item => item.question_id == id), {
@@ -387,7 +384,7 @@ export default {
             var q = this.questions.findIndex(item => item.id == id);
             console.log("move", id, upwards ? 'up':'down');
             var question = this.questions[q];
-            admin.genericPost(this.authToken, 'Form/Question/' + this.context_code + '/' + id + '/Move', {
+            admin.genericPost('Form/Question/' + this.context_code + '/' + id + '/Move', {
                 id: id,
                 direction: upwards
             }, (results) => {
@@ -416,7 +413,7 @@ export default {
         },
         saveEdit: function(id) {
             this.editedQuestions[id].saving = true;
-            admin.genericPost(this.authToken, 'Form/Question/' + this.context_code + '/' + id,
+            admin.genericPost('Form/Question/' + this.context_code + '/' + id,
                 this.editedQuestions[id].question, (results, total) => {
                     this.$set(this.questions, this.questions.findIndex(item => item.id == id), this.editedQuestions[id].question);
                     this.editedQuestions[id].saving = false;
@@ -443,7 +440,7 @@ export default {
         saveNewQuestion: function() {
 
             this.newQuestionSaving = true;
-            admin.genericPost(this.authToken, 'Form/Question/' + this.context_code,
+            admin.genericPost('Form/Question/' + this.context_code,
                 this.newQuestion, (results, total) => {
                     //Add the ID that we got to the question
                     this.newQuestion = {
@@ -500,7 +497,7 @@ export default {
             this.importLoading = true;
             await Promise.all(this.importingQuestionsSelected.map(question =>
                 new Promise((resolve, reject) => {
-                    admin.genericPost(this.authToken, 'Form/Question/' + this.context_code,
+                    admin.genericPost('Form/Question/' + this.context_code,
                         question, (results) => {
                             //Add the ID that we got to the question
                             question = {

@@ -95,9 +95,6 @@ export default {
         pagination: {},
     }),
     computed: {
-        authToken: function() {
-            return this.$store.getters['mydata/getAuthToken'];
-        },
         headers() {
             var result = this.defHeaders || [];
             var rmv = this.RemoveHeaders || [];
@@ -137,7 +134,7 @@ export default {
 
         doSearch: function() {
             this.loading = true;
-            admin.genericGetList(this.authToken, this.apiPath, {
+            admin.genericGetList(this.apiPath, {
                 "find": this.searchText
             }, (results, total) => {
                 this.tableResults = results;

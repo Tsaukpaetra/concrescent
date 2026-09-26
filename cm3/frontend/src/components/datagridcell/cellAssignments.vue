@@ -37,9 +37,6 @@ export default {
             'locationListData': 'locations',
             'categoryList': 'locationCategories'
         }),
-        authToken: function () {
-            return this.$store.getters['mydata/getAuthToken'];
-        },
         location() {
             return (id) => {
                 return this.locationListData.find(x => x.id == id) || {

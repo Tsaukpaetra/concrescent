@@ -19,6 +19,7 @@ return function (App $app, $container) {
             $app->get('', \CM3_Lib\Action\Form\Question\Search::class);
             $app->post('', \CM3_Lib\Action\Form\Question\Create::class)
             ->add($accessPerm);
+            $app->get('/All', \CM3_Lib\Action\Public\ListAllQuestions::class);
             $app->get('/{id}', \CM3_Lib\Action\Form\Question\Read::class);
             $app->post('/{id}', \CM3_Lib\Action\Form\Question\Update::class)
             ->add($accessPerm);

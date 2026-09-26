@@ -483,10 +483,6 @@ export default {
                 },
             ];
         },
-        authToken: function() {
-            return this.$store.getters['mydata/getAuthToken'];
-        },
-
         ...mapGetters('products', {
             badgeContexts: 'badgeContexts',
             currentContext: 'selectedbadgecontext',
@@ -564,9 +560,9 @@ export default {
         loadSelectedBadge: async function() {
             if (this.selectedBadge.id == undefined) return;
             await this.$store.dispatch('products/selectContext', this.selectedBadge.context_code);
-            admin.badgeCheckinFetch(this.authToken, this.selectedBadge.context_code, this.selectedBadge.id, async (results) => {
+            admin.badgeCheckinFetch(this.selectedBadge.context_code, this.selectedBadge.id, async (results) => {
                 this.selectedBadge = results;
-                admin.genericGet(this.authToken, 'Badge/FormatMap/' + this.selectedBadge.context_code + '/' + this.selectedBadge.badge_type_id + '?full=true', null, (selectedBadgeFormats) => {
+                admin.genericGet('Badge/FormatMap/' + this.selectedBadge.context_code + '/' + this.selectedBadge.badge_type_id + '?full=true', null, (selectedBadgeFormats) => {
                     console.log('Received format map', selectedBadgeFormats)
                     this.selectedBadgeFormats = selectedBadgeFormats;
                     //Select the first one, if there is at least one
@@ -581,7 +577,7 @@ export default {
         updateSelectedBadge: function() {
             if (!this.editingBadge) return;
             this.savingEditedBadge = true;
-            admin.badgeCheckinSave(this.authToken, {
+            admin.badgeCheckinSave({
                 context_code: this.selectedBadge.context_code,
                 id: this.selectedBadge.id,
                 real_name: this.edit_real_name,
@@ -602,7 +598,7 @@ export default {
         RefreshPayment: function() {
             if (this.selectedBadge.id == undefined) return;
             this.loadpaying = true;
-            admin.badgeCheckinGetPayment(this.authToken, this.selectedBadge.context_code, this.selectedBadge.id, (result) => {
+            admin.badgeCheckinGetPayment(this.selectedBadge.context_code, this.selectedBadge.id, (result) => {
                 this.edit_selectedBadgePayment = result;
                 this.loadpaying = false;
 
@@ -613,7 +609,7 @@ export default {
         ConfirmPayment: function() {
             if (this.selectedBadge.id == undefined) return;
             this.paying = true;
-            admin.badgeCheckinConfirmPayment(this.authToken, this.selectedBadge.context_code, this.selectedBadge.id, {
+            admin.badgeCheckinConfirmPayment(this.selectedBadge.context_code, this.selectedBadge.id, {
                 payment_system: 'Cash',
                 notes: this.edit_selectedBadgePayment.notes
             }, (results) => {
@@ -662,7 +658,7 @@ export default {
         },
         PostPrint: function(completedLocally) {
 
-            admin.genericPost(this.authToken, "Badge/CheckIn/" + this.selectedBadge.context_code + "/" + this.selectedBadge.id + "/Print", {
+            admin.genericPost("Badge/CheckIn/" + this.selectedBadge.context_code + "/" + this.selectedBadge.id + "/Print", {
                 format_id: this.selectedBadgeFormat.id,
                 localPrinted: completedLocally,
                 meta: {
@@ -677,7 +673,7 @@ export default {
         },
         RefreshRemotePrintJob: function() {
             //console.log('Polling print job', this.printingRemoteJobId);
-            admin.genericGet(this.authToken, "Badge/CheckIn/" + this.selectedBadge.context_code + "/" + this.selectedBadge.id + "/Print/" + this.printingRemoteJobId, null, (printJob) => {
+            admin.genericGet("Badge/CheckIn/" + this.selectedBadge.context_code + "/" + this.selectedBadge.id + "/Print/" + this.printingRemoteJobId, null, (printJob) => {
                 //console.log('print job status', printJob)
 
                 let donePrinting = -1 < [
@@ -695,7 +691,7 @@ export default {
         FinishCheckIn: function() {
             if (this.selectedBadge.id == undefined) return;
             this.finishing = true;
-            admin.badgeCheckinFinish(this.authToken, this.selectedBadge.context_code, this.selectedBadge.id, (results) => {
+            admin.badgeCheckinFinish(this.selectedBadge.context_code, this.selectedBadge.id, (results) => {
                 this.selectedBadge = {};
                 this.finishing = false;
             }, (error) => {

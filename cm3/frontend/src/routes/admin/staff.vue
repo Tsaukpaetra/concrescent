@@ -76,7 +76,12 @@
         <v-tab-item value="1">
             <orderableList apiPath="Staff/BadgeType" :AddHeaders="btAddHeaders" :actions="btActions"
                 :footerActions="btFooterActions" :isEditingItem="btDialog" @edit="editBadgeType"
-                @create="createBadgeType" />
+                @create="createBadgeType" >
+                
+                <template v-slot:[`item.active`]="{ item }">
+                    <cell-toggle v-model="item.active" @input="sSetActive(item.id, $event)"></cell-toggle>
+                </template>
+            </orderableList>
 
             <v-dialog v-model="btDialog" scrollable>
 
@@ -101,7 +106,7 @@
         </v-tab-item>
         <v-tab-item value="3">
             <treeList apiPath="Staff/Department" :AddHeaders="dAddHeaders" :actions="dActions"
-                :footerActions="btFooterActions" :isEditingItem="dDialog" @edit="editDepartment"
+                :footerActions="btFooterActions" :isEditingItem="(dDialog || dMoving)" @edit="editDepartment"
                 @create="createDepartment" @moveup="moveDepartmentUp" @movedown="moveDepartmentDown" />
             <v-dialog v-model="dDialog" scrollable>
 
@@ -339,6 +344,7 @@ export default {
             value: 'active'
         }],
         dDialog: false,
+        dMoving: false,
         dSelected: {},
 
         eAddHeaders: [{
@@ -416,9 +422,6 @@ export default {
         createError: '',
     }),
     computed: {
-        authToken: function () {
-            return this.$store.getters['mydata/getAuthToken'];
-        },
         listActions: function () {
             var result = [];
             //TODO: Detect permissions
@@ -494,7 +497,7 @@ export default {
             console.log('edit badge selected from grid', selectedBadge);
             let that = this;
             that.loading = true;
-            admin.genericGet(this.authToken, 'Staff/Badge/' + selectedBadge.id, null, function (editBadge) {
+            admin.genericGet('Staff/Badge/' + selectedBadge.id, null, function (editBadge) {
                 that.bSelected = editBadge;
                 that.loading = false;
                 that.bEdit = true;
@@ -510,7 +513,7 @@ export default {
             console.log('saving badge', this.bSelected);
             let that = this;
             that.loading = true;
-            admin.genericPost(this.authToken, 'Staff/Badge/' + this.bSelected.id + "?sendupdate=" + (sendStatus ? "true" : "false"), this.bSelected, function (SavedDetails) {
+            admin.genericPost('Staff/Badge/' + this.bSelected.id + "?sendupdate=" + (sendStatus ? "true" : "false"), this.bSelected, function (SavedDetails) {
                 that.bSelected = {};
                 that.loading = false;
                 that.bEdit = false;
@@ -532,12 +535,23 @@ export default {
             this.loading = true;
             this.btDialog = true;
             var that = this;
-            admin.genericGet(this.authToken, 'Staff/BadgeType/' + selectedBadgeType.id, null, function (editBt) {
+            admin.genericGet('Staff/BadgeType/' + selectedBadgeType.id, null, function (editBt) {
 
                 that.btSelected = editBt;
                 that.loading = false;
             }, function () {
                 that.loading = false;
+            })
+        },
+        
+        sSetActive: function (id, active) {
+            this.loading = true;
+            var url = 'Staff/BadgeType/' + id;
+            console.log("Saving BadgeType active state", id, active)
+            admin.genericPost(url, { active }, (result) => {
+                this.loading = false;
+            }, () => {
+
             })
         },
         saveBadgeType: function () {
@@ -546,7 +560,7 @@ export default {
                 url = url + '/' + this.btSelected.id;
             console.log("Saving badge type", this.btSelected)
             var that = this;
-            admin.genericPost(this.authToken, url, this.btSelected, function (editBt) {
+            admin.genericPost(url, this.btSelected, function (editBt) {
 
                 that.btSelected = editBt;
                 that.loading = false;
@@ -561,28 +575,25 @@ export default {
         },
         moveDepartmentUp: function (selectedDepartment) {
             //Hack! Probably should find a better way to refresh the departments list only
-            this.dDialog = true;
-            var that = this;
-            admin.genericPost(this.authToken, 'Staff/Department/' + selectedDepartment.id + '/Move', { direction: true }, function (results) {
-                that.dDialog = false;
-            }, function () {
-                that.dDialog = false;
+            this.loading = this.dMoving = true;
+            admin.genericPost('Staff/Department/' + selectedDepartment.id + '/Move', { direction: true }, (results) => {
+                this.loading = this.dMoving = false;
+            },  () => {
+                this.loading = this.dMoving = false;
             })
         },
         moveDepartmentDown: function (selectedDepartment) {
-            this.dDialog = true;
-            var that = this;
-            admin.genericPost(this.authToken, 'Staff/Department/' + selectedDepartment.id + '/Move', { direction: false }, function (results) {
-
-                that.dDialog = false;
-            }, function () {
-                that.dDialog = false;
+            this.loading = this.dMoving = true;
+            admin.genericPost('Staff/Department/' + selectedDepartment.id + '/Move', { direction: false }, (results) => {
+                this.loading = this.dMoving = false;
+            },  () => {
+                this.loading = this.dMoving = false;
             })
         },
         editDepartment: function (selectedDepartment) {
             this.loading = true;
             var that = this;
-            admin.genericGet(this.authToken, 'Staff/Department/' + selectedDepartment.id, null, function (editBt) {
+            admin.genericGet('Staff/Department/' + selectedDepartment.id, null, function (editBt) {
 
                 that.dSelected = editBt;
                 that.dDialog = true;
@@ -597,7 +608,7 @@ export default {
                 url = url + '/' + this.dSelected.id;
             console.log("Saving badge type", this.dSelected)
             var that = this;
-            admin.genericPost(this.authToken, url, this.dSelected, function (editBt) {
+            admin.genericPost(url, this.dSelected, function (editBt) {
 
                 //that.dSelected = editBt;
                 that.loading = false;
@@ -609,7 +620,7 @@ export default {
         editEmailTemplate: function(selectedEmailTemplate) {
             console.log(selectedEmailTemplate);
             this.loading = false;
-            admin.genericGet(this.authToken, 'Mail/Template/S/' + selectedEmailTemplate.name, null, (editEmailTemplate) => {
+            admin.genericGet('Mail/Template/S/' + selectedEmailTemplate.name, null, (editEmailTemplate) => {
                 console.log('loaded EmailTemplate', editEmailTemplate)
                 this.eSelected = editEmailTemplate;
                 this.loading = false;
@@ -623,7 +634,7 @@ export default {
             var url = 'Mail/Template/S/' + this.eSelected.name;
             
             console.log("Saving Email Template", this.eSelected)
-            admin.genericPut(this.authToken, url, this.eSelected, (editET) => {
+            admin.genericPut( url, this.eSelected, (editET) => {
 
                 this.eSelected = editET;
                 this.loading = false;
@@ -641,7 +652,7 @@ export default {
             this.loading = true;
             var url = 'Mail/Template/S/' + name;
             console.log("Saving EmailTemplate active state", name, active)
-            admin.genericPut(this.authToken, url, { active }, (result) => {
+            admin.genericPut( url, { active }, (result) => {
                 this.eEdit = false;
                 this.loading = false;
             }, () => {
@@ -655,7 +666,7 @@ export default {
             this.loading = true;
             var url = 'Mail/Template/S/' + this.eSelected.name;
             console.log("Deleting EmailTemplate", this.eSelected.name)
-            admin.genericDelete(this.authToken, url, (result) => {
+            admin.genericDelete( url, (result) => {
                 this.eDelete = false;
                 this.loading = false;
                 this.eEdit = false;
@@ -665,7 +676,7 @@ export default {
         },
         eloadBadgeData() {
 
-            admin.genericGet(this.authToken, 'Badge/CheckIn/S/' + this.eloadBadgeDataID, null, (badgeData) => {
+            admin.genericGet('Badge/CheckIn/S/' + this.eloadBadgeDataID, null, (badgeData) => {
                 //Merge in the event info
                 badgeData['event'] = this.$store.state.products.selectedEvent
                 this.bSelected = badgeData;

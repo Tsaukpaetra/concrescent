@@ -378,16 +378,9 @@ export default {
 
     }),
     computed: {
-        ...mapGetters('mydata', {
-            getAuthToken: 'getAuthToken',
-        }),
-
         ...mapGetters('products', {
             contextBadges: 'contextBadges',
         }),
-        authToken: function() {
-            return this.$store.getters['mydata/getAuthToken'];
-        },
         listActions: function() {
             var result = [];
             //TODO: Detect permissions
@@ -437,7 +430,7 @@ export default {
             console.log(selectedBadge);
             let that = this;
             that.loading = false;
-            admin.genericGet(this.authToken, 'Contact/' + selectedBadge.id, null, function(editBadge) {
+            admin.genericGet('Contact/' + selectedBadge.id, null, function(editBadge) {
                 console.log('loaded contact', editBadge)
                 that.bSelected = editBadge;
                 that.loading = false;
@@ -451,7 +444,7 @@ export default {
             console.log('saving contact', this.bSelected);
             let that = this;
             that.loading = true;
-            admin.genericPost(this.authToken, 'Contact/' + this.bSelectedId ,this.bSelected, function(editBadge) {
+            admin.genericPost('Contact/' + this.bSelectedId ,this.bSelected, function(editBadge) {
                 that.bSelected = {};
                 that.loading = false;
                 that.bEdit = false;
@@ -472,7 +465,7 @@ export default {
             this.loading = true;
             this.btDialog = true;
             var that = this;
-            admin.genericGet(this.authToken, 'Attendee/BadgeType/' + selectedBadgeType.id, null, function(editBt) {
+            admin.genericGet('Attendee/BadgeType/' + selectedBadgeType.id, null, function(editBt) {
 
                 that.btSelected = editBt;
                 that.loading = false;
@@ -486,7 +479,7 @@ export default {
                 url = url + '/' + this.btSelected.id;
             console.log("Saving badge type", this.btSelected)
             var that = this;
-            admin.genericPost(this.authToken, url, this.btSelected, function(editBt) {
+            admin.genericPost(url, this.btSelected, function(editBt) {
 
                 that.btSelected = editBt;
                 that.loading = false;
@@ -499,7 +492,7 @@ export default {
             console.log(selectedPromoCode);
             let that = this;
             that.loading = false;
-            admin.genericGet(this.authToken, 'Attendee/PromoCode/' + selectedPromoCode.id, null, function(editPromoCode) {
+            admin.genericGet('Attendee/PromoCode/' + selectedPromoCode.id, null, function(editPromoCode) {
                 console.log('loaded PromoCode', editPromoCode)
                 that.pSelected = editPromoCode;
                 that.loading = false;
@@ -514,7 +507,7 @@ export default {
                 url = url + '/' + this.pSelected.id;
             console.log("Saving Promo Code", this.pSelected)
             var that = this;
-            admin.genericPost(this.authToken, url, this.pSelected, function(editPC) {
+            admin.genericPost(url, this.pSelected, function(editPC) {
 
                 that.pSelected = editPC;
                 that.loading = false;
@@ -532,7 +525,7 @@ export default {
             console.log(selectedAddon);
             let that = this;
             that.loading = false;
-            admin.genericGet(this.authToken, 'Attendee/Addon/' + selectedAddon.id, null, function(editAddon) {
+            admin.genericGet('Attendee/Addon/' + selectedAddon.id, null, function(editAddon) {
                 console.log('loaded Addon', editAddon)
                 that.dSelected = editAddon;
                 that.loading = false;
@@ -547,7 +540,7 @@ export default {
                 url = url + '/' + this.dSelected.id;
             console.log("Saving Addon", this.dSelected)
             var that = this;
-            admin.genericPost(this.authToken, url, this.dSelected, function(editA) {
+            admin.genericPost(url, this.dSelected, function(editA) {
 
                 that.dSelected = editA;
                 that.loading = false;
@@ -564,7 +557,7 @@ export default {
             console.log(selectedBadge);
             let that = this;
             that.loading = false;
-            admin.genericGet(this.authToken, 'Attendee/Badge/' + selectedBadge.attendee_id, null, function(editBadge) {
+            admin.genericGet('Attendee/Badge/' + selectedBadge.attendee_id, null, function(editBadge) {
                 console.log('loaded badge', editBadge)
                 that.bSelected = editBadge;
                 that.loading = false;

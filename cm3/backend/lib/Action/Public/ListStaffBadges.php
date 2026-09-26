@@ -47,6 +47,23 @@ final class ListStaffBadges
     {
         $qp = $request->getQueryParams();
         $override = $qp['override'] ?? null;
+
+        //If we're coming in as a logged-on user, we must have admin permissions vetted from the router
+        if ($request->getAttribute('event_id')) {
+            $params['event_id'] = $request->getAttribute('event_id');
+            $whereParts = [
+                new SearchTerm('event_id', $params['event_id']),
+            ];
+        } else {
+            $whereParts = array(
+                new SearchTerm('event_id', $params['event_id']),
+                new SearchTerm('', '', subSearch: array(
+                    new SearchTerm('active', 1),
+                    new SearchTerm('active_override_code', $override, TermType: 'OR'),
+                ))
+            );
+        }
+
         $viewData = new View(
             array(
               'id',
@@ -96,11 +113,6 @@ final class ListStaffBadges
                    )
                )
           )
-        );
-
-        $whereParts = array(
-          new SearchTerm('active', 1),
-          new SearchTerm('active_override_code', $override, TermType:'OR')
         );
 
         $order = array('display_order' => false);

@@ -49,6 +49,8 @@ return function (App $app, $container) {
             ->add($attendeePerm);
             $app->post('', \CM3_Lib\Action\Attendee\BadgeType\Create::class)
             ->add($atManage);
+            $app->get('All', \CM3_Lib\Action\Public\ListAttendeeBadges::class)
+            ->add($attendeePerm);
             $app->get('/{id}', \CM3_Lib\Action\Attendee\BadgeType\Read::class)
             ->add($attendeePerm);
             $app->post('/{id}', \CM3_Lib\Action\Attendee\BadgeType\Update::class)
@@ -64,6 +66,8 @@ return function (App $app, $container) {
             ->add($attendeePerm);
             $app->post('', \CM3_Lib\Action\Attendee\Addon\Create::class)
             ->add($atManage);
+            $app->get('All', \CM3_Lib\Action\Public\ListAllAttendeeAddons::class)
+            ->add($attendeePerm);;
             $app->get('/{id}', \CM3_Lib\Action\Attendee\Addon\Read::class)
             ->add($attendeePerm);
             $app->post('/{id}', \CM3_Lib\Action\Attendee\Addon\Update::class)

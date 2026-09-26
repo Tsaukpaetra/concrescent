@@ -536,9 +536,6 @@ export default {
         }
     },
     computed: {
-        authToken: function() {
-            return this.$store.getters['mydata/getAuthToken'];
-        },
         availableHeaders() {
             var result = [
                 this.headerKey,
@@ -662,7 +659,7 @@ export default {
             if(this.isEditingItem || this.loading) return;
             this.loading = true;
             console.log('doSearch pageOptions', this.pageOptionsForGet);
-            admin.genericGetList(this.authToken, this.apiPath, this.pageOptionsForGet, (results, total) => {
+            admin.genericGetList(this.apiPath, this.pageOptionsForGet, (results, total) => {
                 this.tableResults = results;
                 this.totalResults = total;
                 this.loading = false;
@@ -697,7 +694,7 @@ export default {
         doExport: function() {
             this.loading = true;
             console.log('doExport pageOptions', this.pageOptionsForGet);
-            admin.genericGetList(this.authToken, this.apiPath, this.pageOptionsForGet, (results, total) => {
+            admin.genericGetList(this.apiPath, this.pageOptionsForGet, (results, total) => {
                 this.loading = false;
                 
                 //TODO: auto-generate name from context info?
@@ -727,7 +724,7 @@ export default {
         doRefreshQuestions: function() {
             if (this.context_code == undefined) return;
             console.log('bsl refreshing questions', this.context_code);
-            admin.genericGetList(this.authToken, 'Form/Question/' + this.context_code, null, (results, total) => {
+            admin.genericGetList('Form/Question/' + this.context_code, null, (results, total) => {
                 this.questions = results;
                 //Generate initial displayed question indices and add them to the displayed indices
                 this.displayedQuestionsIx = this.questions.map((item,ix) => item.listed ? ix :undefined).filter(x=>x!=undefined);

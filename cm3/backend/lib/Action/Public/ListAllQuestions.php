@@ -38,6 +38,18 @@ final class ListAllQuestions
      */
     public function __invoke(ServerRequestInterface $request, ResponseInterface $response, $params): ResponseInterface
     {
+      //If we're coming in as a logged-on user, we must have admin permissions vetted from the router
+        if ($request->getAttribute('event_id')) {
+            $params['event_id'] = $request->getAttribute('event_id');
+            $whereParts = [
+              new SearchTerm('event_id', $params['event_id']),
+            ];
+        } else {
+          $whereParts = array(
+            new SearchTerm('event_id', $params['event_id']),
+            new SearchTerm('active', 1)
+          );
+        }
         $viewData = new View(
             array(
               'id',
@@ -66,10 +78,6 @@ final class ListAllQuestions
           )
         );
 
-        $whereParts = array(
-          new SearchTerm('event_id', $params['event_id']),
-          new SearchTerm('active', 1)
-        );
 
         $order = array('order' => false);
 

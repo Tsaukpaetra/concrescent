@@ -174,7 +174,6 @@ export default {
     computed: {
         ...mapGetters('mydata', {
             'isLoggedIn': 'getIsLoggedIn',
-            'authToken': 'getAuthToken',
         }),
         ...mapGetters('products', {
             'selectedEvent': 'selectedEvent',
@@ -257,7 +256,7 @@ export default {
                 console.log('pulling applications')
 
                 //TODO: This should be handled by the store...
-                admin.genericGet(this.authToken, 'Location/AvailableApplications', null, (apps) => {
+                admin.genericGet('Location/AvailableApplications', null, (apps) => {
 
                     this.applicationListData = apps;
                 }, function () {
@@ -275,7 +274,7 @@ export default {
                 console.log('pulling locations')
 
                 //TODO: This should be handled by the store...
-                admin.genericGet(this.authToken, 'Location', null, (locs) => {
+                admin.genericGet('Location', null, (locs) => {
 
                     this.locationListData = locs;
                 }, function () {
@@ -285,7 +284,7 @@ export default {
         },
         refreshCategories() {
             //TODO: This should be handled by the store...
-            admin.genericGet(this.authToken, 'LocationCategory', null, (categories) => {
+            admin.genericGet('LocationCategory', null, (categories) => {
 
                 this.categoryList = categories;
             }, function () {

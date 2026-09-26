@@ -21,6 +21,8 @@ return function (App $app, $container) {
             ->add($gpAsign);
             $app->post('', \CM3_Lib\Action\Application\BadgeType\Create::class)
             ->add($gpAsign);
+            $app->get('All', \CM3_Lib\Action\Public\ListApplicationBadges::class)
+            ->add($groupPerm);
             $app->get('/{id}', \CM3_Lib\Action\Application\BadgeType\Read::class)
             ->add($gpAsign);
             $app->post('/{id}', \CM3_Lib\Action\Application\BadgeType\Update::class)
@@ -103,6 +105,8 @@ return function (App $app, $container) {
             ->add($groupPerm);
             $app->post('', \CM3_Lib\Action\Application\Addon\Create::class)
             ->add($gtmanage);
+            $app->get('All', \CM3_Lib\Action\Public\ListAllApplicationAddons::class)
+            ->add($groupPerm);
             $app->get('/{id}', \CM3_Lib\Action\Application\Addon\Read::class)
             ->add($groupPerm);
             $app->post('/{id}', \CM3_Lib\Action\Application\Addon\Update::class)

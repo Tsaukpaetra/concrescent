@@ -49,6 +49,26 @@ final class ListApplicationBadges
     {
         $qp = $request->getQueryParams();
         $override = $qp['override'] ?? null;
+
+        //If we're coming in as a logged-on user, we must have admin permissions vetted from the router
+        if ($request->getAttribute('event_id')) {
+            $params['event_id'] = $request->getAttribute('event_id');
+            $whereParts = [
+                new SearchTerm('event_id', $params['event_id'], JoinedTableAlias: 'grp'),
+                new SearchTerm('context_code', $params['context_code'], JoinedTableAlias: 'grp'),
+            ];
+        } else {
+
+            $whereParts = array(
+                new SearchTerm('event_id', $params['event_id'], JoinedTableAlias: 'grp'),
+                new SearchTerm('context_code', $params['context_code'], JoinedTableAlias: 'grp'),
+                new SearchTerm('', '', subSearch: array(
+                    new SearchTerm('active', 1),
+                    new SearchTerm('active_override_code', $override, TermType: 'OR'),
+                ))
+            );
+        }
+
         $viewData = new View(
             array(
                   'id',
@@ -120,14 +140,6 @@ final class ListApplicationBadges
             )
         );
 
-        $whereParts = array(
-                  new SearchTerm('event_id', $params['event_id'], JoinedTableAlias: 'grp'),
-                  new SearchTerm('context_code', $params['context_code'], JoinedTableAlias: 'grp'),
-                  new SearchTerm('', '', subSearch:array(
-                      new SearchTerm('active', 1),
-                      new SearchTerm('active_override_code', $override, TermType:'OR'),
-                  ))
-                );
 
         $order = array('display_order' => false);
 

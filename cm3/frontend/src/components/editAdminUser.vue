@@ -142,7 +142,6 @@ export default {
     computed: {
         ...mapGetters('mydata', {
             'isLoggedIn': 'getIsLoggedIn',
-            'authToken': 'getAuthToken',
         }),
         ...mapGetters('products', {
             'badgeContexts': 'badgeContexts',
@@ -193,7 +192,7 @@ export default {
     },
     created() {
         var that = this;
-        admin.genericGet(this.authToken, 'AdminUser/GetPerms', null, function(perms) {
+        admin.genericGet('AdminUser/GetPerms', null, function(perms) {
 
             that.perms = perms;
         }, function() {

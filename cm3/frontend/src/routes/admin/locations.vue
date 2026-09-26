@@ -444,9 +444,6 @@ export default {
 
     }),
     computed: {
-        authToken: function () {
-            return this.$store.getters['mydata/getAuthToken'];
-        },
         ...mapGetters('products', {
             'selectedEvent': 'selectedEvent',
             'locations': 'locations',
@@ -506,7 +503,7 @@ export default {
         editLocation: function (selectedLocation) {
             console.log("Edit Location", selectedLocation);
             this.loading = true;
-            admin.genericGet(this.authToken, 'Location/' + selectedLocation.id, null, (editLocation) => {
+            admin.genericGet('Location/' + selectedLocation.id, null, (editLocation) => {
                 console.log('loaded Location', editLocation)
                 this.lSelected = editLocation;
                 this.loading = false;
@@ -525,7 +522,7 @@ export default {
             this.loading = true;
             var url = 'Location/' + id;
             console.log("Saving location active state", id, active)
-            admin.genericPost(this.authToken, url, { active }, (result) => {
+            admin.genericPost(url, { active }, (result) => {
                 console.log("Saved location active state", id, result)
                 this.lEdit = false;
                 this.loading = false;
@@ -540,7 +537,7 @@ export default {
                 url = url + '/' + this.lSelected.id;
             console.log("Saving Location", this.lSelected)
             this.loading = true;
-            admin.genericPost(this.authToken, url, this.lSelected, (editBt) => {
+            admin.genericPost(url, this.lSelected, (editBt) => {
                 this.lSelected.id = editBt.id;
                 this.$store.commit('products/updateLocation', this.lSelected);
                 //Process assignment updates
@@ -561,7 +558,7 @@ export default {
         editMap: function (selectedLocationMap) {
             console.log("Edit LocationMap", selectedLocationMap);
             this.loading = true;
-            admin.genericGet(this.authToken, 'LocationMap/' + selectedLocationMap.id, null, (editLocationMap) => {
+            admin.genericGet('LocationMap/' + selectedLocationMap.id, null, (editLocationMap) => {
                 console.log('loaded LocationMap', editLocationMap)
                 this.mSelected = editLocationMap;
                 this.loading = false;
@@ -586,7 +583,7 @@ export default {
             this.mEdit = true;
             var url = 'LocationMap/' + id;
             console.log("Saving LocationMap active state", id, active)
-            admin.genericPost(this.authToken, url, { active }, () => {
+            admin.genericPost(url, { active }, () => {
                 this.mEdit = false;
             },  () => {
 
@@ -599,7 +596,7 @@ export default {
                 url = url + '/' + this.mSelected.id;
             console.log("Saving LocationMap", this.mSelected)
             this.loading = true;
-            admin.genericPost(this.authToken, url, this.mSelected, (editBt) => {
+            admin.genericPost(url, this.mSelected, (editBt) => {
 
                 this.loading = false;
                 this.mEdit = false;
@@ -758,7 +755,7 @@ export default {
                 assn.end_time = assn.start_time == null ? null : nullIfEmptyOrZero(this.formatDate(new Date(assn.end_time)));
 
                 await new Promise((resolve, reject) =>
-                    admin.genericPost(this.authToken, 'Location/Assignments/' + assn.id, assn, resolve, reject)
+                    admin.genericPost('Location/Assignments/' + assn.id, assn, resolve, reject)
                 ).then((result) => {
                     //Assume it was good                    
                     this.$store.commit('products/updateLocationEvent', assn);
@@ -785,7 +782,7 @@ export default {
                 url = url + '/' + this.locationCategorySelected.id;
             console.log("Saving LocationCategory", this.locationCategorySelected)
             this.loading = true;
-            admin.genericPost(this.authToken, url, this.locationCategorySelected, (result) => {
+            admin.genericPost(url, this.locationCategorySelected, (result) => {
                 //For some reason the API returns the new ID as a string?
                 this.locationCategorySelected.id = parseInt(result.id);
                 this.$store.commit('products/updateLocationCategory', this.locationCategorySelected);

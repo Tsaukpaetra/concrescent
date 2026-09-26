@@ -119,7 +119,6 @@ export default {
     computed: {
         ...mapGetters('mydata', {
             'isLoggedIn': 'getIsLoggedIn',
-            'authToken': 'getAuthToken',
         }),
     },
     methods: {
@@ -149,7 +148,7 @@ export default {
         // refreshCurrentDepartments() {
         //     //TODO: This should be handled by the store...
         //     var that = this;
-        //     admin.genericGet(this.authToken, 'Staff/Department', null, function(departments) {
+        //     admin.genericGet('Staff/Department', null, function(departments) {
 
         //         that.currentDepartments = departments.filter(department => department.id != that.model.id);
         //         that.currentDepartments.unshift({

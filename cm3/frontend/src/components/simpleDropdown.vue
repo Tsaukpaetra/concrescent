@@ -96,9 +96,6 @@ export default {
         }, ]
     }),
     computed: {
-        authToken: function() {
-            return this.$store.getters['mydata/getAuthToken'];
-        },
         headers() {
             var result = this.defHeaders || [];
             var rmv = this.RemoveHeaders || [];

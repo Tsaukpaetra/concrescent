@@ -274,9 +274,6 @@ export default {
         createError: '',
     }),
     computed: {
-        authToken: function() {
-            return this.$store.getters['mydata/getAuthToken'];
-        },
         listActions: function() {
             var result = [];
             //TODO: Detect permissions
@@ -321,7 +318,7 @@ export default {
             console.log('view error selected from grid', errorRow);
             let that = this;
             that.loading = true;
-            admin.genericGet(this.authToken, 'System/ErrorLog/' + errorRow.id, null, function(logData) {
+            admin.genericGet('System/ErrorLog/' + errorRow.id, null, function(logData) {
                 logData.dataJSON = JSON.parse(logData.data);
                 that.eSelected = logData;
                 that.loading = false;
@@ -335,7 +332,7 @@ export default {
             console.log('edit badge selected from grid', selectedBadge);
             let that = this;
             that.loading = true;
-            admin.genericGet(this.authToken, 'Staff/Badge/' + selectedBadge.id, null, function(editBadge) {
+            admin.genericGet('Staff/Badge/' + selectedBadge.id, null, function(editBadge) {
                 that.bSelected = editBadge;
                 that.loading = false;
                 that.bEdit = true;
@@ -351,7 +348,7 @@ export default {
             console.log('saving badge', this.bSelected);
             let that = this;
             that.loading = true;
-            admin.genericPost(this.authToken, 'Staff/Badge/' + this.bSelected.id + "?sendupdate=" + (sendStatus ? "true" : "false"), this.bSelected, function(SavedDetails) {
+            admin.genericPost('Staff/Badge/' + this.bSelected.id + "?sendupdate=" + (sendStatus ? "true" : "false"), this.bSelected, function(SavedDetails) {
                 that.bSelected = {};
                 that.loading = false;
                 that.bEdit = false;
@@ -373,7 +370,7 @@ export default {
             this.loading = true;
             this.blDialog = true;
             var that = this;
-            admin.genericGet(this.authToken, 'Banlist/' + selectedBan.id, null, function(editBl) {
+            admin.genericGet('Banlist/' + selectedBan.id, null, function(editBl) {
 
                 that.blSelected = editBl;
                 that.loading = false;
@@ -387,7 +384,7 @@ export default {
                 url = url + '/' + this.blSelected.id;
             console.log("Saving ban", this.blSelected)
             var that = this;
-            admin.genericPost(this.authToken, url, this.blSelected, function(editBt) {
+            admin.genericPost(url, this.blSelected, function(editBt) {
 
                 that.blSelected = editBt;
                 that.loading = false;
@@ -403,7 +400,7 @@ export default {
         },
         editGroup: function(selectedGroup) {
             this.loading = true;
-            admin.genericGet(this.authToken, 'Group/' + selectedGroup.id, null, (editG) => {
+            admin.genericGet('Group/' + selectedGroup.id, null, (editG) => {
 
                 this.gSelected = editG;
                 this.gDialog = true;
@@ -420,7 +417,7 @@ export default {
                 url = url + '/' + this.gSelected.id;
             console.log("Saving group", JSON.parse(JSON.stringify(this.gSelected)))
             this.loading = false;
-            admin.genericPost(this.authToken, url, this.gSelected, () => {
+            admin.genericPost(url, this.gSelected, () => {
 
                 //that.dSelected = editBt;
                 this.loading = false;
@@ -434,7 +431,7 @@ export default {
             this.gEdit = true;
             var url = 'Group/' + id;
             console.log("Saving group active state", id,active)
-            admin.genericPost(this.authToken, url, {active}, () => {
+            admin.genericPost(url, {active}, () => {
                 this.gEdit = false;
             }, function() {
                 
@@ -450,7 +447,7 @@ export default {
         },
         editEvent: function(selectedEvent) {
             this.loading = true;
-            admin.genericGet(this.authToken, 'EventInfo/' + selectedEvent.id, null, (editG) => {
+            admin.genericGet('EventInfo/' + selectedEvent.id, null, (editG) => {
 
                 this.vSelected = editG;
                 this.vDialog = true;
@@ -467,7 +464,7 @@ export default {
                 url = url + '/' + this.vSelected.id;
             console.log("Saving Event", JSON.parse(JSON.stringify(this.vSelected)))
             this.loading = false;
-            admin.genericPost(this.authToken, url, this.vSelected, () => {
+            admin.genericPost(url, this.vSelected, () => {
 
                 //that.dSelected = editBt;
                 this.loading = false;
@@ -481,7 +478,7 @@ export default {
             this.vEdit = true;
             var url = 'EventInfo/' + id;
             console.log("Saving Event active state", id,active)
-            admin.genericPost(this.authToken, url, {active}, () => {
+            admin.genericPost(url, {active}, () => {
                 this.vEdit = false;
             }, function() {
                 

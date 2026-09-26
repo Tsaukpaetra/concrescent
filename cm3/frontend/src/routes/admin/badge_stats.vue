@@ -118,9 +118,6 @@ export default {
 
     }),
     computed: {
-        authToken: function() {
-            return this.$store.getters['mydata/getAuthToken'];
-        },
         ...mapGetters('products', {
             'badgeContexts': 'badgeContexts',
         }),
@@ -168,7 +165,7 @@ export default {
         ]),
         doSearch: function() {
             this.loading = true;
-            admin.genericGetList(this.authToken, 'Stats/Badge', {...this.pageOptionsForGet, 'badge_groups':'payment_status,printed,checked_in', 'range_start':'2036-01-01'}, (results, total) => {
+            admin.genericGetList('Stats/Badge', {...this.pageOptionsForGet, 'badge_groups':'payment_status,printed,checked_in', 'range_start':'2036-01-01'}, (results, total) => {
                 this.rawResults = results;
                 this.totalResults = total;
                 this.loading = false;
@@ -183,7 +180,7 @@ export default {
         doExport: function() {
             this.loading = true;
             console.log('doSearch pageOptions', this.pageOptionsForGet);
-            admin.genericGetList(this.authToken, 'Stats/Badge', this.pageOptionsForGet, (results, total) => {
+            admin.genericGetList('Stats/Badge', this.pageOptionsForGet, (results, total) => {
                 this.loading = false;
                 
                 const fileName = 'Export';

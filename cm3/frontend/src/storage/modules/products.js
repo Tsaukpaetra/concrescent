@@ -88,6 +88,22 @@ const getters = {
     allStaffPositions: (state) => {
         return state.allStaffPositions || [];
     },
+    /**
+     * Returns the appropriate API client (admin or shop) and the associated token/context
+     * based on the user's permissions in the root state.
+     */
+    apiClient: (state, getters, rootState) => {
+        const isAdmin = rootState.mydata.permissions != null 
+            && rootState.mydata.permissions != undefined
+            && rootState.mydata.adminMode === true;
+
+        return {
+            client: isAdmin ? admin : shop,
+            token: isAdmin ? rootState.mydata.token : null,
+            isAdmin: isAdmin
+        };
+    }
+
 }
 
 // actions
@@ -113,21 +129,18 @@ const actions = {
     getEventInfo({
         commit,
         state,
-        rootState
+        rootState,
+        getters
     }, force) {
 
-        return new Promise((resolve) => {
-            //Load only if necessary
+        return new Promise((resolve, reject) => {
             if (!state.gotEventInfo || force) {
-                //Hack: Ask the mydata if we're an admin and use that to load contexts
-                // console.log('root state',rootState.mydata.permissions != null, rootState.mydata.permissions != undefined,rootState.mydata.adminMode)
-                if(rootState.mydata.permissions != null 
-                    && rootState.mydata.permissions != undefined
-                    && rootState.mydata.adminMode == true){
-                    admin.getEventInfo(rootState.mydata.token)
+                const { client, token, isAdmin } = getters.apiClient;
+
+                if (isAdmin) {
+                    client.getEventInfo()
                     .then(eventinfo => {
                         commit('setEventInfo', eventinfo);
-                        console.log('event stored info id', state.selectedEventId);
                         if (state.selectedEventId == null)
                             commit('selectEvent', eventinfo[0].id);
                         else {
@@ -138,9 +151,8 @@ const actions = {
                         reject(err)
                     });
                 } else {
-                    shop.getEventInfo(eventinfo => {
+                    client.getEventInfo(eventinfo => {
                         commit('setEventInfo', eventinfo);
-                        console.log('event stored info id', state.selectedEventId);
                         if (state.selectedEventId == null)
                             commit('selectEvent', eventinfo[0].id);
                         else {
@@ -160,19 +172,18 @@ const actions = {
     getBadgeContexts({
         commit,
         state,
-        rootState
+        rootState,
+        getters
     }, force) {
         return new Promise((resolve, reject) => {
             if (state.selectedEventId == null)
                 return reject('Unable to get context if the event ID is not known');
-            //Load only if necessary
+
             if (!state.gotBadgeContexts || force) {
-                //Hack: Ask the mydata if we're an admin and use that to load contexts
-                // console.log('root state',rootState.mydata.permissions != null, rootState.mydata.permissions != undefined,rootState.mydata.adminMode)
-                if(rootState.mydata.permissions != null 
-                    && rootState.mydata.permissions != undefined
-                    && rootState.mydata.adminMode == true){
-                    admin.getBadgeContexts(rootState.mydata.token)
+                const { client, token, isAdmin } = getters.apiClient;
+
+                if (isAdmin) {
+                    client.getBadgeContexts()
                     .then(contexts => {
                         commit('setBadgeContexts', contexts);
                         resolve();
@@ -180,8 +191,7 @@ const actions = {
                         reject(err)
                     });
                 } else {
-
-                    shop.getBadgeContexts(state.selectedEventId, contexts => {
+                    client.getBadgeContexts(state.selectedEventId, contexts => {
                         commit('setBadgeContexts', contexts);
                         resolve();
                     })
@@ -198,14 +208,10 @@ const actions = {
     }, context_code) {
         return new Promise(async (resolve, reject) => {
             try {
-                
                 await dispatch('getBadgeContexts');
-                //Confirm we have a context to select that matches
                 commit('setBadgeContextSelected', context_code);
-                //Check that the desired context exists
                 if (state.badgecontextselected == undefined)
                     return reject('Context Code not found:' + context_code);
-                //Fetch all the things(if needed)!
                 await dispatch('getContextBadges', context_code);
                 await dispatch('getContextQuestions', context_code);
                 await dispatch('getContextAddons', context_code);
@@ -220,24 +226,26 @@ const actions = {
     getContextBadges({
         dispatch,
         commit,
-        state
+        state,
+        getters
     }, context_code) {
         return new Promise((resolve, reject) => {
-            //Prerequisite: We need a context
             if (context_code == undefined)
                 return reject('Context not selected!');
-            //Load only if necessary
             if (state.gotBadges[context_code] != undefined)
                 return resolve();
-            //Initialize to empty in case of failure
+
             commit('setContextBadges', {
                 badges: [],
                 context_code: context_code,
                 success: false
             });
+
+            const { client, token, isAdmin } = getters.apiClient;
+            
             try {
-                shop.getBadges(state.selectedEventId,
-                    context_code, state.override_code,
+                if (isAdmin) {
+                    client.getBadges(context_code, state.override_code,
                     badges => {
                         commit('setContextBadges', {
                             badges: badges,
@@ -246,17 +254,35 @@ const actions = {
                         });
                         resolve();
                     },
-                    error => {
+                    err => {
                         commit('setContextBadges', {
                             badges: [],
                             context_code: context_code,
                             success: false
                         });
-                        resolve()
-                    })
-                
+                        resolve();
+                    });
+                } else {
+                    client.getBadges(state.selectedEventId,
+                        context_code, state.override_code,
+                        badges => {
+                            commit('setContextBadges', {
+                                badges: badges,
+                                context_code: context_code,
+                                success: true
+                            });
+                            resolve();
+                        },
+                        error => {
+                            commit('setContextBadges', {
+                                badges: [],
+                                context_code: context_code,
+                                success: false
+                            });
+                            resolve()
+                        })
+                }
             } catch (error) {
-                
                 console.log('products/getContextBadges error',error)
                 reject(error)
             }
@@ -265,16 +291,38 @@ const actions = {
     getContextQuestions({
         dispatch,
         commit,
-        state
+        state,
+        getters
     }, context_code) {
         return new Promise((resolve, reject) => {
-            //Prerequisite: We need a context
             if (context_code == undefined)
                 return reject('Context not selected!');
-            //Load only if necessary
             if (state.gotQuestions[context_code] != undefined)
                 return resolve();
-            shop.getQuestions(state.selectedEventId,
+            
+            const { client, token, isAdmin } = getters.apiClient;
+
+            if (isAdmin) {
+                client.getQuestions(context_code,
+                questions => {
+                    commit('setContextQuestions', {
+                        questions: questions,
+                        context_code: context_code,
+                        success: true
+                    });
+                    resolve();
+                },
+                error => {
+                    commit('setContextQuestions', {
+                        questions: [],
+                        context_code: context_code,
+                        success: false
+                    });
+                    resolve()
+                })
+            } else {
+                
+            client.getQuestions(state.selectedEventId,
                 context_code,
                 questions => {
                     commit('setContextQuestions', {
@@ -292,22 +340,25 @@ const actions = {
                     });
                     resolve()
                 })
+            }
         })
     },
     getContextAddons({
         dispatch,
         commit,
-        state
+        state,
+        getters
     }, context_code) {
         return new Promise((resolve, reject) => {
-            //Prerequisite: We need a context
             if (context_code == undefined)
                 return reject('Context not selected!');
-            //Load only if necessary
             if (state.gotAddons[context_code] != undefined)
                 return resolve();
-            shop.getAddons(state.selectedEventId,
-                context_code, state.override_code,
+
+            const { client, token, isAdmin } = getters.apiClient;
+
+            if (isAdmin) {
+                client.getAddons(context_code, state.override_code,
                 addons => {
                     commit('setContextAddons', {
                         addons: addons,
@@ -316,32 +367,52 @@ const actions = {
                     });
                     resolve();
                 },
-                error => {
+                err => {
                     commit('setContextAddons', {
                         addons: [],
                         context_code: context_code,
                         success: false
                     });
-                    resolve()
-                })
-        })
+                    resolve();
+                });
+            } else {
+                client.getAddons(state.selectedEventId,
+                    context_code, state.override_code,
+                    addons => {
+                        commit('setContextAddons', {
+                            addons: addons,
+                            context_code: context_code,
+                            success: true
+                        });
+                        resolve();
+                    },
+                    error => {
+                        commit('setContextAddons', {
+                            addons: [],
+                            context_code: context_code,
+                            success: false
+                        });
+                        resolve();
+                    })
+                };
+            })
+        
     },
     getLocations({
         commit,
         state,
-        rootState
+        rootState,
+        getters
     }) {
         return new Promise((resolve, reject) => {
             if (state.selectedEventId == null)
                 return reject('Unable to get locations if the event ID is not known');
-            //Load only if necessary
             if (!state.gotLocations) {
                 commit('setLocations', []);
-                //Hack: Ask the mydata if we're an admin and use that to load contexts
-                if(rootState.mydata.permissions != null 
-                    && rootState.mydata.permissions != undefined
-                    && rootState.mydata.adminMode == true){
-                    admin.getLocations(rootState.mydata.token)
+                const { client, token, isAdmin } = getters.apiClient;
+
+                if (isAdmin) {
+                    client.getLocations()
                     .then(contexts => {
                         commit('setLocations', contexts);
                         resolve();
@@ -349,8 +420,7 @@ const actions = {
                         reject(err)
                     });
                 } else {
-
-                    shop.getLocations(state.selectedEventId, contexts => {
+                    client.getLocations(state.selectedEventId, contexts => {
                         commit('setLocations', contexts);
                         resolve();
                     })

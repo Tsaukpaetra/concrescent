@@ -123,10 +123,6 @@ export default {
         };
     },
     computed: {
-
-        authToken: function() {
-            return this.$store.getters['mydata/getAuthToken'];
-        },
         ...mapGetters('mydata', {
             'getContactInfo': 'getContactInfo',
             'isLoggedIn': 'getIsLoggedIn',
@@ -159,7 +155,7 @@ export default {
         },
         refresh_positions: async function() {
             this.available_positions_loading = true;
-            admin.genericGetList(this.authToken, 'Staff/Department/' + this.department_id_selected + '/Position', {
+            admin.genericGetList('Staff/Department/' + this.department_id_selected + '/Position', {
 
             }, (results, total) => {
                 this.available_positions = results;

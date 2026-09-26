@@ -298,9 +298,6 @@ export default {
         };
     },
     computed: {
-        authToken: function() {
-            return this.$store.getters['mydata/getAuthToken'];
-        },
         headers() {
             var result = [this.headerKey, {
                 text: 'Actions',
@@ -356,7 +353,7 @@ export default {
 
         doSearch: debounce(function () {
             this.loading = true;
-            admin.genericGetList(this.authToken, this.apiPath, this.pageOptionsForGet, (results, total) => {
+            admin.genericGetList(this.apiPath, this.pageOptionsForGet, (results, total) => {
                 this.tableResults = results;
                 this.totalResults = total;
                 this.loading = false;
@@ -373,7 +370,7 @@ export default {
         doExport: function() {
             this.loading = true;
             console.log('doSearch pageOptions', this.pageOptionsForGet);
-            admin.genericGetList(this.authToken, this.apiPath, this.pageOptionsForGet, (results, total) => {
+            admin.genericGetList(this.apiPath, this.pageOptionsForGet, (results, total) => {
                 this.loading = false;
                 
                 const fileName = 'Export';
@@ -412,7 +409,7 @@ export default {
             this.loading = true;
 
             //TODO: Shouldn't we be using the internalKey
-            admin.genericPost(this.authToken, this.apiPath + '/' + item[this.headerKey.value] + '/Move', { direction: upwards }, (results, total) => {
+            admin.genericPost(this.apiPath + '/' + item[this.headerKey.value] + '/Move', { direction: upwards }, (results, total) => {
                 this.tableResults = this.tableResults.map(element => {
                     var updated = results.find(r => r[this.headerKey.value] == element[this.headerKey.value], this);
                     if (updated != undefined){

@@ -293,9 +293,6 @@ export default {
         createError: '',
     }),
     computed: {
-        authToken: function () {
-            return this.$store.getters['mydata/getAuthToken'];
-        },
         listActions: function () {
             var result = [];
             //TODO: Detect permissions
@@ -379,7 +376,7 @@ export default {
             let that = this;
             that.loading = true;
             that.fSelected = {};
-            admin.genericGet(this.authToken, 'Badge/Format/' + selectedFormat.id, null, function (editFormat) {
+            admin.genericGet('Badge/Format/' + selectedFormat.id, null, function (editFormat) {
                 that.fSelected = editFormat;
                 that.loading = false;
                 that.fEdit = true;
@@ -398,7 +395,7 @@ export default {
                 url = url + '/' + this.fSelected.id;
             let that = this;
             that.loading = true;
-            admin.genericPost(this.authToken, url, this.fSelected, function (SavedDetails) {
+            admin.genericPost(url, this.fSelected, function (SavedDetails) {
                 that.fSelected = {};
                 that.loading = false;
                 that.fEdit = false;
@@ -422,7 +419,7 @@ export default {
             this.loading = true;
             this.fSelected = {};
             console.log('fetching format', selectedFormat)
-            admin.genericGet(this.authToken, 'Badge/Format/' + selectedFormat.id, null, (editFormat) => {
+            admin.genericGet('Badge/Format/' + selectedFormat.id, null, (editFormat) => {
                 this.fSelected = editFormat;
                 this.loading = false;
                 this.printStage = 2;
@@ -448,7 +445,7 @@ export default {
         enqueueBadgePrintingBatch: function () {
             console.log('enqueue selected badges for batch print', structuredClone(this.printSelected));
             this.loading = true;
-            admin.genericPost(this.authToken, 'Badge/Format/' + this.fSelected.id + '/Badges/BatchPrint', {
+            admin.genericPost('Badge/Format/' + this.fSelected.id + '/Badges/BatchPrint', {
                 overridePaymentRequirement: this.badgeSelectParams.allowUnpaid,
                 meta: {
                     stationName: this.printToStation || this.$store.state.station.servicePrintJobsAs || 'Batch'
@@ -482,7 +479,7 @@ export default {
         updateBadgePrintingBatch: function(newState, result){
             console.log('enqueue selected badges for batch print', structuredClone(this.printSelected));
             this.loading = true;
-            admin.genericPatch(this.authToken, 'Badge/Format/' + this.fSelected.id + '/Badges/BatchPrint', {
+            admin.genericPatch('Badge/Format/' + this.fSelected.id + '/Badges/BatchPrint', {
                 badges: this.badgesForPrint.map(x => {return { uuid : x.uuid, context_code : x.context_code, id: x.id ,
                     printjob_id: x.printjob_id,
                     printjob_state: newState,
@@ -520,7 +517,7 @@ export default {
         },
         badgePrintGetJobStatus: function(){
 
-            admin.genericPost(this.authToken, 'Badge/Format/' + this.fSelected.id + '/Badges/BatchPrintRefresh', 
+            admin.genericPost('Badge/Format/' + this.fSelected.id + '/Badges/BatchPrintRefresh', 
                 this.badgesForPrint.map(x => x.printjob_id)
             , (result) => {
                 result.forEach(job => {
@@ -542,7 +539,7 @@ export default {
         enqueueBadgeForPrinting: function (selectedBadge) {
             console.log('enqueue single badge for batch print from grid', selectedBadge);
             this.loading = true;
-            admin.genericPost(this.authToken, 'Badge/Format/' + this.fSelected.id + '/Badges/' + selectedBadge.context_code + '/' + selectedBadge.id, {
+            admin.genericPost('Badge/Format/' + this.fSelected.id + '/Badges/' + selectedBadge.context_code + '/' + selectedBadge.id, {
                 state: 'Batch',
                 meta: {
                     stationName: this.$store.state.station.servicePrintJobsAs || 'Batch'
@@ -559,7 +556,7 @@ export default {
             console.log('edit print job from grid', selectedFormat);
             this.loading = true;
             this.jSelected = {};
-            admin.genericGet(this.authToken, 'Badge/PrintJob/' + selectedFormat.id, {
+            admin.genericGet('Badge/PrintJob/' + selectedFormat.id, {
                 includeFormat: true
             }, (editPrintJob) => {
                 this.jSelected = editPrintJob;
@@ -577,7 +574,7 @@ export default {
                 url = url + '/' + this.jSelected.id;
             let that = this;
             that.loading = true;
-            admin.genericPost(this.authToken, url, this.jSelected, function (SavedDetails) {
+            admin.genericPost(url, this.jSelected, function (SavedDetails) {
                 that.jSelected = {};
                 that.loading = false;
                 that.jEdit = false;

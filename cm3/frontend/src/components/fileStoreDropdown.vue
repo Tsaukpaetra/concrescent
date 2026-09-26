@@ -100,9 +100,6 @@ export default {
         }, ]
     }),
     computed: {
-        authToken: function() {
-            return this.$store.getters['mydata/getAuthToken'];
-        },
         headers() {
             var result = this.defHeaders || [];
             var rmv = this.RemoveHeaders || [];
@@ -135,7 +132,7 @@ export default {
                 'page': 1,
                 'itemsPerPage': 10
             };
-            admin.genericGetList(this.authToken, 'Filestore', {
+            admin.genericGetList('Filestore', {
                 "context": this.context,
                 "find": this.searchText,
                 ...pageOptions

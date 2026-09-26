@@ -1,6 +1,6 @@
 <template>
 <v-card>
-    <v-btn>Show All</v-btn>
+    <v-btn>Export</v-btn>
     <v-treeview :items="OrgChart"
                 item-key="tid"
                 :open.sync="OrgChartOpened"
@@ -188,9 +188,6 @@ export default {
 
     }),
     computed: {
-        authToken: function() {
-            return this.$store.getters['mydata/getAuthToken'];
-        },
         OrgChartFullOpenIDs() {
             if (this.OrgChart.length > 0) {
                 return openChildren(this.OrgChart);
@@ -205,7 +202,7 @@ export default {
         },
         getOrgChart: function() {
             this.loading = true;
-            admin.genericGetList(this.authToken, "Staff/OrgChart", null, (results, total) => {
+            admin.genericGetList("Staff/OrgChart", null, (results, total) => {
                 this.OrgChart = results;
                 this.loading = false;
 

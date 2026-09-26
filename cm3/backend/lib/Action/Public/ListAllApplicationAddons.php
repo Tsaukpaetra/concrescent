@@ -51,6 +51,16 @@ final class ListAllApplicationAddons
      */
     public function __invoke(ServerRequestInterface $request, ResponseInterface $response, $params): ResponseInterface
     {
+        //If we're coming in as a logged-on user, we must have admin permissions vetted from the router
+        if ($request->getAttribute('event_id')) {
+            $params['event_id'] = $request->getAttribute('event_id');
+            $whereParts = [
+            ];
+        } else {
+            $whereParts = array(
+                new SearchTerm('active', 1)
+            );
+        }
         $viewData = new View(
             array(
                 new SelectColumn('badge_type_id', JoinedTableAlias:'am'),
@@ -132,10 +142,6 @@ final class ListAllApplicationAddons
                  )
              )
           )
-        );
-
-        $whereParts = array(
-          new SearchTerm('active', 1)
         );
 
         $order = array('display_order' => false);

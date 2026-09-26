@@ -167,7 +167,6 @@ export default {
     computed: {
         ...mapGetters('mydata', {
             'isLoggedIn': 'getIsLoggedIn',
-            'authToken': 'getAuthToken',
         }),
         ...mapGetters('products', {
             'badgeContexts': 'badgeContexts',
