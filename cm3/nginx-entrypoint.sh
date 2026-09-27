@@ -6,10 +6,16 @@ TEMP_DIR="/etc/nginx/ssl_fallback"
 SSL_LINK_DIR="/etc/nginx/ssl"
 ENABLE_SSL=${ENABLE_SSL:-false}
 
-TEMPLATE="/etc/nginx/conf.d/default.conf.template"
-FINAL_CONF="/etc/nginx/conf.d/default.conf"
+#template expected at "/etc/nginx/templates/default.conf.template"
+#This becomes the default.conf in the conf directory
+#If it's not, the default default.conf won't be impacted by the upcoming mods
+TEMPLATE="/etc/nginx/conf.d/default.conf"
 
-mkdir -p $TEMP_DIR $SSL_LINK_DIR /etc/nginx/templates
+mkdir -p $TEMP_DIR $SSL_LINK_DIR
+
+#Run the container's entrypoint without the ending exec line at the end
+sed '/exec "\$@"/d' /docker-entrypoint.sh | sh -s -- "$@"
+
 
 # 1. Replace Domain Name
 sed -i "s/SERVER_DOMAIN_NAME/$DOMAIN/g" "$TEMPLATE"
@@ -46,7 +52,8 @@ if [ "$ENABLE_SSL" = "true" ] && [ -n "$DOMAIN_NAME" ] && [ "$DOMAIN_NAME" != "_
         export FALLBACK_MODE=false
     fi
 
-    nginx -g "daemon off;" &
+    #Start nginx backgrounded so we can continue, using passed-in arguments (if any)
+    "$@" &
     NGINX_PID=$!
 
     if [ "$FALLBACK_MODE" = "true" ]; then
@@ -74,5 +81,5 @@ else
     sed -i '/if (\$scheme = http) {/,/}/d' "$TEMPLATE"
 
     cp "$TEMPLATE" "$FINAL_CONF"
-    nginx -g "daemon off;"
+    exec "$@"
 fi
