@@ -113,14 +113,13 @@ class AccessLogMiddleware implements MiddlewareInterface
             // Log request result (Failure/Exception caught during flow)
             // Build human-friendly message using class constants
             $action = self::ACTION_MAP[$method] ?? 'Request';
-            $statusDescription = self::STATUS_MESSAGES[$context['status_code']] ?? ($context['status_code'] >= 400 ? 'Failed' : 'OK');
+            $statusDescription = self::STATUS_MESSAGES[500];
             $logMessage = "{$action} {$statusDescription}";
             
             $this->logger->error("!{$logMessage} - " . $e->getMessage(), [
                 'method' => $method,
                 'uri' => $path,
-                'duration' => $duration,
-                'exception' => $e,
+                'duration' => $duration
             ]);
 
             // Re-throw so Slim's ErrorMiddleware can handle it downstream

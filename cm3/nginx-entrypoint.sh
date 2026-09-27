@@ -11,6 +11,10 @@ ENABLE_SSL=${ENABLE_SSL:-false}
 #If it's not, the default default.conf won't be impacted by the upcoming mods
 TEMPLATE="/etc/nginx/conf.d/default.conf"
 
+#Default command if none was provided
+if [ $# -eq 0 ]; then
+    set -- nginx -g "daemon off;"
+fi
 mkdir -p $TEMP_DIR $SSL_LINK_DIR
 
 #Run the container's entrypoint without the ending exec line at the end
@@ -34,7 +38,6 @@ fi
 
 if [ "$ENABLE_SSL" = "true" ] && [ -n "$DOMAIN_NAME" ] && [ "$DOMAIN_NAME" != "_" ]; then
     echo "Mode: FULL SSL for $DOMAIN_NAME"
-    cp "$TEMPLATE" "$FINAL_CONF"
 
     # --- Certificate Fallback Logic ---
     if [ ! -f "$CERT_DIR/fullchain.pem" ]; then
@@ -80,6 +83,5 @@ else
     # We look for the 'if ($scheme = http)' block and remove it.
     sed -i '/if (\$scheme = http) {/,/}/d' "$TEMPLATE"
 
-    cp "$TEMPLATE" "$FINAL_CONF"
     exec "$@"
 fi

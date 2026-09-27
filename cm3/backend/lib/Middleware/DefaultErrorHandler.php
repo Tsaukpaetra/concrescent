@@ -185,6 +185,11 @@ final class DefaultErrorHandler implements ErrorHandlerInterface
                 $trace['class'] = str_replace("\0".$this->installpath, '::', $trace['class']);
             }
 
+            // Sanitize all arguments to ensure UTF-8 validity for JSON encoding
+            if (isset($trace['args']) && is_array($trace['args'])) {
+                $trace['args'] = $this->sanitizeArrayForJson($trace['args']);
+            }
+
             $result[$key] = $trace;
             //Stop adding more traces once we've hit the middleware
             if (isset($trace['file']) && str_starts_with($trace['file'], '/vendor/slim/slim/Slim/MiddlewareDispatcher.php')) {
@@ -192,6 +197,47 @@ final class DefaultErrorHandler implements ErrorHandlerInterface
             }
         }
         return $result;
+    }
+    
+    /**
+     * Recursively traverses an array to sanitize strings and ensure UTF-8 compatibility.
+     * Replaces non-UTF-8 sequences with a placeholder to prevent json_encode failures.
+     *
+     * @param mixed $data
+     * @return mixed
+     */
+    private function sanitizeArrayForJson(mixed $data): mixed
+    {
+        if (is_string($data)) {
+            // Check if string is valid UTF-8
+            if (!mb_check_encoding($data, 'UTF-8')) {
+                // If not valid UTF-8, attempt to convert from ISO-8859-1 or simply scrub it
+                return '[BINARY DATA / INVALID UTF-8 SEQUENCE]';
+            }
+            return $data;
+        }
+
+        if (is_array($data)) {
+            $sanitized = [];
+            foreach ($data as $k => $v) {
+                $sanitized[$k] = $this->sanitizeArrayForJson($v);
+            }
+            return $sanitized;
+        }
+
+        // if (is_object($data)) {
+        //     // For objects, we convert to array to inspect properties, 
+        //     // but to avoid infinite recursion or massive payloads, 
+        //     // we represent complex objects as their class name + serialized content if safe.
+        //     try {
+        //         $props = (array) $data;
+        //         return ['__object_type__' => get_class($data), 'properties' => $this->sanitizeArrayForJson($props)];
+        //     } catch (\Throwable $e) {
+        //         return '[UNSERIALIZABLE OBJECT]';
+        //     }
+        // }
+
+        return $data;
     }
     
     function extractData(ServerRequestInterface $request)

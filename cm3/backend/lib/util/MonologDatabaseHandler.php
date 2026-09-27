@@ -37,7 +37,7 @@ class MonologDatabaseHandler extends \Monolog\Handler\AbstractProcessingHandler
         ];
         //Only add duration if it exists in the table
         if ($this->targetTable->HasColumn('server_duration')) {
-            $this->targetTable->debugThrowBeforeSelect = true;
+            //$this->targetTable->debugThrowBeforeSelect = true;
             $data['server_duration'] = $record['context']['duration'] ?? 0;
         }
 

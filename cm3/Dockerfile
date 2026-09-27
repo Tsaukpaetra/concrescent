@@ -40,6 +40,6 @@ COPY --chown=www-data:www-data --from=backend-builder /app/backend /var/www/html
 # Stage 4: Production Nginx (Frontend + Orchestrator)
 # ==========================================
 FROM nginx:alpine AS frontend
-COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
+COPY --from=frontend-builder /app/frontend/dist /var/www/html
 COPY --chmod=755  nginx-entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
