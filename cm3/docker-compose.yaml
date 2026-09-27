@@ -1,34 +1,48 @@
 services:
-  # 1. Nginx Web Server Container
+  # 1. Nginx Web Server (Serves Frontend + Proxies API)
   webserver:
-    image: nginx:alpine
+    build:
+      context: .
+      target: frontend
     container_name: cm3_nginx
     restart: always
     ports:
       - 8080:80
+      - 8443:443
+    env_file:
+      - path: .env
+        required: false
+      - path: .env.local
+        required: false 
     volumes:
-      - ./cm3/nginx-default.conf:/etc/nginx/conf.d/default.conf
-      - web_root:/var/www/html
+      - ./cm3/nginx-default.conf:/etc/nginx/conf.d/default.conf.template:ro
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/www/certbot
     depends_on:
       - app
-  # 2. PHP-FPM Application Container
+
+  # 2. PHP-FPM Application Container (Backend)
   app:
     build:
       context: .
-      dockerfile: Dockerfile
+      target: backend
     container_name: cm3_php_fpm
     restart: always
-    volumes:
-      - web_root:/var/www/html
     depends_on:
       - mariadb
+    env_file:
+      - path: .env
+        required: false
+      - path: .env.local
+        required: false 
     environment:
-    #Overrides the default config.php file with a custom values (see below)
       - DATABASE_HOST=mariadb
       - DATABASE_DATABASE=cm3_db
       - DATABASE_USERNAME=cm3_user
       - DATABASE_PASSWORD=cm3_pass
+      # If SSL is not enabled, this is critical as the API will refuse connections
       - ENVIRONMENT_IGNORE_INSECURE=True
+
   # 3. MariaDB Database Container
   mariadb:
     image: mariadb:11.2
@@ -39,11 +53,20 @@ services:
       MYSQL_DATABASE: cm3_db
       MYSQL_USER: cm3_user
       MYSQL_PASSWORD: cm3_pass
-    ports:
-      - 3306:3306
     volumes:
       - mariadb_data:/var/lib/mysql
+  # The Certbot service is assigned to the 'ssl' profile.
+  # It will ONLY run if you run `docker compose --profile ssl up`
+  certbot:
+    image: certbot/certbot
+    container_name: cm3_certbot
+    profiles: ["ssl"] 
+    volumes:
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
 volumes:
-  web_root: null
-  mariadb_data: null
-networks: {}
+  mariadb_data: 
+  certbot-etc:
+  certbot-var:
