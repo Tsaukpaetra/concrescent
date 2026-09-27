@@ -46,6 +46,8 @@ return function (App $app, $container) {
             ->add($staffView);
             $app->post('', \CM3_Lib\Action\Staff\BadgeType\Create::class)
             ->add($staffPerm);
+            $app->get('All', \CM3_Lib\Action\Public\ListStaffBadges::class)
+            ->add($staffPerm);
             $app->get('/{id}', \CM3_Lib\Action\Staff\BadgeType\Read::class)
             ->add($staffView);
             $app->post('/{id}', \CM3_Lib\Action\Staff\BadgeType\Update::class)
@@ -82,6 +84,16 @@ return function (App $app, $container) {
                 $app->delete('/{id}', \CM3_Lib\Action\Staff\Position\Delete::class)
                 ->add($staffPerm);
             });
+        },
+        '/Addon' => function (RouteCollectorProxy $app) use ($staffPerm, $staffView) {
+            //Dummy until staff badge types can get addons...
+            $app->get('All', function ($request, $response, $params) {
+                $response->getBody()->write("[]");
+                return $response
+                ->withHeader('Content-Type', 'application/json')
+                ->withStatus(200);
+            })
+            ->add($staffPerm);
         },
     );
 

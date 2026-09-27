@@ -145,12 +145,12 @@ final class OrgChart
         //First, index the departments
         $departments = array_combine(
             array_column($departments, 'id'),
-            array_map('self::ect', $departments)
+            array_map([self::class, 'ect'], $departments)
         );
         //and index the positions
         $positions = array_combine(
             array_column($positions, 'id'),
-            array_map('self::ect', $positions)
+            array_map([self::class, 'ect'], $positions)
         );
 
         //Set all the assigned positions into the actual positions

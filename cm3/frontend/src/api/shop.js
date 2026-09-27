@@ -1,4 +1,5 @@
 import axios from './axiosWrap'; // Uses the interceptor for URL and Token
+import { setTokenRefreshing } from './axiosWrap';
 
 export default {
 
@@ -141,11 +142,17 @@ export default {
             });
     },
     loginAccount(accountCreds, cb, errorCb) {
-        axios.post("public/login", accountCreds)
+        //Just in case
+        setTokenRefreshing(true);
+        axios.post("public/login", accountCreds, {
+            bypassQueue: true
+        })
             .then(function (response) {
                 cb(response.data);
+                setTokenRefreshing(false);
             })
             .catch(function (response) {
+                setTokenRefreshing(false, response);
                 if (typeof errorCb == "function")
                     errorCb(response.response.data);
             });
@@ -179,17 +186,21 @@ export default {
             });
     },
     switchEvent(token, event_id, cb, errorCb) {
+        setTokenRefreshing(true);
         axios.post("account/switchevent", {
             "event_id": event_id
         }, {
             headers: {
                 Authorization: `Bearer ${token}`
-            }
+            },
+            bypassQueue: true
         })
             .then(function (response) {
                 cb(response.data);
+                setTokenRefreshing(false);
             })
             .catch(function (response) {
+                setTokenRefreshing(false, response);
                 if (typeof errorCb != "undefined")
                     errorCb(response.response.data);
             });
