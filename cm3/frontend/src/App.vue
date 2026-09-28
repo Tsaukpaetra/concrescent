@@ -503,9 +503,15 @@ export default {
         },
         updateSubTabs(newSubTabs) {
             this.subTabs = newSubTabs;
-            //TODO:Determine if the current route is intended to be on a particular sub-tab
-
-
+            
+            // If the URL already has a tabKey, try to sync it
+            const tabKey = this.$route.params.tabKey;
+            if (tabKey) {
+                const index = this.subTabs.findIndex(t => t.key === tabKey);
+                if (index !== -1) {
+                    this.subTabIx = index;
+                }
+            }
         },
         ...mapActions('mydata', ['clearAuthError']),
         async resolveSession() {
@@ -533,25 +539,48 @@ export default {
                 this.showAuthErrorDialog = true;
             }
         }  ,
-        '$route.name': function(name) {
-            console.log("Switching route to " + name);
-            //Reset title
-            document.title = this.appTitle;
-            //Expect a new set of subtabs if this route has them
-            this.subTabs = [];
-            this.subTabIx = 0;
-            this.subHead = null;
+        '$route': function(to, from) {
+            console.log("Route changed from " + from.name + " to " + to.name);
+            
+            // If we are moving to a completely different route name
+            if (to.name !== from.name) {
+                document.title = this.appTitle;
+                this.subTabs = [];
+                this.subTabIx = 0;
+                this.subHead = null;
+            }
+
+            // If the route name is the same, but the tabKey changed (or we just arrived)
+            // We wait a tick for the child component to call updateSubTabs
+            this.$nextTick(() => {
+                const tabKey = to.params.tabKey;
+                if (tabKey && this.subTabs.length > 0) {
+                    const index = this.subTabs.findIndex(t => t.key === tabKey);
+                    if (index !== -1 && this.subTabIx !== index) {
+                        this.subTabIx = index;
+                    }
+                }
+            });
         },
         'appTitle': function(newTitle) {
             document.title = this.appTitle;
         },
         'subTabIx': function(newSubTab) {
             if (this.subTabs[this.subTabIx]) {
-
-                console.log('Switching subtab to ' + newSubTab, this.subTabs[this.subTabIx].key);
-            } else {
-                console.log('Switching subtab to un-keyed index ' + this.subTabIx);
-
+                const tabKey = this.subTabs[this.subTabIx].key;
+                const route = this.$route;
+                
+                // Only push if the key actually changed to avoid infinite loops
+                if (route.params.tabKey !== tabKey) {
+                    const newParams = { ...route.params, tabKey: tabKey };
+                    
+                    this.$router.push({
+                        name: route.name,
+                        params: newParams
+                    }).catch(err => {
+                        if (err.name !== 'NavigationDuplicated') throw err;
+                    });
+                }
             }
         }
     },

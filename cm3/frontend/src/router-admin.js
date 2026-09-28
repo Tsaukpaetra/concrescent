@@ -11,7 +11,7 @@ const result = [{
         component: () => import( /* webpackChunkName: "admin_badge_checkin" */ './routes/admin/badge_checkin.vue'),
     },
     {
-      path: 'Locations',
+      path: 'Locations/:tabKey?',
       name: 'Locations',
       meta: {
         title: 'Venue Locations and assignments',
@@ -19,7 +19,7 @@ const result = [{
       component: () => import(/* webpackChunkName: "login" */ './routes/admin/locations.vue'),
     },
     {
-        path: 'Attendee',
+        path: 'Attendee/:tabKey?',
         name: 'Attendee',
         meta: {
             title: 'Attendee',
@@ -27,7 +27,7 @@ const result = [{
         component: () => import( /* webpackChunkName: "admin_attendee" */ './routes/admin/attendee.vue'),
     },
     {
-        path: 'Contact',
+        path: 'Contact/:tabKey?',
         name: 'Contact',
         meta: {
             title: 'Contact',
@@ -35,7 +35,7 @@ const result = [{
         component: () => import( /* webpackChunkName: "admin_contact" */ './routes/admin/contact.vue'),
     },
     {
-        path: 'Application/:context_code',
+        path: 'Application/:context_code/:tabKey?',
         name: 'Application',
         meta: {
             title: 'Group Applications',
@@ -43,7 +43,7 @@ const result = [{
         component: () => import( /* webpackChunkName: "admin_group" */ './routes/admin/applications.vue'),
     },
     {
-        path: 'Staff',
+        path: 'Staff/:tabKey?',
         name: 'Staff',
         meta: {
             title: 'Staff',
@@ -67,7 +67,7 @@ const result = [{
         component: () => import( /* webpackChunkName: "admin_badgestats" */ './routes/admin/badge_stats.vue'),
     },
     {
-        path: 'Users',
+        path: 'Users/:tabKey?',
         name: 'Users',
         meta: {
             title: 'Users',
@@ -75,7 +75,7 @@ const result = [{
         component: () => import( /* webpackChunkName: "admin_users" */ './routes/admin/users.vue'),
     },
     {
-        path: 'System',
+        path: 'System/:tabKey?',
         name: 'System',
         meta: {
             title: 'System',
@@ -83,7 +83,7 @@ const result = [{
         component: () => import( /* webpackChunkName: "admin_system" */ './routes/admin/system.vue'),
     },
     {
-        path: 'Printing',
+        path: 'Printing/:tabKey?',
         name: 'Printing',
         meta: {
             title: 'Badge Printing',
@@ -91,7 +91,7 @@ const result = [{
         component: () => import( /* webpackChunkName: "badgeprinting" */ './routes/admin/badgeprinting.vue'),
     },
     {
-        path: 'Payments',
+        path: 'Payments/:tabKey?',
         name: 'Payments',
         meta: {
             title: 'Payments',
