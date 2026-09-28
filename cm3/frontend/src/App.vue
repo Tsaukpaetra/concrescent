@@ -140,6 +140,30 @@
       shaped color="appbar"
       transition="fab-transition"
       ><v-col style="text-align: center;" @click="initLoadDone = false"><h1>{{ selectedEvent.display_name }}</h1></v-col></v-snackbar>
+    <v-snackbar v-model="showAuthErrorDialog" color="error" vertical right :timeout="15000">
+
+    <div class="d-flex align-center">
+      <v-icon
+        color="default"
+        left
+        class="mr-3"
+      >
+        mdi-alert-circle-outline
+      </v-icon>
+      <div>
+        
+            <strong>Session Issue Detected</strong><br>
+            {{ authErrorDetails.message }}<br>
+            <small>Error on: {{ authErrorDetails.endpoint }}</small>
+      </div>
+    </div>
+
+        <template v-slot:action>
+            <v-btn text @click="resolveSession">Try Re-logging</v-btn>
+            <v-btn text @click="dismissError">Dismiss</v-btn>
+        </template>
+    </v-snackbar>
+  
 </v-app>
 </template>
 
@@ -147,12 +171,14 @@
 <script>
 import {
     mapState,
-    mapGetters
+    mapGetters,
+    mapActions
 } from 'vuex'
 export default {
     data: () => ({
         drawer: false,
         initLoadDone:false,
+        showAuthErrorDialog:false,
         subHead: null,
         subTabs: [],
         subTabIx: 0
@@ -420,7 +446,8 @@ export default {
             'isAdmin': 'hasPerms',
             'hasEventPerm': 'hasEventPerm',
             'hasGroupPerm': 'hasGroupPerm',
-            'getLoggedInName': 'getLoggedInName'
+            'getLoggedInName': 'getLoggedInName',
+            'authError' : 'authError'
         }),
         ...mapGetters('products', {
             'events': 'events',
@@ -466,6 +493,9 @@ export default {
         ...mapState({
             runPrintDaemon: (state) => state.station.serviceRemoteJobs,
         }),
+        authErrorDetails() {
+            return this.authError;
+        }
     },
     methods: {
         updateSubTitle(newSubTitle) {
@@ -476,12 +506,33 @@ export default {
             //TODO:Determine if the current route is intended to be on a particular sub-tab
 
 
+        },
+        ...mapActions('mydata', ['clearAuthError']),
+        async resolveSession() {
+            this.clearAuthError();
+            // Navigate to login or trigger a refresh logic
+            console.log('Go log in, we will come back to', this.$route.fullPath)
+            this.$router.push({
+                path: '/login',
+                query: { returnTo: this.$route.fullPath }
+            });
+            this.showAuthErrorDialog = false;
+        },
+        dismissError() {
+            this.showAuthErrorDialog = false;
+            this.clearAuthError();
         }
     },
     watch: {
         'selectedEvent': function(newSelectedEvent){
             this.initLoadDone = true;
         },
+        'authError': function(authError){
+            if(this.isLoggedIn && authError.hasError)
+            {
+                this.showAuthErrorDialog = true;
+            }
+        }  ,
         '$route.name': function(name) {
             console.log("Switching route to " + name);
             //Reset title

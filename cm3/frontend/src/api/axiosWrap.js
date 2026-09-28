@@ -63,7 +63,24 @@ customInstance.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// You can export these to control rotation from your switchEvent logic
+customInstance.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response && error.response.status === 401) {
+            // Capture metadata for the user or helpdesk
+            console.log('unauthorixzeddd!',error.response)
+            store.dispatch('mydata/setAuthError', {
+                hasError: true,
+                message: error.response.data?.error?.message || error.response.data?.message || "Unauthorized",
+                statusCode: error.response.status,
+                endpoint: error.config.url
+            });
+        }
+        return Promise.reject(error);
+    }
+);
+
+// Export command to control whether we're queueing or not
 export const setTokenRefreshing = (status, error = null) => {
     isRefreshing = status;
     if (!status) {

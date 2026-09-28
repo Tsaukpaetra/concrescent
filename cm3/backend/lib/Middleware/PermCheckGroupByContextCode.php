@@ -74,59 +74,54 @@ class PermCheckGroupByContextCode
             }
 
 
+            $gperms = new PermGroup(0);
             //Do they have permissions for the specified group at all?
             if (isset($perms->GroupPerms[$desiredGroupID])) {
-                //Are we checking for more than the group id at this time?
-                if (count($this->AllowedPerms) > 0) {
-                    $gperms = $perms->GroupPerms[$desiredGroupID];
-                    foreach ($this->AllowedPerms as $value) {
-                        if ($value instanceof PermGroup) {
-                            $hasPerm |= $gperms->getValue() & $value->getValue();
-                        }
-                    }
-                } else {
-                    //We don't have any specific perms to check, pass this round
-                    $hasPerm = true;
-                }
-            } elseif ($context_code == 'A' || $context_code == 'S') {
                 $gperms = $perms->GroupPerms[$desiredGroupID];
+            } elseif ($context_code == 'A' || $context_code == 'S') {
                 $eventPermsValue = $perms->EventPerms->getValue();
 
                 // Define the mapping configuration
                 // Key: PermGroup constant
-                // Value: Array of PermEvent constants it maps to
+                // Value: Equivalent PermEvent constant it maps to
                 $mappings = [
                     'A' => [
-                        PermGroup::Badge_View    => [PermEvent::Attendee_View],
-                        PermGroup::Badge_Edit    => [PermEvent::Attendee_Edit],
-                        PermGroup::Badge_Manage  => [PermEvent::Attendee_Manage],
+                        PermGroup::Badge_View    => PermEvent::Attendee_View,
+                        PermGroup::Badge_Edit    => PermEvent::Attendee_Edit,
+                        PermGroup::Badge_Manage  => PermEvent::Attendee_Manage,
                         // Add View/Export/Refund mappings as defined in your business logic
                     ],
                     'S' => [
-                        PermGroup::Badge_View    => [PermEvent::Staff_View],
-                        PermGroup::Badge_Edit    => [PermEvent::Staff_Edit],
-                        PermGroup::Badge_Manage  => [PermEvent::Staff_Manage],
+                        PermGroup::Badge_View    => PermEvent::Staff_View,
+                        PermGroup::Badge_Edit    => PermEvent::Staff_Edit,
+                        PermGroup::Badge_Manage  => PermEvent::Staff_Manage,
                         // Add Staff-specific mappings here
                     ],
                 ];
 
-                $currentMapping = $mappings[$desiredGroupID] ?? [];
+                $currentMapping = $mappings[$context_code] ?? [];
 
-                foreach ($currentMapping as $groupBit => $eventBits) {
-                    // Check if the user has the specific Group permission
-                    if ($gperms->getValue() & $groupBit) {
-                        // Check if the user has ANY of the mapped Event permissions
-                        foreach ($eventBits as $eventBit) {
-                            if ($eventPermsValue & $eventBit) {
-                                $hasPerm = true;
-                                break 2; // Found a match, exit both loops
-                            }
-                        }
+                foreach ($currentMapping as $groupBit => $eventBit) {
+                    // Check if the user has ANY of the mapped Event permissions
+                    if ($eventPermsValue & $eventBit) {
+                        [$gperms,'set' . PermGroup::getKeyArray($groupBit)[0]](true);
                     }
                 }
-
+            } 
             
+            //Are we checking for more than the group id at this time?
+            if (count($this->AllowedPerms) > 0) {
+                foreach ($this->AllowedPerms as $value) {
+                    if ($value instanceof PermGroup) {
+                        $hasPerm |= $gperms->getValue() & $value->getValue();
+                    }
+                }
             } else {
+                //We don't have any specific perms to check, pass this round
+                $hasPerm = true;
+            }
+            
+            if(!$hasPerm && $gperms->isNoPermission()) {
                 throw new HttpUnauthorizedException($request, 'Context Code ' . $context_code . ' not accessible with missing permissions');
             }
         }

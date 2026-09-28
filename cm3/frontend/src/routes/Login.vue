@@ -193,7 +193,7 @@ export default {
                 event_id: this.event_id
             }).then((success) => {
                 if (success === true) {
-                    this.state = 3;
+                    this.$router.push(this.returnTo);
                 } else {
                     this.loginFailReason = success;
                     this.state = 4;
@@ -213,12 +213,7 @@ export default {
                         if(this.returnTo.startsWith("/Admin/") && this.isAdmin)  {
                             this.setAdminMode(true);
                         }
-                        if(query.justgo != undefined){
-                            console.log("just going to",this.returnTo)
-                            setTimeout(()=>{
-                                this.$router.push(this.returnTo);
-                            },400)
-                        }
+                        this.$router.push(this.returnTo);                        
                     } else {
                         this.loginFailReason = success;
                         this.state = 4;

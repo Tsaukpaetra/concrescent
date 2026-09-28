@@ -26,6 +26,12 @@ const state = {
     },
     activeCarts: [],
     allCarts: null,
+    authError: {
+        hasError: false,
+        message: "",
+        statusCode: null,
+        endpoint: ""
+    }
 }
 
 
@@ -109,7 +115,8 @@ const getters = {
                 return state.contactInfo.email_address;
         }
         return "Guest";
-    }
+    },
+    authError: (state) => state.authError
 }
 
 // actions
@@ -184,6 +191,12 @@ const actions = {
                 resolve(error.error?.message);
             });
         })
+    },
+    setAuthError({ commit }, errorDetails) {
+        commit('setAuthError', errorDetails);
+    },
+    clearAuthError({ commit }) {
+        commit('clearAuthError');
     },
     logout({
         commit,
@@ -463,6 +476,17 @@ const mutations = {
         var ix = state.activeCarts.findIndex(cart => cart.id == cartdata.id);
         //upsert
         state.activeCarts.splice(ix, ix == -1 ? 0 : 1, cartdata);
+    },
+    setAuthError(state, details) {
+        state.authError = details;
+    },
+    clearAuthError(state) {
+        state.authError = {
+            hasError: false,
+            message: "",
+            statusCode: null,
+            endpoint: ""
+        };
     }
 
 }
