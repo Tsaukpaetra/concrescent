@@ -1,6 +1,6 @@
 <template>
     <v-tabs-items :value="subTabIx" touchless>
-        <v-tab-item value="0">
+        <v-tab-item value="Submissions">
             <badgeSearchList v-if="context_id>0" :apiPath="'Application/' + context_code +'/Submission'"
                 :context_code="context_code" :headerFirst="{
                                  text: currentContext.application_name1,
@@ -104,7 +104,7 @@
             </v-card>
         </v-dialog>
 
-        <v-tab-item value="1">
+        <v-tab-item value="Badges">
             <badgeSearchList v-if="context_id>0" :apiPath="'Application/' + context_code +'/Applicant'"
                 :context_code="context_code" :AddHeaders="listAddHeaders" :RemoveHeaders="listRemoveHeaders"
                 :isEditingItem="bEdit" :actions="listActions" @edit="editBadge" />
@@ -162,7 +162,7 @@
                 </v-card>
             </v-dialog>
         </v-tab-item>
-        <v-tab-item value="2">
+        <v-tab-item value="Types">
             <orderableList :apiPath="'Application/' + context_code +'/BadgeType'" :AddHeaders="btAddHeaders"
                 :actions="btActions" :footerActions="btFooterActions" :isEditingItem="btDialog" @edit="editBadgeType"
                 @create="createBadgeType" >
@@ -189,10 +189,10 @@
                 </v-card>
             </v-dialog>
         </v-tab-item>
-        <v-tab-item value="3">
+        <v-tab-item value="Questions">
             <formQuestionEditList :context_code="context_code" />
         </v-tab-item>
-        <v-tab-item value="4">
+        <v-tab-item value="Promos">
 
             <simpleList v-if="context_id>0" :apiPath="'Application/' + context_code +'/PromoCode'"
                 :isEditingItem="pEdit" :AddHeaders="pAddHeaders" :actions="btActions" :footerActions="btFooterActions"
@@ -248,7 +248,7 @@
             </v-dialog>
         </v-tab-item>
 
-        <v-tab-item value="5">
+        <v-tab-item value="Addons">
 
             <orderableList :apiPath="'Application/' + context_code +'/Addon'" :isEditingItem="aEdit"
                 :AddHeaders="aAddHeaders" :actions="btActions" :footerActions="btFooterActions" show-expand
@@ -303,7 +303,7 @@
                 </v-card>
             </v-dialog>
         </v-tab-item>
-        <v-tab-item value="6">
+        <v-tab-item value="Notifications">
 
         <simpleList :apiPath="'Mail/Template/' + context_code"
                     :isEditingItem="eEdit"
@@ -421,7 +421,7 @@
         </v-dialog>
 
 
-    </v-tab-item>
+        </v-tab-item>
 
         <v-dialog v-model="loading" width="200" height="200" close-delay="1200" content-class="elevation-0" persistent>
             <v-card-text class="text-center overflow-hidden">
@@ -447,6 +447,7 @@ import admin from '../../api/admin';
 import {
     debounce
 } from '@/plugins/debounce';
+import { subTabEditorByQueryIdMixin } from '@/plugins/subTabEditorByQueryId.js';
 import badgeSearchList from '@/components/badgeSearchList.vue';
 import orderableList from '@/components/orderableList.vue';
 import simpleList from '@/components/simpleList.vue';
@@ -475,10 +476,80 @@ export default {
         cellToggle,
         EmailTemplateEditor,
     },
+    mixins: [subTabEditorByQueryIdMixin],
     props: [
         'subTabIx'
     ],
     data: () => ({
+        subTabs:  [
+            {
+                key: 'Submissions',
+                text: 'Submissions',
+                title: 'Submissions',
+                editor: {
+                    editObject: 'sSelected',
+                    editFunction: 'editSubmission',
+                    dialogToggle: 'sEdit'
+                }
+            },
+            {
+                key: 'Badges',
+                text: 'Badges',
+                title: 'Badges',
+                editor: {
+                    editObject: 'bSelected',
+                    editFunction: 'editBadge',
+                    dialogToggle: 'bEdit'
+                }
+            },
+            {
+                key: 'Types',
+                text: 'Types',
+                title: 'Types',
+                editor: {
+                    editObject: 'btSelected',
+                    editFunction: 'editBadgeType',
+                    dialogToggle: 'btDialog'
+                }
+            },
+            {
+                key: 'Questions',
+                text: 'Questions',
+                title: 'Questions'
+            },
+            {
+                key: 'Promos',
+                text: 'Promos',
+                title: 'Promos',
+                editor: {
+                    editObject: 'pSelected',
+                    editFunction: 'editPromoCode',
+                    dialogToggle: 'pEdit'
+                }
+            },
+            {
+                key: 'Addons',
+                text: 'Addons',
+                title: 'Addons',
+                editor: {
+                    editObject: 'aSelected',
+                    editFunction: 'editAddon',
+                    dialogToggle: 'aEdit'
+                }
+            },
+            {
+                key: 'Notifications',
+                text: 'Notifications',
+                title: 'Notifications',
+                editor: {
+                    editObject: 'eSelected',
+                    editKey: 'name',
+                    editFunction: 'editEmailTemplate',
+                    dialogToggle: 'eEdit'
+                }
+            }
+
+        ],
         listRemoveHeaders: [
             'time_printed',
             'time_checked_in',
@@ -838,14 +909,13 @@ export default {
         },
         editBadgeType: function(selectedBadgeType) {
             this.loading = true;
-            this.btDialog = true;
-            var that = this;
-            admin.genericGet('Application/' + this.context_code + '/BadgeType/' + selectedBadgeType.id, null, function(editBt) {
+            admin.genericGet('Application/' + this.context_code + '/BadgeType/' + selectedBadgeType.id, null, (editBt) => {
 
-                that.btSelected = editBt;
-                that.loading = false;
-            }, function() {
-                that.loading = false;
+                this.btSelected = editBt;
+                this.btDialog = true;
+                this.loading = false;
+            }, () => {
+                this.loading = false;
             })
         },
         saveBadgeType: function() {
@@ -1090,6 +1160,7 @@ export default {
         },
     },
     async created() {
+        this.$emit('updateSubTabs', this.subTabs);
         console.log('Context!', this.context_code)
         this.loading = true;
         //Wait until we have context info
@@ -1112,43 +1183,6 @@ export default {
         this.loading = false;
         this.checkPermission();
         //this.doSearch();
-        this.$emit('updateSubTabs', [{
-                key: '0',
-                text: 'Submissions',
-                title: 'Submissions'
-            },
-            {
-                key: '1',
-                text: 'Badges',
-                title: 'Badges'
-            },
-            {
-                key: '2',
-                text: 'Types',
-                title: 'Types'
-            },
-            {
-                key: '3',
-                text: 'Questions',
-                title: 'Questions'
-            },
-            {
-                key: '4',
-                text: 'Promos',
-                title: 'Promos'
-            },
-            {
-                key: '5',
-                text: 'Addons',
-                title: 'Addons'
-            },
-            {
-                key: '6',
-                text: 'Notifications',
-                title: 'Notifications'
-            }
-
-        ]);
     }
 };
 </script>

@@ -1,7 +1,7 @@
 <template>
 <v-tabs-items :value="subTabIx"
               touchless>
-    <v-tab-item value="0">
+    <v-tab-item value="Payments">
         <simpleList apiPath="Payment"
                     :AddHeaders="listAddHeaders"
                     :RemoveHeaders="listRemoveHeaders"
@@ -114,6 +114,7 @@ import admin from '../../api/admin';
 import {
     debounce
 } from '@/plugins/debounce';
+import { subTabEditorByQueryIdMixin } from '@/plugins/subTabEditorByQueryId.js';
 import simpleList from '@/components/simpleList.vue';
 import simpleDropdown from '@/components/simpleDropdown.vue';
 import editAdminUser from '@/components/editAdminUser.vue';
@@ -130,10 +131,22 @@ export default {
         payment_status_pill,
         cartItemCards
     },
+    mixins: [subTabEditorByQueryIdMixin],
     props: [
         'subTabIx'
     ],
     data: () => ({
+        subTabs:  [{
+                key: 'Payments',
+                text: 'Payments',
+                title: 'Payments',
+                editor: {
+                    editObject: 'uSelected',
+                    editFunction: 'editUser',
+                    dialogToggle: 'uEdit'
+                }
+            },
+        ],
         listRemoveHeaders: [
         ],
         listAddHeaders: [{
@@ -266,12 +279,7 @@ export default {
     created() {
         this.checkPermission();
         //this.doSearch();
-        this.$emit('updateSubTabs', [{
-                key: '0',
-                text: 'Users',
-                title: 'Users'
-            },
-        ]);
+        this.$emit('updateSubTabs',this.subTabs);
     }
 };
 </script>

@@ -181,7 +181,7 @@ export default {
         showAuthErrorDialog:false,
         subHead: null,
         subTabs: [],
-        subTabIx: 0
+        subTabIx: -1
     }),
     components: {
         PrintDaemon: () => import( /* webpackChunkName: "printDaemon" */ '@/components/formatpieces/printDaemon.vue')
@@ -503,13 +503,26 @@ export default {
         },
         updateSubTabs(newSubTabs) {
             this.subTabs = newSubTabs;
+            console.log('updateSubTabs call', newSubTabs)
             
             // If the URL already has a tabKey, try to sync it
             const tabKey = this.$route.params.tabKey;
-            if (tabKey) {
-                const index = this.subTabs.findIndex(t => t.key === tabKey);
-                if (index !== -1) {
-                    this.subTabIx = index;
+            if (tabKey != null) {
+                const tabIx = this.subTabs.findIndex(t => t.key === tabKey);
+                console.log('updateSubTabs', tabKey, tabIx)
+                if (tabIx !== -1) {
+                    console.log('updateSubTabs, have tabs and tabKey', tabKey, tabIx)
+                    this.subTabIx = tabIx;
+                } else {
+                    console.log('updateSubTabs, fail find tabKey', tabKey, tabIx)
+                }
+            } else {
+                //if we have subTabs but didn't specify one, emplace the route with the first tab since that's most likely to be selected anyways
+                if(this.subTabs.length > 0){
+                    console.log('no tab selected but have tabs, select first tab', tabKey)
+                    this.$router.replace({
+                        params: {...this.$route.params, tabKey: this.subTabs[0].key}
+                    })
                 }
             }
         },
@@ -546,21 +559,22 @@ export default {
             if (to.name !== from.name) {
                 document.title = this.appTitle;
                 this.subTabs = [];
-                this.subTabIx = 0;
+                this.subTabIx = null;
                 this.subHead = null;
             }
 
             // If the route name is the same, but the tabKey changed (or we just arrived)
             // We wait a tick for the child component to call updateSubTabs
-            this.$nextTick(() => {
+            // this.$nextTick(() => {
                 const tabKey = to.params.tabKey;
                 if (tabKey && this.subTabs.length > 0) {
-                    const index = this.subTabs.findIndex(t => t.key === tabKey);
-                    if (index !== -1 && this.subTabIx !== index) {
-                        this.subTabIx = index;
+                    const tabIx = this.subTabs.findIndex(t => t.key === tabKey);
+                    if (tabIx !== -1 && this.subTabIx !== tabIx) {
+                        console.log('setting tabIx', tabIx)
+                        this.subTabIx = tabIx;
                     }
                 }
-            });
+            // });
         },
         'appTitle': function(newTitle) {
             document.title = this.appTitle;

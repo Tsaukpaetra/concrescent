@@ -1,7 +1,7 @@
 <template>
 <v-tabs-items :value="subTabIx"
               touchless>
-    <v-tab-item value="0">
+    <v-tab-item value="Badges">
         <badgeSearchList apiPath="Attendee/Badge"
                          context_code="A"
                          :AddHeaders="listAddHeaders"
@@ -61,7 +61,7 @@
             </v-card-text>
         </v-card>
     </v-dialog>
-    <v-tab-item value="1">
+    <v-tab-item value="Types">
         <orderableList apiPath="Attendee/BadgeType"
                        :AddHeaders="btAddHeaders"
                        :actions="btActions"
@@ -96,10 +96,10 @@
             </v-card>
         </v-dialog>
     </v-tab-item>
-    <v-tab-item value="2">
+    <v-tab-item value="Questions">
         <formQuestionEditList context_code="A" />
     </v-tab-item>
-    <v-tab-item value="3">
+    <v-tab-item value="Promos">
 
         <simpleList apiPath="Attendee/PromoCode"
                     :isEditingItem="pEdit"
@@ -168,7 +168,7 @@
         </v-dialog>
     </v-tab-item>
 
-    <v-tab-item value="4">
+    <v-tab-item value="Addons">
 
         <orderableList apiPath="Attendee/Addon"
                     :isEditingItem="dEdit"
@@ -227,7 +227,7 @@
             </v-card>
         </v-dialog>
     </v-tab-item>
-    <v-tab-item value="5">
+    <v-tab-item value="Notifications">
 
         <simpleList apiPath="Mail/Template/A"
                     :isEditingItem="eEdit"
@@ -377,6 +377,7 @@ import admin from '../../api/admin';
 import {
     debounce
 } from '@/plugins/debounce';
+import { subTabEditorByQueryIdMixin } from '@/plugins/subTabEditorByQueryId.js';
 import badgeSearchList from '@/components/badgeSearchList.vue';
 import orderableList from '@/components/orderableList.vue';
 import simpleList from '@/components/simpleList.vue';
@@ -401,10 +402,69 @@ export default {
         cellToggle,
         EmailTemplateEditor
     },
+    mixins: [subTabEditorByQueryIdMixin],
     props: [
         'subTabIx'
     ],
     data: () => ({
+        subTabs: [
+            {
+                key: 'Badges',
+                text: 'Badges',
+                title: 'Badges',
+                editor: {
+                    editObject: 'bSelected',
+                    editFunction: 'editBadge',
+                    dialogToggle: 'bEdit'
+                }
+            },
+            {
+                key: 'Types',
+                text: 'Types',
+                title: 'Types',
+                editor: {
+                    editObject: 'btSelected',
+                    editFunction: 'editBadgeType',
+                    dialogToggle: 'btDialog'
+                }
+            },
+            {
+                key: 'Questions',
+                text: 'Questions',
+                title: 'Questions'
+            },
+            {
+                key: 'Promos',
+                text: 'Promos',
+                title: 'Promos',
+                editor: {
+                    editObject: 'pSelected',
+                    editFunction: 'editPromoCode',
+                    dialogToggle: 'pEdit'
+                }
+            },
+            {
+                key: 'Addons',
+                text: 'Addons',
+                title: 'Addons',
+                editor: {
+                    editObject: 'dSelected',
+                    editFunction: 'editAddon',
+                    dialogToggle: 'dEdit'
+                }
+            },
+            {
+                key: 'Notifications',
+                text: 'Notifications',
+                title: 'Notifications',
+                editor: {
+                    editObject: 'eSelected',
+                    editKey: 'name',
+                    editFunction: 'editEmailTemplate',
+                    dialogToggle: 'eEdit'
+                }
+            }
+        ],
         listRemoveHeaders: [
             'application_status',
             'time_checked_in',
@@ -612,31 +672,30 @@ export default {
         },
         editBadge: function(selectedBadge) {
             console.log(selectedBadge);
-            let that = this;
-            that.loading = false;
-            admin.genericGet('Attendee/Badge/' + selectedBadge.id, null, function(editBadge) {
+            this.loading = false;
+            admin.genericGet('Attendee/Badge/' + selectedBadge.id, null, (editBadge) => {
                 console.log('loaded badge', editBadge)
-                that.bSelected = editBadge;
-                that.loading = false;
-                that.bEdit = true;
-            }, function() {
-                that.loading = false;
+                this.bSelected = editBadge;
+            
+                this.loading = false;
+                this.bEdit = true;
+            }, () => {
+                this.loading = false;
             })
         },
         saveBadge: function(sendStatus) {
             console.log('saving badge', this.bSelected);
-            let that = this;
-            that.loading = true;
-            admin.genericPost('Attendee/Badge/' + this.bSelected.id + "?sendupdate=" + (sendStatus ? "true" : "false"), this.bSelected, function(editBadge) {
-                that.bSelected = {};
-                that.loading = false;
-                that.bEdit = false;
-                that.$nextTick(() => {
-                    that.bModified = false;
+            this.loading = true;
+            admin.genericPost('Attendee/Badge/' + this.bSelected.id + "?sendupdate=" + (sendStatus ? "true" : "false"), this.bSelected, (editBadge) => {
+                this.bSelected = {};
+                this.loading = false;
+                this.bEdit = false;
+                this.$nextTick(() => {
+                    this.bModified = false;
                 })
 
-            }, function() {
-                that.loading = false;
+            }, () => {
+                this.loading = false;
             })
         },
         createBadgeType: function() {
@@ -645,14 +704,13 @@ export default {
         },
         editBadgeType: function(selectedBadgeType) {
             this.loading = true;
-            this.btDialog = true;
-            var that = this;
-            admin.genericGet('Attendee/BadgeType/' + selectedBadgeType.id, null, function(editBt) {
-
-                that.btSelected = editBt;
-                that.loading = false;
-            }, function() {
-                that.loading = false;
+            admin.genericGet('Attendee/BadgeType/' + selectedBadgeType.id, null, (editBt) => {
+                
+                this.btSelected = editBt;
+                this.loading = false;
+                this.btDialog = true;
+            }, () => {
+                this.loading = false;
             })
         },
         saveBadgeType: function() {
@@ -660,13 +718,12 @@ export default {
             if (this.btSelected.id != undefined)
                 url = url + '/' + this.btSelected.id;
             console.log("Saving badge type", this.btSelected)
-            var that = this;
-            admin.genericPost(url, this.btSelected, function(editBt) {
+            admin.genericPost(url, this.btSelected, (editBt) => {
 
-                that.btSelected = editBt;
-                that.loading = false;
-                that.btDialog = false;
-            }, function() {
+                this.btSelected = editBt;
+                this.loading = false;
+                this.btDialog = false;
+            }, () => {
                 that.loading = false;
             })
         },
@@ -683,15 +740,14 @@ export default {
         },
         editPromoCode: function(selectedPromoCode) {
             console.log(selectedPromoCode);
-            let that = this;
-            that.loading = false;
-            admin.genericGet('Attendee/PromoCode/' + selectedPromoCode.id, null, function(editPromoCode) {
+            this.loading = true;
+            admin.genericGet('Attendee/PromoCode/' + selectedPromoCode.id, null, (editPromoCode) => {
                 console.log('loaded PromoCode', editPromoCode)
-                that.pSelected = editPromoCode;
-                that.loading = false;
-                that.pEdit = true;
-            }, function() {
-                that.loading = false;
+                this.pSelected = editPromoCode;
+                this.loading = false;
+                this.pEdit = true;
+            }, () => {
+                this.loading = false;
             })
         },
         savePromoCode: function() {
@@ -699,14 +755,13 @@ export default {
             if (this.pSelected.id != undefined)
                 url = url + '/' + this.pSelected.id;
             console.log("Saving Promo Code", this.pSelected)
-            var that = this;
-            admin.genericPost(url, this.pSelected, function(editPC) {
+            admin.genericPost(url, this.pSelected, (editPC) => {
 
-                that.pSelected = editPC;
-                that.loading = false;
-                that.pEdit = false;
-            }, function() {
-                that.loading = false;
+                this.pSelected = editPC;
+                this.loading = false;
+                this.pEdit = false;
+            }, () => {
+                this.loading = false;
             })
         },
         createPromoCode: function() {
@@ -727,15 +782,15 @@ export default {
 
         editAddon: function(selectedAddon) {
             console.log(selectedAddon);
-            let that = this;
-            that.loading = false;
-            admin.genericGet('Attendee/Addon/' + selectedAddon.id, null, function(editAddon) {
+            this.loading = true;
+            admin.genericGet('Attendee/Addon/' + selectedAddon.id, null, (editAddon) => {
                 console.log('loaded Addon', editAddon)
-                that.dSelected = editAddon;
-                that.loading = false;
-                that.dEdit = true;
-            }, function() {
-                that.loading = false;
+                this.dSelected = editAddon;
+                this.loading = false;
+                this.dEdit = true;
+            }, (err) => {
+                console.log('errAddasd', err)
+                this.loading = false;
             })
         },
         saveAddon: function() {
@@ -743,14 +798,13 @@ export default {
             if (this.dSelected.id != undefined)
                 url = url + '/' + this.dSelected.id;
             console.log("Saving Addon", this.dSelected)
-            var that = this;
-            admin.genericPost(url, this.dSelected, function(editA) {
+            admin.genericPost(url, this.dSelected, (editA) => {
 
-                that.dSelected = editA;
-                that.loading = false;
-                that.dEdit = false;
-            }, function() {
-                that.loading = false;
+                this.dSelected = editA;
+                this.loading = false;
+                this.dEdit = false;
+            }, () => {
+                this.loading = false;
             })
         },
         createAddon: function() {
@@ -860,38 +914,7 @@ export default {
     created() {
         this.checkPermission();
         //this.doSearch();
-        this.$emit('updateSubTabs', [{
-                key: '0',
-                text: 'Badges',
-                title: 'Badges'
-            },
-            {
-                key: '1',
-                text: 'Types',
-                title: 'Types'
-            },
-            {
-                key: '2',
-                text: 'Questions',
-                title: 'Questions'
-            },
-            {
-                key: '3',
-                text: 'Promos',
-                title: 'Promos'
-            },
-            {
-                key: '4',
-                text: 'Addons',
-                title: 'Addons'
-            },
-            {
-                key: '5',
-                text: 'Notifications',
-                title: 'Notifications'
-            }
-
-        ]);
+        this.$emit('updateSubTabs', this.subTabs);
     }
 };
 </script>

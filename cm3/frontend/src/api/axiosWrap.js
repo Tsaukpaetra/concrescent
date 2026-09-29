@@ -37,7 +37,7 @@ const applyConfigTransformations = (config) => {
     const token = store.getters['mydata/getAuthToken'];
     const shouldHaveAuth = !config.url.includes('public/');
     
-    if (token) {
+    if (token && (config.headers?.Authorization || '') == '') {
         config.headers.Authorization = `Bearer ${token}`;
     } else if (shouldHaveAuth) {
         console.log('Calling without authentication', config.url);

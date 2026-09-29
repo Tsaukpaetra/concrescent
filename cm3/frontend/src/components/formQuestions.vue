@@ -38,6 +38,7 @@ export default {
         },
         value(newValue) {
             //Splat the input into the form
+            if(newValue == undefined) newValue = {};
             this.interrimFormData = newValue;
         },
         validFormInfo(isValid) {

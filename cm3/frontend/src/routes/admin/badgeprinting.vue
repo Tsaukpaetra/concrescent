@@ -206,6 +206,7 @@ import admin from '../../api/admin';
 import {
     debounce
 } from '@/plugins/debounce';
+import { subTabEditorByQueryIdMixin } from '@/plugins/subTabEditorByQueryId.js';
 import badgeSearchList from '@/components/badgeSearchList.vue';
 import simpleList from '@/components/simpleList.vue';
 import badgeFormatEditor from '@/components/badgeFormatEditor.vue';
@@ -220,10 +221,37 @@ export default {
         badgeFullRender,
         scaleToParent
     },
+    mixins: [subTabEditorByQueryIdMixin],
     props: [
         'subTabIx'
     ],
     data: () => ({
+        subTabs: [{
+            key: 'BadgeFormats',
+            text: 'Badge Formats',
+            title: 'Badge Formats',
+                editor: {
+                    editObject: 'fSelected',
+                    editFunction: 'editBadgeFormat',
+                    dialogToggle: 'fEdit'
+                }
+        },
+        {
+            key: 'Print',
+            text: 'Pre-Printing',
+            title: 'Badge Pre-Printing'
+        },
+        {
+            key: 'Queue',
+            text: 'Printing Queue',
+            title: 'Printing Queue',
+                editor: {
+                    editObject: 'jSelected',
+                    editFunction: 'editPrintJob',
+                    dialogToggle: 'jEdit'
+                }
+        },
+        ],
         listRemoveHeaders: [
             'time_checked_in'
         ],
@@ -276,7 +304,7 @@ export default {
             text: 'Status',
             value: 'state'
         }],
-        jfSelected: {},
+        jSelected: {},
         jEdit: false,
         jPrintStates: [
             'Queued',
@@ -555,7 +583,6 @@ export default {
         editPrintJob: function (selectedFormat) {
             console.log('edit print job from grid', selectedFormat);
             this.loading = true;
-            this.jSelected = {};
             admin.genericGet('Badge/PrintJob/' + selectedFormat.id, {
                 includeFormat: true
             }, (editPrintJob) => {
@@ -620,22 +647,7 @@ export default {
     created() {
         this.checkPermission();
         //this.doSearch();
-        this.$emit('updateSubTabs', [{
-            key: 'BadgeFormats',
-            text: 'Badge Formats',
-            title: 'Badge Formats'
-        },
-        {
-            key: 'Print',
-            text: 'Pre-Printing',
-            title: 'Badge Pre-Printing'
-        },
-        {
-            key: 'Queue',
-            text: 'Printing Queue',
-            title: 'Printing Queue'
-        },
-        ]);
+        this.$emit('updateSubTabs', this.subTabs);
     },
     beforeDestroy: function(){        
         console.log('Shutting down local Batch Print Daemon')

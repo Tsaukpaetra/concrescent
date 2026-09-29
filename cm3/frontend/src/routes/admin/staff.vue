@@ -1,6 +1,6 @@
 <template>
     <v-tabs-items :value="subTabIx" touchless>
-        <v-tab-item value="0">
+        <v-tab-item value="Badges">
             <badgeSearchList apiPath="Staff/Badge" context_code="S" :AddHeaders="listAddHeaders"
                 :RemoveHeaders="listRemoveHeaders" :isEditingItem="bEdit || bPrint" showExport :actions="listActions"
                 @edit="editBadge">
@@ -73,7 +73,7 @@
                 </v-card>
             </v-dialog>
         </v-tab-item>
-        <v-tab-item value="1">
+        <v-tab-item value="Types">
             <orderableList apiPath="Staff/BadgeType" :AddHeaders="btAddHeaders" :actions="btActions"
                 :footerActions="btFooterActions" :isEditingItem="btDialog" @edit="editBadgeType"
                 @create="createBadgeType" >
@@ -101,10 +101,10 @@
                 </v-card>
             </v-dialog>
         </v-tab-item>
-        <v-tab-item value="2">
+        <v-tab-item value="Questions">
             <formQuestionEditList context_code="S" />
         </v-tab-item>
-        <v-tab-item value="3">
+        <v-tab-item value="Departments">
             <treeList apiPath="Staff/Department" :AddHeaders="dAddHeaders" :actions="dActions"
                 :footerActions="btFooterActions" :isEditingItem="(dDialog || dMoving)" @edit="editDepartment"
                 @create="createDepartment" @moveup="moveDepartmentUp" @movedown="moveDepartmentDown" />
@@ -126,7 +126,7 @@
                 </v-card>
             </v-dialog>
         </v-tab-item>
-        <v-tab-item value="4">
+        <v-tab-item value="Notifications">
 
         <simpleList apiPath="Mail/Template/S"
                     :isEditingItem="eEdit"
@@ -269,6 +269,7 @@ import admin from '../../api/admin';
 import {
     debounce
 } from '@/plugins/debounce';
+import { subTabEditorByQueryIdMixin } from '@/plugins/subTabEditorByQueryId.js';
 import badgeSearchList from '@/components/badgeSearchList.vue';
 import orderableList from '@/components/orderableList.vue';
 import simpleList from '@/components/simpleList.vue';
@@ -295,10 +296,59 @@ export default {
         cellAssignedPositions,
         EmailTemplateEditor
     },
+    mixins: [subTabEditorByQueryIdMixin],
     props: [
         'subTabIx'
     ],
     data: () => ({
+        subTabs: [{
+            key: 'Badges',
+            text: 'Badges',
+            title: 'Badges',
+            editor: {
+                editObject: 'bSelected',
+                editFunction: 'editBadge',
+                dialogToggle: 'bEdit'
+            }
+        },
+        {
+            key: 'Types',
+            text: 'Types',
+            title: 'Types',
+            editor: {
+                editObject: 'btSelected',
+                editFunction: 'editBadgeType',
+                dialogToggle: 'btDialog'
+            }
+        },
+        {
+            key: 'Questions',
+            text: 'Questions',
+            title: 'Questions'
+        },
+        {
+            key: 'Departments',
+            text: 'Departments',
+            title: 'Departments',
+            editor: {
+                editObject: 'dSelected',
+                editFunction: 'editDepartment',
+                dialogToggle: 'dDialog'
+            }
+        },
+        {
+            key: 'Notifications',
+            text: 'Notifications',
+            title: 'Notifications',
+            editor: {
+                editObject: 'eSelected',
+                editKey: 'name',
+                editFunction: 'editEmailTemplate',
+                dialogToggle: 'eEdit'
+            }
+        }
+
+        ],
         listRemoveHeaders: [
             'time_checked_in'
         ],
@@ -495,36 +545,35 @@ export default {
         },
         editBadge: function (selectedBadge) {
             console.log('edit badge selected from grid', selectedBadge);
-            let that = this;
-            that.loading = true;
-            admin.genericGet('Staff/Badge/' + selectedBadge.id, null, function (editBadge) {
-                that.bSelected = editBadge;
-                that.loading = false;
-                that.bEdit = true;
-                that.$nextTick(() => {
-                    that.bModified = false;
+            this.loading = true;
+            admin.genericGet('Staff/Badge/' + selectedBadge.id, null, (editBadge) => {
+                this.bSelected = editBadge;
+                this.loading = false;
+                this.bEdit = true;
+                this.$nextTick(() => {
+                    this.bModified = false;
                 })
 
-            }, function () {
-                that.loading = false;
+            }, () => {
+                this.loading = false;
             })
         },
         saveBadge: function (sendStatus) {
             console.log('saving badge', this.bSelected);
             let that = this;
-            that.loading = true;
-            admin.genericPost('Staff/Badge/' + this.bSelected.id + "?sendupdate=" + (sendStatus ? "true" : "false"), this.bSelected, function (SavedDetails) {
-                that.bSelected = {};
-                that.loading = false;
-                that.bEdit = false;
-                that.bSaved = true;
-                that.bSavedDetails = SavedDetails;
-                that.$nextTick(() => {
-                    that.bModified = false;
+            this.loading = true;
+            admin.genericPost('Staff/Badge/' + this.bSelected.id + "?sendupdate=" + (sendStatus ? "true" : "false"), this.bSelected, (SavedDetails) => {
+                this.bSelected = {};
+                this.loading = false;
+                this.bEdit = false;
+                this.bSaved = true;
+                this.bSavedDetails = SavedDetails;
+                this.$nextTick(() => {
+                    this.bModified = false;
                 })
 
-            }, function () {
-                that.loading = false;
+            }, () => {
+                this.loading = false;
             })
         },
         createBadgeType: function () {
@@ -533,14 +582,13 @@ export default {
         },
         editBadgeType: function (selectedBadgeType) {
             this.loading = true;
-            this.btDialog = true;
             var that = this;
-            admin.genericGet('Staff/BadgeType/' + selectedBadgeType.id, null, function (editBt) {
-
-                that.btSelected = editBt;
-                that.loading = false;
-            }, function () {
-                that.loading = false;
+            admin.genericGet('Staff/BadgeType/' + selectedBadgeType.id, null, (editBt) => {
+                this.btDialog = true;
+                this.btSelected = editBt;
+                this.loading = false;
+            }, () => {
+                this.loading = false;
             })
         },
         
@@ -560,13 +608,13 @@ export default {
                 url = url + '/' + this.btSelected.id;
             console.log("Saving badge type", this.btSelected)
             var that = this;
-            admin.genericPost(url, this.btSelected, function (editBt) {
+            admin.genericPost(url, this.btSelected, (editBt) => {
 
-                that.btSelected = editBt;
-                that.loading = false;
-                that.btDialog = false;
-            }, function () {
-                that.loading = false;
+                this.btSelected = editBt;
+                this.loading = false;
+                this.btDialog = false;
+            }, () => {
+                this.loading = false;
             })
         },
         createDepartment: function () {
@@ -592,14 +640,13 @@ export default {
         },
         editDepartment: function (selectedDepartment) {
             this.loading = true;
-            var that = this;
-            admin.genericGet('Staff/Department/' + selectedDepartment.id, null, function (editBt) {
+            admin.genericGet('Staff/Department/' + selectedDepartment.id, null, (editBt) => {
 
-                that.dSelected = editBt;
-                that.dDialog = true;
-                that.loading = false;
-            }, function () {
-                that.loading = false;
+                this.dSelected = editBt;
+                this.dDialog = true;
+                this.loading = false;
+            }, () => {
+                this.loading = false;
             })
         },
         saveDepartment: function () {
@@ -607,14 +654,13 @@ export default {
             if (this.dSelected.id != undefined)
                 url = url + '/' + this.dSelected.id;
             console.log("Saving badge type", this.dSelected)
-            var that = this;
-            admin.genericPost(url, this.dSelected, function (editBt) {
+            admin.genericPost(url, this.dSelected, (editBt) => {
 
-                //that.dSelected = editBt;
-                that.loading = false;
-                that.dDialog = false;
-            }, function () {
-                that.loading = false;
+                //this.dSelected = editBt;
+                this.loading = false;
+                this.dDialog = false;
+            }, () => {
+                this.loading = false;
             })
         },
         editEmailTemplate: function(selectedEmailTemplate) {
@@ -697,33 +743,7 @@ export default {
     created() {
         this.checkPermission();
         //this.doSearch();
-        this.$emit('updateSubTabs', [{
-            key: '0',
-            text: 'Badges',
-            title: 'Badges'
-        },
-        {
-            key: '1',
-            text: 'Types',
-            title: 'Types'
-        },
-        {
-            key: '2',
-            text: 'Questions',
-            title: 'Questions'
-        },
-        {
-            key: '3',
-            text: 'Departments',
-            title: 'Departments'
-        },
-        {
-            key: '4',
-            text: 'Notifications',
-            title: 'Notifications'
-        }
-
-        ]);
+        this.$emit('updateSubTabs', this.subTabs);
     }
 };
 </script>

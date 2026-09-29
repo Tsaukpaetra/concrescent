@@ -1,7 +1,7 @@
 <template>
 <v-tabs-items :value="subTabIx"
               touchless>
-    <v-tab-item value="0">
+    <v-tab-item value="Users">
         <simpleList apiPath="AdminUser"
                     :AddHeaders="listAddHeaders"
                     :RemoveHeaders="listRemoveHeaders"
@@ -113,6 +113,7 @@ import admin from '../../api/admin';
 import {
     debounce
 } from '@/plugins/debounce';
+import { subTabEditorByQueryIdMixin } from '@/plugins/subTabEditorByQueryId.js';
 import simpleList from '@/components/simpleList.vue';
 import simpleDropdown from '@/components/simpleDropdown.vue';
 import editAdminUser from '@/components/editAdminUser.vue';
@@ -125,10 +126,28 @@ export default {
         editAdminUser,
         profileForm
     },
+    mixins: [subTabEditorByQueryIdMixin],
     props: [
         'subTabIx'
     ],
     data: () => ({
+        subTabs: [{
+                key: 'Users',
+                text: 'Users',
+                title: 'Users',
+                editor: {
+                    editObject: 'uSelected',
+                    editKey: 'contact_id',
+                    editFunction: 'editUser',
+                    dialogToggle: 'uEdit'
+                }
+            },
+            {
+                key: 'PermsInfo',
+                text: 'Permissions Info',
+                title: 'Permissions Info'
+            },
+        ],
         listRemoveHeaders: [
             'id'
         ],
@@ -181,15 +200,14 @@ export default {
         },
         editUser: function(selectedUser) {
             console.log("Edit user", selectedUser);
-            let that = this;
-            that.loading = false;
-            admin.genericGet('AdminUser/' + selectedUser.contact_id, null, function(editUser) {
+            this.loading = false;
+            admin.genericGet('AdminUser/' + selectedUser.contact_id, null, (editUser) => {
                 console.log('loaded user', editUser)
-                that.uSelected = editUser;
-                that.loading = false;
-                that.uEdit = true;
-            }, function() {
-                that.loading = false;
+                this.uSelected = editUser;
+                this.loading = false;
+                this.uEdit = true;
+            }, () => {
+                this.loading = false;
             })
         },
         createUser: function() {
@@ -197,18 +215,6 @@ export default {
             this.uSelected = {
                 active: true
             };
-        },
-        editBadgeType: function(selectedBadgeType) {
-            this.loading = true;
-            this.btDialog = true;
-            var that = this;
-            admin.genericGet('Staff/BadgeType/' + selectedBadgeType.id, null, function(editBt) {
-
-                that.btSelected = editBt;
-                that.loading = false;
-            }, function() {
-                that.loading = false;
-            })
         },
         saveUser: function() {
             var url = 'AdminUser';
@@ -220,14 +226,13 @@ export default {
                 url = url + '/' + data.contact_id;
             console.log("Saving user", this.uSelected)
             this.loading = true;
-            var that = this;
-            admin.genericPost(url, data, function(editBt) {
+            admin.genericPost(url, data, (editBt) => {
 
-                that.loading = false;
-                that.uCreate = false;
-                that.uEdit = false;
+                this.loading = false;
+                this.uCreate = false;
+                this.uEdit = false;
             }, function() {
-                that.loading = false;
+                this.loading = false;
             })
         }
     },
@@ -239,17 +244,7 @@ export default {
     created() {
         this.checkPermission();
         //this.doSearch();
-        this.$emit('updateSubTabs', [{
-                key: '0',
-                text: 'Users',
-                title: 'Users'
-            },
-            {
-                key: '1',
-                text: 'Permissions Info',
-                title: 'Permissions Info'
-            },
-        ]);
+        this.$emit('updateSubTabs', this.subTabs);
     }
 };
 </script>

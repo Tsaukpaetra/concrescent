@@ -159,6 +159,7 @@ import admin from '../../api/admin';
 import {
     debounce
 } from '@/plugins/debounce';
+import { subTabEditorByQueryIdMixin } from '@/plugins/subTabEditorByQueryId.js';
 import badgeSearchList from '@/components/badgeSearchList.vue';
 import simpleList from '@/components/simpleList.vue';
 import orderableList from '@/components/orderableList.vue';
@@ -180,10 +181,49 @@ export default {
         editEventInfo,
         cellToggle
     },
+    mixins: [subTabEditorByQueryIdMixin],
     props: [
         'subTabIx'
     ],
     data: () => ({
+        subTabs:[{
+                key: 'ErrorLog',
+                text: 'Error Log',
+                title: 'Error Log',
+                editor: {
+                    editObject: 'eSelected',
+                    editFunction: 'viewErrorLog',
+                    dialogToggle: 'eView'
+                }
+            },{
+                key: 'BanList',
+                text: 'Banlist',
+                title: 'Ban List',
+                editor: {
+                    editObject: 'blSelected',
+                    editFunction: 'editBan',
+                    dialogToggle: 'blDialog'
+                }
+            },{
+                key: 'Groups',
+                text: 'App Groups',
+                title: 'Application Groups',
+                editor: {
+                    editObject: 'gSelected',
+                    editFunction: 'editGroup',
+                    dialogToggle: 'gEdit'
+                }
+            },{
+                key: 'Events',
+                text: 'Events',
+                title: 'Events',
+                editor: {
+                    editObject: 'vSelected',
+                    editFunction: 'editEvent',
+                    dialogToggle: 'vEdit'
+                }
+            },
+        ],
         listRemoveHeaders: [
             'time_checked_in'
         ],
@@ -316,50 +356,47 @@ export default {
         },
         viewErrorLog: function(errorRow) {
             console.log('view error selected from grid', errorRow);
-            let that = this;
-            that.loading = true;
-            admin.genericGet('System/ErrorLog/' + errorRow.id, null, function(logData) {
+            this.loading = true;
+            admin.genericGet('System/ErrorLog/' + errorRow.id, null, (logData) => {
                 logData.dataJSON = JSON.parse(logData.data);
-                that.eSelected = logData;
-                that.loading = false;
-                that.eView = true;
+                this.eSelected = logData;
+                this.loading = false;
+                this.eView = true;
 
             }, function() {
-                that.loading = false;
+                this.loading = false;
             })
         },
         editBadge: function(selectedBadge) {
             console.log('edit badge selected from grid', selectedBadge);
-            let that = this;
-            that.loading = true;
-            admin.genericGet('Staff/Badge/' + selectedBadge.id, null, function(editBadge) {
-                that.bSelected = editBadge;
-                that.loading = false;
-                that.bEdit = true;
-                that.$nextTick(() => {
-                    that.bModified = false;
+            this.loading = true;
+            admin.genericGet('Staff/Badge/' + selectedBadge.id, null, (editBadge) => {
+                this.bSelected = editBadge;
+                this.loading = false;
+                this.bEdit = true;
+                this.$nextTick(() => {
+                    this.bModified = false;
                 })
 
-            }, function() {
-                that.loading = false;
+            }, () => {
+                this.loading = false;
             })
         },
         saveBadge: function(sendStatus) {
             console.log('saving badge', this.bSelected);
-            let that = this;
-            that.loading = true;
-            admin.genericPost('Staff/Badge/' + this.bSelected.id + "?sendupdate=" + (sendStatus ? "true" : "false"), this.bSelected, function(SavedDetails) {
-                that.bSelected = {};
-                that.loading = false;
-                that.bEdit = false;
-                that.bSaved = true;
-                that.bSavedDetails = SavedDetails;
-                that.$nextTick(() => {
-                    that.bModified = false;
+            this.loading = true;
+            admin.genericPost('Staff/Badge/' + this.bSelected.id + "?sendupdate=" + (sendStatus ? "true" : "false"), this.bSelected, (SavedDetails) => {
+                this.bSelected = {};
+                this.loading = false;
+                this.bEdit = false;
+                this.bSaved = true;
+                this.bSavedDetails = SavedDetails;
+                this.$nextTick(() => {
+                    this.bModified = false;
                 })
 
-            }, function() {
-                that.loading = false;
+            }, () => {
+                this.loading = false;
             })
         },
         createBan: function() {
@@ -368,14 +405,13 @@ export default {
         },
         editBan: function(selectedBan) {
             this.loading = true;
-            this.blDialog = true;
-            var that = this;
-            admin.genericGet('Banlist/' + selectedBan.id, null, function(editBl) {
+            admin.genericGet('Banlist/' + selectedBan.id, null, (editBl) => {
 
-                that.blSelected = editBl;
-                that.loading = false;
-            }, function() {
-                that.loading = false;
+                this.blSelected = editBl;
+                this.blDialog = true;
+                this.loading = false;
+            }, () => {
+                this.loading = false;
             })
         },
         saveBan: function() {
@@ -383,14 +419,13 @@ export default {
             if (this.blSelected.id != undefined)
                 url = url + '/' + this.blSelected.id;
             console.log("Saving ban", this.blSelected)
-            var that = this;
-            admin.genericPost(url, this.blSelected, function(editBt) {
+            admin.genericPost(url, this.blSelected, (editBt) => {
 
-                that.blSelected = editBt;
-                that.loading = false;
-                that.blDialog = false;
-            }, function() {
-                that.loading = false;
+                this.blSelected = editBt;
+                this.loading = false;
+                this.blDialog = false;
+            }, () => {
+                this.loading = false;
             })
         },
         createGroup: function() {
@@ -419,7 +454,6 @@ export default {
             this.loading = false;
             admin.genericPost(url, this.gSelected, () => {
 
-                //that.dSelected = editBt;
                 this.loading = false;
                 this.gDialog = false;
                 this.gEdit = false;
@@ -466,7 +500,6 @@ export default {
             this.loading = false;
             admin.genericPost(url, this.vSelected, () => {
 
-                //that.dSelected = editBt;
                 this.loading = false;
                 this.vDialog = false;
                 this.vEdit = false;
@@ -480,7 +513,7 @@ export default {
             console.log("Saving Event active state", id,active)
             admin.genericPost(url, {active}, () => {
                 this.vEdit = false;
-            }, function() {
+            }, () => {
                 
             })
         },
@@ -496,24 +529,7 @@ export default {
     created() {
         this.checkPermission();
         //this.doSearch();
-        this.$emit('updateSubTabs', [{
-                key: 'ErrorLog',
-                text: 'Error Log',
-                title: 'Error Log'
-            },{
-                key: 'BanList',
-                text: 'Banlist',
-                title: 'Ban List'
-            },{
-                key: 'Groups',
-                text: 'App Groups',
-                title: 'Application Groups'
-            },{
-                key: 'Events',
-                text: 'Events',
-                title: 'Events'
-            },
-        ]);
+        this.$emit('updateSubTabs', this.subTabs);
     }
 };
 </script>
