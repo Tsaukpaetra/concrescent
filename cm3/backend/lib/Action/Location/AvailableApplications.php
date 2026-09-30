@@ -192,7 +192,8 @@ final class AvailableApplications
                     $this->g_group,
                     array(
                         'id' => new SearchTerm('group_id', null, JoinedTableAlias: 'typ'),
-                        new SearchTerm('event_id', $this->CurrentUserInfo->GetEventId())
+                        new SearchTerm('event_id', $this->CurrentUserInfo->GetEventId()),
+                        new SearchTerm('can_assign_slot', 1)
                     ),
                     alias: 'grp'
                 ),
