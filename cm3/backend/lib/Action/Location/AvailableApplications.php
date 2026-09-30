@@ -97,7 +97,7 @@ final class AvailableApplications
     {
         $whereParts =
             empty($searchText) ? [
-                new SearchTerm('assignment_count', 0, '>'),
+                //new SearchTerm('assignment_count', 0, '>'),
                 new SearchTerm('application_status', ['PendingAcceptance', 'Accepted'], 'IN')
             ] :
             array(
@@ -105,7 +105,7 @@ final class AvailableApplications
                 new SearchTerm('real_name', $searchText, Raw: 'MATCH(' . $this->g_badge_submission->dbTableName() . '.`real_name`,' . $this->g_badge_submission->dbTableName() . '.`fandom_name`) AGAINST (? IN NATURAL LANGUAGE MODE) ')
             );
         $wherePartsSimpler = [
-            new SearchTerm('assignment_count', 0, '>'),
+            //new SearchTerm('assignment_count', 0, '>'),
             new SearchTerm('application_status', ['PendingAcceptance', 'Accepted'], 'IN'),
             new SearchTerm(
                 '',
@@ -113,7 +113,6 @@ final class AvailableApplications
                 subSearch: [
                     new SearchTerm('real_name', '%' . $searchText . '%', 'LIKE', 'OR'),
                     new SearchTerm('fandom_name', '%' . $searchText . '%', 'LIKE', 'OR'),
-                    new SearchTerm('email_address', '%' . $searchText . '%', 'LIKE', 'OR', JoinedTableAlias: 'con'),
                 ]
             )
         ];

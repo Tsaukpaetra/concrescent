@@ -7,11 +7,26 @@
                     <template v-slot:label>
                         Application
                     </template>
+
+                    <!-- Renders the selected value inside the input field -->
                     <template v-slot:selection="data">
-                        <v-chip label small>{{ data.item.badge_id_display }}</v-chip>
+                        <v-chip label small class="mr-2">{{ data.item.badge_id_display }}</v-chip>
                         {{ data.item.display_name }}
                     </template>
-                </v-autocomplete>{{ lockApplication }}
+
+                    <!-- Renders individual dropdown items (automatically ignores headers/dividers) -->
+                    <template v-slot:item="data">
+                        <v-list-item-content>
+                            <v-list-item-title>
+                                <v-chip label x-small class="mr-2">{{ data.item.badge_id_display }}</v-chip>
+                                {{ data.item.real_name }}
+                                <span class="grey--text text--darken-1 text-caption ml-1">
+                                    (Assignments: {{ data.item.assignments }}/{{ data.item.assignment_count }})
+                                </span>
+                            </v-list-item-title>
+                        </v-list-item-content>
+                    </template>
+                </v-autocomplete>
             </v-col>
             <v-col cols="12" sm="4">
                 <v-autocomplete dense hide-details v-model="model.location_id" :items="locationList"
@@ -192,7 +207,33 @@ export default {
                 return [this.application];
             } else {
                 //TODO: Fetch applications from store
-                return this.applicationListData;
+                 const sortedItems = [...this.applicationListData].sort((a, b) => {
+                    // Sort alphabetically by group name first
+                    const groupA = a.badge_type_name || '';
+                    const groupB = b.badge_type_name || '';
+                    if (groupA !== groupB) {
+                        return groupA.localeCompare(groupB);
+                    }
+
+                    // If they are in the same group, sort by assignments (lowest assignments first)
+                    return a.assignments - b.assignments;
+                });
+
+                // 2. Insert header items whenever the group changes
+                const result = [];
+                let currentGroup = null;
+
+                sortedItems.forEach(item => {
+                    if (item.badge_type_name !== currentGroup) {
+                        currentGroup = item.badge_type_name;
+
+                        // Vuetify looks for the 'header' property to render a non-selectable v-subheader
+                        result.push({ header: currentGroup || 'No Badge Type' });
+                    }
+                    result.push(item);
+                });
+
+                return result;
             }
         },
         locationList() {

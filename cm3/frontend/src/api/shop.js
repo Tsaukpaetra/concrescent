@@ -345,6 +345,17 @@ export default {
                     errorCb(error.response.data);
             })
     },
+    getSpecificApplication(context_code, id, uuid, cb, errorCb) {
+        axios.get("public/getspecificapplication?context_code=" +
+            context_code + "&id=" + id + "&uuid=" + uuid)
+            .then(function (response) {
+                cb(response.data);
+            })
+            .catch(function (error) {
+                if (typeof errorCb == "function")
+                    errorCb(error.response.data);
+            })
+    },
     getMyApplications(token, cb, errorCb) {
         axios.get("account/applications", {
             headers: {

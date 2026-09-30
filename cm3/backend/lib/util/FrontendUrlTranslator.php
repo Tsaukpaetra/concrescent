@@ -28,7 +28,8 @@ class FrontendUrlTranslator
     }
     public function GetBadgeLoad(array $badge)
     {
-        return $this->routedURL('myBadges?context_code='. $badge['context_code'] . '&id=' . $badge['id'] . '&uuid=' . $badge['uuid']);
+        $route = ($badge['context_code'] == 'A' || $badge['context_code'] == 'S' || isset($badge['application_id'])) ? 'myBadges' : 'myApplications';
+        return $this->routedURL($route.'?context_code='. $badge['context_code'] . '&id=' . $badge['id'] . '&uuid=' . $badge['uuid']);
     }
     public function GetCartLoad(array $badge)
     {
@@ -46,7 +47,6 @@ class FrontendUrlTranslator
         $result = $this->routedURL('login?token=' . $authString);
         if (!empty($returnTo)) {
             $result .= '&returnTo=' .urlencode($returnTo);
-            $result .= '&justgo=1';
         }
         return $result;
     }

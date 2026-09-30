@@ -42,15 +42,15 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="(item, ix) in model.Assignments" :key="item.id">
+                            <tr v-for="(item) in sortedAssignments" :key="item.id">
                                 <td>
                                     <badgeName :badge="item" />
                                 </td>
                                 <td>{{ item.start_time }}</td>
                                 <td>{{ item.end_time }}</td>
                                 <td>
-                                    <v-btn dark @click="editAssignment = ix">Edit</v-btn>
-                                    <v-btn dark @click="model.Assignments.splice(ix,1)">Delete</v-btn>
+                                    <v-btn dark @click="editAssignmentByObject(item)">Edit</v-btn>
+                                    <v-btn dark @click="deleteAssignmentByObject(item)">Delete</v-btn>
                                 </td>
                             </tr>
                         </tbody>
@@ -120,6 +120,16 @@ export default {
         ...mapGetters('mydata', {
             'isLoggedIn': 'getIsLoggedIn',
         }),
+        sortedAssignments() {
+            if (!this.model.Assignments) return [];
+            
+            // Return a new sorted array without mutating the original model.Assignments
+            return [...this.model.Assignments].sort((a, b) => {
+                const timeA = a.start_time ? new Date(a.start_time).getTime() : 0;
+                const timeB = b.start_time ? new Date(b.start_time).getTime() : 0;
+                return timeA - timeB;
+            });
+        }
     },
     methods: {
 
@@ -141,6 +151,22 @@ export default {
             this.editAssignment = this.model.Assignments.length - 1;
 
 
+        },
+        editAssignmentByObject(item) {
+            // Find the actual index in the source model to ensure the dialog 
+            // works with the correct reference in model.Assignments
+            const realIndex = this.model.Assignments.findIndex(a => a.id === item.id);
+            if (realIndex !== -1) {
+                this.editAssignment = realIndex;
+            }
+        },
+
+        deleteAssignmentByObject(item) {
+            // Find the actual index in the source model and remove it
+            const realIndex = this.model.Assignments.findIndex(a => a.id === item.id);
+            if (realIndex !== -1) {
+                this.model.Assignments.splice(realIndex, 1);
+            }
         },
         // removePosition(ix) {
         //     this.$delete(this.model.positions, ix);

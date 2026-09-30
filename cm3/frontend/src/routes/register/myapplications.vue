@@ -3,7 +3,7 @@
              fluid>
     <v-row>
         <p>
-            <i v-if="!ownedbadgecount">You have no badges. Click on the link in your confirmation email, or Add one.</i>
+            <i v-if="!ownedbadgecount">You have no applications. Log in, or submit an application.</i>
         </p>
     </v-row>
     <v-row>
@@ -26,7 +26,7 @@
                            @click.stop="displayBadge = idx">
                         <v-icon>mdi-information</v-icon>
                     </v-btn>
-                    <v-btn icon
+                    <v-btn icon v-if="isLoggedIn"
                             :disabled="badge.application_status!='Accepted'"
                            :to="{name:'editbadge', params: {editAppIx: idx}}">
                         <v-icon>mdi-pencil</v-icon>
@@ -80,7 +80,7 @@
               :fullscreen="printingBadge">
         <v-card v-if="displayBadgeData">
             <v-card-actions class="d-print-none">
-                <v-btn color="red lighten-1"
+                <v-btn color="red lighten-1" v-if="isLoggedIn"
                        @click="removeBadge">
                     <v-icon>mdi-delete</v-icon>
                 </v-btn>
@@ -122,6 +122,7 @@
                 <v-card-title class="title">{{displayBadgeData && displayBadgeData['badge-type-name']}}</v-card-title>
                 <badgePerksRender :description="displayBadgeProduct ? displayBadgeProduct.description : null "
                                   :rewardlist="displayBadgeProduct ? displayBadgeProduct.rewards : null"></badgePerksRender>
+                <div v-if="isLoggedIn">
                 <v-card-title>Addons purchased:</v-card-title>
 
                 <v-card v-for="addon in (displayBadgeProduct ? displayBadgeData.addons : null)"
@@ -139,6 +140,7 @@
                 </p>
                 <v-card-title>Question responses:</v-card-title>
                 <formQuestionViewList :questions="displayBadgeQuestions" :responses="displayBadgeData.form_responses" />
+                </div>
             </v-card-text>
         </v-card>
     </v-dialog>
@@ -150,6 +152,10 @@
                @click="clearBadgeRetrievalResult">
             Close
         </v-btn>
+    </v-snackbar>
+    <v-snackbar :value="!isLoggedIn" left :timeout="-1">
+        You're not logged in, information on this page may be incomplete or inaccurate.
+        <v-btn color="primary" small :to="{ path: '/login', query: { returnTo: $route.fullPath } }">Log in</v-btn>
     </v-snackbar>
 </v-container>
 </template>
@@ -191,6 +197,9 @@ export default {
         ownedbadgecount() {
             return Object.keys(this.applications).length;
         },
+        ...mapGetters('mydata', {
+            'isLoggedIn': 'getIsLoggedIn',
+        }),
         displayBadgeModal: {
             get() {
                 return this.displayBadge != -1;
@@ -232,7 +241,7 @@ export default {
     methods: {
         ...mapActions('mydata', [
             'retrieveBadges',
-            'retrieveSpecificBadge',
+            'retrieveSpecificApplication',
             'retrieveTransactionBadges',
             'clearBadgeRetrievalResult',
         ]),
@@ -321,8 +330,8 @@ export default {
             this.retrieveBadges();
         }
         if (query.context_code) {
-            //A specific badge was clicked, load it up
-            this.retrieveSpecificBadge(query);
+            //A specific application was clicked, load it up
+            this.retrieveSpecificApplication(query);
         }
     }
 };

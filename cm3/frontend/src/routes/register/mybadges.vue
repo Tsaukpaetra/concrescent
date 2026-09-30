@@ -23,7 +23,7 @@
                            @click.stop="displayBadge = idx">
                         <v-icon>mdi-information</v-icon>
                     </v-btn>
-                    <v-btn icon
+                    <v-btn icon v-if="isLoggedIn"
                            :to="{name:'editbadge', params: {editIx: idx}}">
                         <v-icon>mdi-pencil</v-icon>
                     </v-btn>
@@ -57,7 +57,7 @@
               :fullscreen="printingBadge">
         <v-card :class="{'printing':printingBadge}" v-if="displayBadgeData">
             <v-card-title class="d-print-none">
-                <v-btn color="red lighten-1"
+                <v-btn color="red lighten-1" v-if="isLoggedIn"
                        @click="removeBadge">
                     <v-icon>mdi-delete</v-icon>
                 </v-btn>
@@ -93,6 +93,7 @@
                 <v-card-title class="title">{{displayBadgeData['badge-type-name']}}</v-card-title>
                 <badgePerksRender :description="displayBadgeProduct ? displayBadgeProduct.description : null "
                                   :rewardlist="displayBadgeProduct ? displayBadgeProduct.rewards : null"></badgePerksRender>
+                <div v-if="isLoggedIn">
                 <v-card-title>Addons purchased:</v-card-title>
 
                 <v-card v-for="addon in (displayBadgeProduct ? displayBadgeData.addons : null)"
@@ -110,6 +111,7 @@
                 </p>
                 <v-card-title>Question responses:</v-card-title>
                 <formQuestionViewList :questions="displayBadgeQuestions" :responses="displayBadgeData.form_responses" />
+                </div>
             </v-card-text>
         </v-card>
     </v-dialog>
@@ -121,6 +123,10 @@
                @click="clearBadgeRetrievalResult">
             Close
         </v-btn>
+    </v-snackbar>
+    <v-snackbar :value="!isLoggedIn" left :timeout="-1">
+        You're not logged in, information on this page may be incomplete or inaccurate.
+        <v-btn color="primary" small :to="{ path: '/login', query: { returnTo: $route.fullPath } }">Log in</v-btn>
     </v-snackbar>
 </v-container>
 </template>
@@ -162,6 +168,9 @@ export default {
         ownedbadgecount() {
             return Object.keys(this.ownedbadges).length;
         },
+        ...mapGetters('mydata', {
+            'isLoggedIn': 'getIsLoggedIn',
+        }),
         displayBadgeModal: {
             get() {
                 return this.displayBadge != -1;

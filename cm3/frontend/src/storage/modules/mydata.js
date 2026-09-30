@@ -76,6 +76,7 @@ const getters = {
         return state.token != "" && state.contactInfo != undefined && state.contactInfo.id != undefined;
     },
     getAdminMode: (state) => {
+        console.log('!!!!Getting admin mode',state.token != "" , state.adminMode)
         return state.token != "" && state.adminMode;
     },
     getPreferences: (state) => {
@@ -370,6 +371,27 @@ const actions = {
             if (-1 == updatedBadges.findIndex(badge => badge.uuid == data.uuid))
                 updatedBadges.push(data);
             commit('setOwnedBadges', updatedBadges);
+        })
+    },
+    retrieveSpecificApplication({
+        commit,
+        state
+    }, {
+        context_code,
+        id,
+        uuid
+    }) {
+        shop.getSpecificApplication(context_code, id, uuid, (data) => {
+
+            var updatedApplications = state.applications.map(app => {
+                if (app.uuid == data.uuid)
+                    return data;
+                return app;
+            });
+            //Check that we have it
+            if (-1 == updatedApplications.findIndex(app => app.uuid == data.uuid))
+                updatedApplications.push(data);
+            commit('setApplications', updatedApplications);
         })
     },
     retrieveTransactionBadges({

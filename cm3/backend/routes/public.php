@@ -47,6 +47,8 @@ return function (App $app) {
 
             //An anonymous user has a badge link
             $app->get('/getspecificbadge', \CM3_Lib\Action\Public\GetSpecificBadge::class);
+            //An anonymous user has a application submission link
+            $app->get('/getspecificapplication', \CM3_Lib\Action\Public\GetSpecificApplication::class);
             //An anonymous user wants to ask us to complete checkout of a payment
             $app->post('/checkoutcartuuid', \CM3_Lib\Action\Public\CheckoutCartUUID::class);
 
