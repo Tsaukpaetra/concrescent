@@ -52,7 +52,7 @@ final class ListAttendeeBadges
         $override = $qp['override'] ?? null;
 
         //If we're coming in as a logged-on user, we must have admin permissions vetted from the router
-        if ($request->getAttribute('event_id')) {
+        if ( $request->getAttribute('perms') != null) {
             $params['event_id'] = $request->getAttribute('event_id');
             $whereParts = [
                 new SearchTerm('event_id', $params['event_id']),
