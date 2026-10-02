@@ -48,12 +48,60 @@
                     </div>
 
                 </v-card-actions>
-                <v-card-actions v-if="badge.assignment_count">
-                    <v-icon>mdi-application</v-icon>
-                    <div class="text-truncate pl-1">
-                        {{ badge.assignment_count }} Assignment slots
-                    </div>
-                </v-card-actions>
+                <v-card-actions v-if="badge.assignments.length" class="flex-column align-start">
+                        <v-btn text block class="justify-start px-0 text-none"
+                            @click="toggleAssignmentExpansion(badge.id)">
+                            <v-icon color="grey darken-1">mdi-application</v-icon>
+                            <div class="text-truncate pl-1 text-body-2 text--primary">
+                                <v-tooltip top open-on-hover>
+                                    <template v-slot:activator="{ on, attrs }">
+                                        <span v-bind="attrs" v-on="on">
+                                            {{ getBadgeAssignmentCountActual(badge) }} Assignment slot{{ getBadgeAssignmentCountActual(badge)!= 1 ? 's':'' }}
+                                        </span>
+                                    </template>
+                                    <span>{{ badge.assignment_count }} slots approved, {{ badge.assignments.length }} assigned</span>
+                                </v-tooltip>
+                            </div>
+                            <v-spacer></v-spacer>
+                            <v-icon color="grey darken-1">{{ expandedBadgeAssignments[badge.id] ? 'mdi-chevron-up' :
+                                'mdi-chevron-down' }}</v-icon>
+                        </v-btn>
+
+                        <v-expand-transition>
+                            <div v-show="expandedBadgeAssignments[badge.id]" class="w-full pl-7 pr-4 pb-2">
+                                <div v-for="(assignment, i) in badge.assignments" :key="i"
+                                    class="d-flex align-center py-2 text-caption border-bottom-light">
+                                    <!-- 1. Category Color Pill with Tooltip -->
+                                    <v-tooltip bottom open-on-hover>
+                                        <template v-slot:activator="{ on, attrs }">
+                                            <span v-bind="attrs" v-on="on"
+                                                class="category-pill text-center font-weight-bold mr-2 px-1"
+                                                :class="getTextContrastClass(assignment.category_color)"
+                                                :style="{ backgroundColor: assignment.category_color }">
+                                                {{ assignment.location_short_code }}
+                                            </span>
+                                        </template>
+                                        <span>{{ assignment.category_name }} – {{ assignment.location_name }}</span>
+                                    </v-tooltip>
+
+                                    <!-- 2. Concise Date, Time, and Duration with Full-Date Tooltip -->
+                                    <v-tooltip bottom open-on-hover>
+                                        <template v-slot:activator="{ on, attrs }">
+                                            <span v-bind="attrs" v-on="on" class="text--secondary">
+                                                {{ formatConciseTime(assignment.start_time, assignment.end_time) }}
+                                            </span>
+                                        </template>
+                                        <span>
+                                            Start: {{ assignment.start_time }}<br>
+                                            End: {{ assignment.end_time }}
+                                        </span>
+                                    </v-tooltip>
+                                </div>
+                            </div>
+
+                        </v-expand-transition>
+                    </v-card-actions>
+
                 <v-card-actions>
                     <v-spacer></v-spacer>
                     <v-btn 
@@ -138,6 +186,52 @@
                 <p v-if="displayBadgeProduct && displayBadgeData.addons != undefined && displayBadgeData.addons.length == 0">
                     No addons purchased
                 </p>
+
+                <v-card-title>Assignment slots:</v-card-title>
+
+                        <div class="row no-gutters font-weight-bold pb-2 text-caption text-uppercase text--secondary">
+                            <v-col cols="6">Category & Location</v-col>
+                            <v-col cols="4">Date & Time Interval</v-col>
+                            <v-col cols="2" class="text-right">Duration</v-col>
+                        </div>
+
+                        <v-row v-for="(assignment, i) in displayBadgeData.assignments" :key="i" no-gutters
+                            class="align-center py-2 printable-row text-body-2">
+                            <!-- Column 1: Explicit Category Tag & Names -->
+                            <v-col cols="12" sm="6" class="d-flex align-center pr-2 mb-1 mb-sm-0">
+                                <span class="print-pill text-center font-weight-bold mr-2 px-2"
+                                    :class="getTextContrastClass(assignment.category_color)"
+                                    :style="{ backgroundColor: assignment.category_color }">
+                                    {{ assignment.location_short_code }}
+                                </span>
+                                <div class="text">
+                                    <span class="font-weight-medium d-block text-caption">{{ assignment.category_name
+                                        }}</span>
+                                    <span class="text--secondary text-caption d-block line-height-tight">{{
+                                        assignment.location_name }}</span>
+                                </div>
+                            </v-col>
+
+                            <!-- Column 2: Explicit Full Dates -->
+                            <v-col cols="12" sm="4" class="pr-2 mb-1 mb-sm-0">
+                                <div class="d-flex flex-column text-caption">
+                                    <div><span class="text--secondary">Start:</span> {{ assignment.start_time }}</div>
+                                    <div><span class="text--secondary">End:</span> {{ assignment.end_time }}</div>
+                                </div>
+                            </v-col>
+
+                            <!-- Column 3: Concise Duration Segment -->
+                            <v-col cols="12" sm="2" class="text-sm-right">
+                                <v-chip label small outlined color="grey darken-1" class="font-weight-medium">
+                                    {{ calculateDuration(assignment.start_time, assignment.end_time) }}
+                                </v-chip>
+                            </v-col>
+                        </v-row>
+                        <p v-if="getBadgeAssignmentCountActual(displayBadgeData) == 0">
+                            No location slots assigned
+                        </p>
+
+      
                 <v-card-title>Question responses:</v-card-title>
                 <formQuestionViewList :questions="displayBadgeQuestions" :responses="displayBadgeData.form_responses" />
                 </div>
@@ -184,6 +278,7 @@ export default {
         promocodeDialog: false,
         promoAppliedDialog: false,
         displayBadge: -1,
+        expandedBadgeAssignments:{},
         printingBadge: false,
     }),
     computed: {
@@ -301,6 +396,55 @@ export default {
             if (undefined == this.addons[context_code][badge_type_id])
                 return result;
             return this.addons[context_code][badge_type_id].find(addon => addon.id == id) || result;
+        },
+        toggleAssignmentExpansion(id) {
+            // Explicitly toggle the state reactively using Vue.set / this.$set
+            this.$set(this.expandedBadgeAssignments, id, !this.expandedBadgeAssignments[id]);
+        },
+        getBadgeAssignmentCountActual(badge){
+            return Math.max(badge.assignment_count, badge.assignments.length);
+        },
+        formatConciseTime(startStr, endStr) {
+            const start = new Date(startStr.replace(/-/g, '/')); // Safe cross-browser parse
+            const end = new Date(endStr.replace(/-/g, '/'));
+            
+            // 1. Format concisely (e.g., "Apr 12, 1:30 AM - 5:30 AM")
+            const dateOptions = { month: 'short', day: 'numeric' };
+            const timeOptions = { hour: 'numeric', minute: '2-digit', hour12: true };
+            
+            const formattedDate = start.toLocaleDateString('en-US', dateOptions);
+            const startTime = start.toLocaleTimeString('en-US', timeOptions);
+            const endTime = end.toLocaleTimeString('en-US', timeOptions);
+            
+            // 2. Compute duration in hours
+            const diffMs = end - start;
+            const diffHours = Math.round((diffMs / (1000 * 60 * 60)) * 10) / 10; 
+            
+            return `${formattedDate} (${startTime} - ${endTime}) [${diffHours} hrs]`;
+        },
+        calculateDuration(startStr, endStr) {
+            const start = new Date(startStr.replace(/-/g, '/'));
+            const end = new Date(endStr.replace(/-/g, '/'));
+            const diffMs = end - start;
+            const diffHours = Math.round((diffMs / (1000 * 60 * 60)) * 10) / 10;
+            return `${diffHours} ${diffHours === 1 ? 'Hour' : 'Hours'}`;
+        },
+        getTextContrastClass(hexColor) {
+            if (!hexColor) return 'white--text';
+            
+            // Strip the '#' character if it exists
+            const hex = hexColor.replace('#', '');
+            
+            // Convert hex values to RGB integers
+            const r = parseInt(hex.substring(0, 2), 16);
+            const g = parseInt(hex.substring(2, 4), 16);
+            const b = parseInt(hex.substring(4, 6), 16);
+            
+            // Calculate brightness using standard YIQ luminance formula 
+            // Threshold is 128 (middle of 0-255 range)
+            const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+            //console.log('decision color', hexColor,yiq,yiq >= 128  )
+            return yiq >= 128 ? 'black--text' : 'white--text';
         }
     },
     watch: {

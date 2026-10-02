@@ -23,6 +23,7 @@ use CM3_Lib\models\application\addonmap as g_addonmap;
 use CM3_Lib\models\application\addonpurchase as g_addonpurchase;
 use CM3_Lib\models\application\assignment as g_assignment;
 use CM3_Lib\models\application\location as g_location;
+use CM3_Lib\models\application\locationcategory as g_locationcategory;
 use CM3_Lib\models\staff\badge as s_badge;
 use CM3_Lib\models\forms\question as f_question;
 use CM3_Lib\models\forms\response as f_response;
@@ -59,6 +60,7 @@ final class badgeinfo
         private g_addonpurchase $g_addonpurchase,
         private g_assignment $g_assignment,
         private g_location $g_location,
+        private g_locationcategory $g_locationcategory,
         private f_question $f_question,
         private f_response $f_response,
         private CurrentUserInfo $CurrentUserInfo,
@@ -1061,6 +1063,19 @@ final class badgeinfo
                 ), array(
                     new SearchTerm('application_id', $badge['id'])
                 ));
+                
+                $badge['assignments'] = $this->g_assignment->Search(new View([
+                    'id','application_id','location_id','category_id','start_time','end_time',
+                    new SelectColumn('short_code', Alias:'location_short_code', JoinedTableAlias:'l'),
+                    new SelectColumn('name', Alias: 'location_name', JoinedTableAlias:'l'),
+                    new SelectColumn('name',Alias:'category_name', JoinedTableAlias:'lc'),
+                    new SelectColumn('color', Alias: 'category_color', JoinedTableAlias:'lc'),
+                ],[
+                    new Join($this->g_location,['id'=>'location_id'],alias:'l'),
+                    new Join($this->g_locationcategory,['id' => 'category_id'], alias:'lc')
+                ]),[
+                    new SearchTerm('application_id',$badge['id'])
+                ]);
             }
         }
 
