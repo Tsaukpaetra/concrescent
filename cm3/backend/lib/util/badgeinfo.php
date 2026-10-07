@@ -1209,10 +1209,13 @@ final class badgeinfo
 
             $result['assignments'] = $this->g_assignment->Search(new View([
                 'id','application_id','location_id','category_id','start_time','end_time',
-                new SelectColumn('short_code', JoinedTableAlias:'l'),
-                new SelectColumn('name', JoinedTableAlias:'l'),
+                new SelectColumn('short_code', Alias:'location_short_code', JoinedTableAlias:'l'),
+                new SelectColumn('name', Alias: 'location_name', JoinedTableAlias:'l'),
+                new SelectColumn('name',Alias:'category_name', JoinedTableAlias:'lc'),
+                new SelectColumn('color', Alias: 'category_color', JoinedTableAlias:'lc'),
             ],[
-                new Join($this->g_location,['id'=>'location_id'],alias:'l')
+                new Join($this->g_location,['id'=>'location_id'],alias:'l'),
+                new Join($this->g_locationcategory,['id' => 'category_id'], alias:'lc')
             ]),[
                 new SearchTerm('application_id',$result['id'])
             ]);

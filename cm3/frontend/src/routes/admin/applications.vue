@@ -1138,7 +1138,7 @@ export default {
         },
         eloadBadgeData() {
 
-            admin.genericGet('Badge/CheckIn/' + this.context_code + '/' + this.eloadBadgeDataID, null, (badgeData) => {
+            admin.genericGet('Application/' + this.context_code + '/Submission/' + this.eloadBadgeDataID, null, (badgeData) => {
                 //Merge in the event info
                 badgeData['event'] = this.$store.state.products.selectedEvent
                 this.bSelected = badgeData;
