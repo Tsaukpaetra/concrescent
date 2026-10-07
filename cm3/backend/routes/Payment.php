@@ -29,6 +29,8 @@ return function (App $app, $container) {
             ->add($payPerm->withAllowedPerms(array(PermEvent::Payment_Edit())));
             $app->delete('/{id}', \CM3_Lib\Action\Payment\Delete::class)
             ->add($payPerm->withAllowedPerms(array(PermEvent::Payment_CreateCancel())));
+            $app->get('/{id}/Refundable', \CM3_Lib\Action\Payment\GetRefundable::class)
+            ->add($payPerm->withAllowedPerms(array(PermEvent::Payment_CreateCancel())));
         }
     );
 };

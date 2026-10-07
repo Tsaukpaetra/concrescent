@@ -56,7 +56,9 @@ class PayProcessor implements \CM3_Lib\Modules\Payment\PayProcessorInterface
             ),
             'stage'=>'init',
             'order_id'=>'',
-            'inflight_data' => array()
+            'inflight_data' => array(),
+            'completion_data' => array(),
+            'refund_history' => array()
         );
     }
     public function ProcessorOk(): bool
@@ -248,6 +250,8 @@ class PayProcessor implements \CM3_Lib\Modules\Payment\PayProcessorInterface
             if ($this->orderData['stage'] == 'COMPLETED') {
                 //Merge down the capture HATEOAS because they're more useful there
                 $this->orderData['inflight_data']['links'] = $this->orderData['inflight_data']['purchase_units'][0]['payments']['captures'][0]['links'];
+                //Also copy it to the completion data
+                $this->orderData['completion_data'] = $this->orderData['inflight_data'];
                 return true;
             }
         }
@@ -414,5 +418,130 @@ class PayProcessor implements \CM3_Lib\Modules\Payment\PayProcessorInterface
             }
         }
         throw new \Exception('HATEOAS link not found: ' . $linkName);
+    }
+    /**
+     * Calculates the tax and subtotal components of a given total amount.
+     * This allows the upstream PaymentBuilder to accurately decrement both tax and transaction amounts during a refund.
+     * 
+     * @param float $totalAmount The amount being refunded (the total)
+     * @return array ['subtotal' => float, 'tax' => float]
+     */
+    public function SplitTotal(float $totalAmount): array
+    {
+        $subtotal = 0.0;
+        $tax = 0.0;
+
+        if ($this->orderData['prep']['total'] > 0) {
+            // Calculate the ratio of tax within the total
+            // Ratio = tax / (subtotal + tax)
+            $taxRatio = $this->orderData['prep']['tax'] / $this->orderData['prep']['total'];
+
+            $tax = $totalAmount * $taxRatio;
+            $subtotal = $totalAmount - $tax;
+        }
+
+        return [
+            'subtotal' => $subtotal,
+            'tax' => $tax
+        ];
+    }
+    /**
+     * Implementation of Refund
+     */
+    public function Refund(float $amount, ?string $reason = null): bool
+    {
+        $denyReason = '';
+        $refundable = $this->GetRefundableAmount($denyReason);
+        if ($amount > $refundable) {
+            throw new \Exception("Refund amount " . $amount . " exceeds available refundable amount " . $refundable);
+        }
+
+        // PayPal captures can be refunded via /v2/payments/captures/{capture_id}/refund
+        // We need to find the capture ID from the inflight_data
+        $captureId = '';
+        if (isset($this->orderData['completion_data']['purchase_units'][0]['payments']['captures'][0]['id'])) {
+            $captureId = $this->orderData['completion_data']['purchase_units'][0]['payments']['captures'][0]['id'];
+        } else {
+            throw new \Exception("Could not find a valid capture ID to refund. Was the order completed?\r\n".json_encode($this->orderData['inflight_data'],true));
+        }
+
+        $payload = array(
+            'amount' => $this->makeMoney($amount)
+        );
+
+        if ($reason) {
+            $payload['note_to_payer'] = $reason;
+        }
+
+        try {
+            // Use the capture endpoint for refunding
+            $refundResponse = $this->api('payments/captures/' . $captureId . '/refund', $payload);
+            
+            // On success, track it in our local history to preserve context
+            $this->orderData['refund_history'][] = array(
+                'id' => $refundResponse['id'],
+                'amount' => $amount,
+                'status' => 'COMPLETED',
+                'date' => date('c'),
+                'parent_capture_id' => $captureId
+            );
+
+            return true;
+        } catch (RequestException $e) {
+            $errorMsg = $e->getResponse()->getBody()->getContents();
+            throw new \Exception("PayPal Refund Failed: " . $errorMsg, $e->getCode(), $e);
+        }
+    }
+
+    /**
+     * Implementation of GetRefundableAmount
+     */
+    public function GetRefundableAmount(string &$denyReason): float
+    {
+        if ($this->orderData['stage'] !== 'COMPLETED') {
+            $denyReason = "Transaction is not complete and cannot be refunded.";
+            return 0;
+        }
+
+        // Get the total original amount
+        $totalOriginal = $this->orderData['prep']['total'];
+
+        // Subtract all existing refunds stored in our history
+        $totalRefunded = 0.0;
+        foreach (($this->orderData['refund_history'] ?? []) as $history) {
+            $totalRefunded += $history['amount'];
+        }
+
+        $remaining = $totalOriginal - $totalRefunded;
+
+        if ($remaining <= 0) {
+            $denyReason = "Already refunded the max amount.";
+            return 0;
+        }
+
+        // Check for age (PayPal generally allows refunds within 180 days)
+        // Access the create_time from the capture data
+        if (isset($this->orderData['completion_data']['purchase_units'][0]['payments']['captures'][0]['create_time'])) {
+            $createTimeStr = $this->orderData['completion_data']['purchase_units'][0]['payments']['captures'][0]['create_time'];
+            $createTimestamp = strtotime($createTimeStr);
+            
+            // 180 days in seconds: 180 * 24 * 60 * 60
+            $maxAgeSeconds = 15552000; 
+
+            if ((time() - $createTimestamp) > $maxAgeSeconds) {
+                $denyReason = "This transaction is too old to be refunded (exceeds 180 days).";
+                return 0;
+            }
+        }
+
+        return max(0.0, $remaining);
+    }
+
+    /**
+     * Implementation of GetRefundHistory
+     */
+    public function GetRefundHistory(): array
+    {
+        return $this->orderData['refund_history'] ?? array();
     }
 }

@@ -254,7 +254,7 @@ final class PaymentBuilder
             'requested_by' => $this->cart['requested_by'],
             'payment_system' => $this->cart['payment_system'],
             'payment_txn_amt' =>$this->cart['payment_txn_amt'],
-            'payment_tax_prt' =>$this->cart['payment_tax_prt'],
+            'payment_tax_prt' =>$this->cart['payment_tax_prt'] ?? '',
             'date_created' => $this->cart['date_created'],
             'date_modified' => $this->cart['date_modified'],
             'notes' => $this->cart['notes'] ??'',
@@ -405,7 +405,7 @@ final class PaymentBuilder
 
     public function getCartTotal(bool $refresh = true)
     {
-        if ($refresh) {
+        if ($refresh && $this->canEdit()) {
             $this->stageItems();
         }
         return $this->cart['payment_txn_amt'];
@@ -413,6 +413,11 @@ final class PaymentBuilder
 
     public function refreshCartMeta()
     {
+        // If the payment is already completed, do not recalculate totals from items
+        if (in_array($this->cart['payment_status'],['Completed' ,'Cancelled','Refunded','RefundedInPart'])) {
+            return;
+        }
+
         $this->CanPay = true;
 
         $this->getCartTotal(true);
@@ -1162,5 +1167,63 @@ final class PaymentBuilder
                 return false;
             }
         }
+    }
+
+    /**
+     * Processes a direct refund via the current PayProcessor.
+     * Updates the cart's total amount and tax portion to reflect the refund.
+     * Does not adjust badges/applications alone
+     */
+    public function ProcessRefund(float $amount, ?string $reason = null): bool
+    {
+        if (
+            $this->cart['payment_status'] !== 'Completed'
+            || $this->cart['payment_status'] !== 'RefundedInPart'
+        ) {
+            throw new \Exception("Only completed transactions can be refunded.");
+        }
+
+        $this->getPayProcessor()->Refund($amount, $reason);
+
+        $split = $this->getPayProcessor()->SplitTotal($amount);
+
+        // New Total = Original Total - Total Refunded
+        $this->cart['payment_txn_amt'] = max(0.0, $this->cart['payment_txn_amt'] - $amount);
+
+        // We subtract the refund's tax from the cart's tax portion
+        $this->cart['payment_tax_prt'] = max(0.0, $this->cart['payment_tax_prt'] - $split['tax']);
+
+        //The cart is now refunded, update the status
+        $this->cart['payment_status'] = 'Refunded' . ($this->cart['payment_txn_amt'] > 0 ? 'InPart' : '');
+
+        $this->saveCart();
+        return true;
+    }
+
+    /**
+     * Determines if the current payment is still refundable and returns the refundable amount.
+     */
+    public function GetRefundable(): array
+    {
+        if (
+            $this->cart['payment_status'] !== 'Completed'
+            || $this->cart['payment_status'] !== 'RefundedInPart'
+        ) {
+            return [
+                'is_refundable' => false,
+                'denyReason' => 'Only completed transactions can be refunded.',
+                'amount' => 0.0
+            ];
+        }
+
+        $processor = $this->getPayProcessor();
+        $denyReason = '';
+        $refundableAmount = (float)$processor->GetRefundableAmount($denyReason);
+
+        return [
+            'is_refundable' => $refundableAmount > 0,
+            'denyReason' => $denyReason,
+            'amount' => $refundableAmount
+        ];
     }
 }

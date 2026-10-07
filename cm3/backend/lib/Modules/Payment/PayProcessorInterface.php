@@ -41,4 +41,33 @@ interface PayProcessorInterface
     public function CompleteOrder($data): bool;
     //payment_status translation
     public function GetOrderStatus(): string;
+    /**
+     * Calculates the tax and subtotal components of a given total amount.
+     * This allows the upstream PaymentBuilder to accurately decrement both tax and transaction amounts during a refund.
+     * 
+     * @param float $totalAmount The amount being refunded (the total)
+     * @return array ['subtotal' => float, 'tax' => float]
+     */
+    public function SplitTotal(float $totalAmount): array;
+    /**
+     * Refund a specific amount from a transaction
+     * @param float $amount
+     * @param string|null $reason
+     * @return bool
+     * @throws \Exception with specific reason if refund fails
+     */
+    public function Refund(float $amount, ?string $reason = null): bool;
+
+    /**
+     * Returns how much money is currently available to be refunded for this transaction
+     * @return float
+     */
+    public function GetRefundableAmount(string &$denyReason): float;
+
+    /**
+     * Returns a list of previous refund actions associated with this order
+     * @return array List of arrays containing 'id', 'amount', 'status', 'date'
+     */
+    public function GetRefundHistory(): array;
+
 }
