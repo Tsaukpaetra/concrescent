@@ -141,6 +141,7 @@ const actions = {
         commit,
         rootState
     }, token) {
+        commit('setToken', token);
         return new Promise((resolve) => {
             shop.switchEvent(token, rootState.products.selectedEventId, async (data) => {
                     commit('setToken', data.token);
@@ -250,26 +251,17 @@ const actions = {
         state
     }) {
         return new Promise((resolve, reject) => {
-            shop.getContactInfo(state.token, (data) => {
+            shop.getContactInfo((data) => {
                 commit('setContactInfo', data);
                 resolve();
             }, (err) => reject())
         })
     },
     fetchCarts({
-        commit,
-        state
+        commit
     }, include_all) {
         return new Promise((resolve, reject) => {
-            if (state.token.length < 1) {
-                reject({
-                    error: {
-                        message: 'not logged in'
-                    }
-                });
-                return;
-            }
-            shop.getCarts(state.token, include_all, (carts) => {
+            shop.getCarts(include_all, (carts) => {
                 commit('setCarts', {
                     carts,
                     include_all,
@@ -291,7 +283,7 @@ const actions = {
         state
     }, newData) {
         return new Promise((resolve) => {
-            shop.setContactInfo(state.token, newData, (data) => {
+            shop.setContactInfo(newData, (data) => {
                 commit('setContactInfo', data);
                 resolve(true);
             })
@@ -304,7 +296,7 @@ const actions = {
         state
     }, newData) {
         return new Promise((resolve) => {
-            shop.setAccountSettings(state.token, newData, (data) => {
+            shop.setAccountSettings(newData, (data) => {
                 commit('setUsername', newData.username);
                 commit('setPreferences', newData.preferences);
                 resolve(true);
@@ -335,7 +327,7 @@ const actions = {
         commit,
         state
     }) {
-        shop.getMyBadges(state.token, (data) => {
+        shop.getMyBadges((data) => {
 
             var updatedBadges = state.ownedbadges.map(badge => {
                 var found = data.find(d => badge.uuid == d.uuid);
@@ -423,7 +415,7 @@ const actions = {
         commit,
         state
     }) {
-        shop.getMyApplications(state.token, (data) => {
+        shop.getMyApplications((data) => {
 
             commit('setApplications', data);
 

@@ -165,7 +165,7 @@ const actions = {
                         }
                     }
                     //Just attempt a load
-                    shop.loadCart(rootState.mydata.token, cartId, async (result) => {
+                    shop.loadCart(cartId, async (result) => {
                         console.log('loaded cart from net', cartId)
                         commit('setcartId', cartId);
                         commit('setCheckoutStatus', {
@@ -222,7 +222,7 @@ const actions = {
         return new Promise((resolve, reject) => {
             if (rootState.mydata.token.length > 0) {
 
-                shop.saveCart(rootState.mydata.token, {
+                shop.saveCart({
                     id: state.cartId,
                     items: state.items,
                     promocode: promocode
@@ -255,7 +255,6 @@ const actions = {
     }, payment_system) {
         commit('setCheckoutStatus', null);
         shop.buyProducts(
-            rootState.mydata.token,
             state.cartId,
             payment_system || "PayPal",
             (data) => {
@@ -312,7 +311,6 @@ const actions = {
         ) {
             return new Promise((resolve, reject) => {
                 shop.deleteCart(
-                    rootState.mydata.token,
                     state.cartId,
                     (data) => {
                         commit('resetCart');

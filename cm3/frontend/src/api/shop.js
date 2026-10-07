@@ -2,145 +2,78 @@ import axios from './axiosWrap'; // Uses the interceptor for URL and Token
 import { setTokenRefreshing } from './axiosWrap';
 
 export default {
+    _request(method, url, data = null, cb, errorCb) {
+        axios({
+            method,
+            url,
+            data
+        })
+            .then((response) => {
+                if (typeof cb === 'function') {
+                    cb(response.data);
+                }
+            })
+            .catch((error) => {
+                console.error(error);
+                if (typeof errorCb === 'function') {
+                    errorCb(error.response?.data || error);
+                }
+            });
+    },
+
+    // Helper for override logic
+    _getOverrideQuery(override_code) {
+        const override = (override_code ?? '').replace(/[^a-z0-9]/gi, '').toUpperCase();
+        return override !== '' ? `?override=${override}` : '';
+    },
 
     getEventInfo(cb, errorCb) {
-        axios.get("public")
-            .then(function (response) {
-                cb(response.data);
-            })
-            .catch(function (error) {
-                console.log(error)
-                if (typeof errorCb == "function")
-                    errorCb(error);
-            })
+        this._request('get', 'public', null, cb, errorCb);
     },
+
     getBadgeContexts(event_id, cb, errorCb) {
-        axios.get("public/" + event_id + '/badges')
-            .then(function (response) {
-                cb(response.data);
-            })
-            .catch(function (error) {
-                console.log(error)
-                if (typeof errorCb == "function")
-                    errorCb(error);
-            })
+        this._request('get', `public/${event_id}/badges`, null, cb, errorCb);
     },
+
     getLocations(event_id, cb, errorCb) {
-        axios.get("public/" + event_id + '/locations')
-            .then(function (response) {
-                cb(response.data);
-            })
-            .catch(function (error) {
-                console.log(error)
-                if (typeof errorCb == "function")
-                    errorCb(error);
-            })
+        this._request('get', `public/${event_id}/locations`, null, cb, errorCb);
     },
+
     getLocationCategories(event_id, cb, errorCb) {
-        axios.get("public/" + event_id + '/locationcategories')
-            .then(function (response) {
-                cb(response.data);
-            })
-            .catch(function (error) {
-                console.log(error)
-                if (typeof errorCb == "function")
-                    errorCb(error);
-            })
+        this._request('get', `public/${event_id}/locationcategories`, null, cb, errorCb);
     },
+
     getLocationEvents(event_id, cb, errorCb) {
-        axios.get("public/" + event_id + '/locationevents')
-            .then(function (response) {
-                cb(response.data);
-            })
-            .catch(function (error) {
-                console.log(error)
-                if (typeof errorCb == "function")
-                    errorCb(error);
-            })
+        this._request('get', `public/${event_id}/locationevents`, null, cb, errorCb);
     },
+
     getBadges(event_id, context, override_code, cb, errorCb) {
-        const override = (override_code ?? '').replace(/[^a-z0-9]/gi, '').toUpperCase();
-        var query = override != '' ? '?override=' + override : '';
-        axios.get("public/" + event_id + '/badges/' + context + query)
-            .then(function (response) {
-                cb(response.data);
-            })
-            .catch(function (error) {
-                console.log(error)
-                if (typeof errorCb == "function")
-                    errorCb(error);
-            })
+        const query = this._getOverrideQuery(override_code);
+        this._request('get', `public/${event_id}/badges/${context}${query}`, null, cb, errorCb);
     },
 
     getQuestions(event_id, context, cb, errorCb) {
-        axios.get("public/" + event_id + '/questions/' + context)
-            .then(function (response) {
-                cb(response.data);
-            })
-            .catch(function (error) {
-                console.log(error)
-                if (typeof errorCb == "function")
-                    errorCb(error);
-            })
+        this._request('get', `public/${event_id}/questions/${context}`, null, cb, errorCb);
     },
 
     getAddons(event_id, context, override_code, cb, errorCb) {
-        const override = (override_code ?? '').replace(/[^a-z0-9]/gi, '').toUpperCase();
-        var query = override != '' ? '?override=' + override : '';
-        axios.get("public/" + event_id + '/badges/' + context + '/addons' + query)
-            .then(function (response) {
-                cb(response.data);
-            })
-            .catch(function (error) {
-                console.log(error)
-                if (typeof errorCb == "function")
-                    errorCb(error);
-            })
+        const query = this._getOverrideQuery(override_code);
+        this._request('get', `public/${event_id}/badges/${context}/addons${query}`, null, cb, errorCb);
     },
 
-    getCarts(token, include_all, cb, errorCb) {
-        axios.get("account/cart?include_all=" + include_all, {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        })
-            .then(function (response) {
-                cb(response.data);
-            })
-            .catch(function (response) {
-                console.log(response)
-                if (typeof errorCb == "function")
-                    errorCb(response.response.data);
-            });
+    getCarts(include_all, cb, errorCb) {
+        this._request('get', `account/cart?include_all=${include_all}`, null, cb, errorCb);
     },
 
-    checkEmailAddress(token, email_address, cb, errorCb) {
-        headers = {};
-        if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-        }
-        axios.post("public/checkemail", { email_address: email_address }, {
-            headers: headers
-        })
-            .then(function (response) {
-                cb(response.data);
-            })
-            .catch(function (er) {
-                if (typeof errorCb == "function")
-                    errorCb(er.response.data);
-            });
+    checkEmailAddress(email_address, cb, errorCb) {
+        // Token is removed from arguments and handled by interceptor
+        this._request('post', 'public/checkemail', { email_address: email_address }, cb, errorCb);
     },
-    //Response should be a token
+
     createAccount(accountInfo, cb, errorCb) {
-        axios.post("public/createaccount", accountInfo)
-            .then(function (response) {
-                cb(response.data);
-            })
-            .catch(function (response) {
-                if (typeof errorCb == "function")
-                    errorCb(response.response.data);
-            });
+        this._request('post', 'public/createaccount', accountInfo, cb, errorCb);
     },
+
     loginAccount(accountCreds, cb, errorCb) {
         //Just in case
         setTokenRefreshing(true);
@@ -157,35 +90,16 @@ export default {
                     errorCb(response.response.data);
             });
     },
-    getContactInfo(token, cb, errorCb) {
-        axios.get("account", {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        })
-            .then(function (response) {
-                cb(response.data);
-            })
-            .catch(function (response) {
-                if (typeof errorCb == "function")
-                    errorCb(response.response.data);
-            });
+
+    getContactInfo(cb, errorCb) {
+        this._request('get', 'account', null, cb, errorCb);
     },
-    setContactInfo(token, data, cb, errorCb) {
-        axios.post("account", data, {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        })
-            .then(function (response) {
-                cb(response.data);
-            })
-            .catch(function (response) {
-                if (typeof errorCb == "function")
-                    errorCb(response.response.data);
-            });
+
+    setContactInfo(data, cb, errorCb) {
+        this._request('post', 'account', data, cb, errorCb);
     },
-    switchEvent(token, event_id, cb, errorCb) {
+
+    switchEvent(event_id, cb, errorCb) {
         setTokenRefreshing(true);
         axios.post("account/switchevent", {
             "event_id": event_id
@@ -205,183 +119,63 @@ export default {
                     errorCb(response.response.data);
             });
     },
-    setAccountSettings(token, settings, cb, errorCb) {
-        axios.post("account/settings", settings, {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        })
-            .then(function (response) {
-                cb(response.data);
-            })
-            .catch(function (response) {
-                if (typeof errorCb != "undefined")
-                    errorCb(response.response.data);
-            });
+
+    setAccountSettings(settings, cb, errorCb) {
+        this._request('post', 'account/settings', settings, cb, errorCb);
     },
 
-    loadCart(token, cartId, cb, errorCb) {
-        axios.get("account/cart/" + cartId, {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        })
-            .then(function (response) {
-                cb(response.data);
-            })
-            .catch(function (er) {
-                if (typeof errorCb == "function")
-                    errorCb(er.response.data);
-            });
+    loadCart(cartId, cb, errorCb) {
+        this._request('get', `account/cart/${cartId}`, null, cb, errorCb);
     },
-    saveCart(token, cart, cb, errorCb) {
-        axios.post("account/cart", cart, {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        })
-            .then(function (response) {
-                cb(response.data);
-            })
-            .catch(function (er) {
-                if (typeof errorCb == "function")
-                    errorCb(er.response.data);
-            });
+
+    saveCart(cart, cb, errorCb) {
+        this._request('post', 'account/cart', cart, cb, errorCb);
     },
-    deleteCart(token, cartId, cb, errorCb) {
-        console.log("yo delete dis", cartId)
-        axios.delete("account/cart/" + cartId, {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        })
-            .then(function (response) {
-                cb(response.data);
-            })
-            .catch(function (er) {
-                if (typeof errorCb == "function")
-                    errorCb(er.response.data);
-            });
+
+    deleteCart(cartId, cb, errorCb) {
+        this._request('delete', `account/cart/${cartId}`, null, cb, errorCb);
     },
-    buyProducts(token, cartId, payment_system, cb, errorCb) {
-        axios.post(`account/cart/${cartId}/checkout`, {
-            payment_system: payment_system
-        }, {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        })
-            .then(function (response) {
-                cb(response.data);
-            })
-            .catch(function (response) {
-                if (typeof errorCb == "function")
-                    errorCb(response.response.data);
-            });
+
+    buyProducts(cartId, payment_system, cb, errorCb) {
+        this._request('post', `account/cart/${cartId}/checkout`, { payment_system }, cb, errorCb);
     },
+
     checkoutCartUUID(cartUUID, cb, errorCb) {
-        axios.post(`public/checkoutcartuuid`, {
-            uuid: cartUUID
-        })
-            .then(function (response) {
-                cb(response.data);
-            })
-            .catch(function (response) {
-                if (typeof errorCb == "function")
-                    errorCb(response.response.data);
-            });
+        this._request('post', `public/checkoutcartuuid`, { uuid: cartUUID }, cb, errorCb);
     },
 
     applyPromo(products, promo, cb, errorCb) {
-        axios.post("cart.php", {
+        this._request('post', 'cart.php', {
             action: 'applypromo',
             code: promo,
             badges: products
-        })
-            .then(function (response) {
-                cb(response.data);
-            })
-            .catch(function (response) {
-                if (typeof errorCb == "function")
-                    errorCb(response.response.data);
-            });
+        }, cb, errorCb);
     },
 
     getMyBadgesByTransaction(gid, tid, cb, errorCb) {
-        axios.post("mybadges.php", {
-            gid: gid,
-            tid: tid
-        })
-            .then(function (response) {
-                cb(response.data);
-            })
-            .catch(function (error) {
-                if (typeof errorCb == "function")
-                    errorCb(error.response.data);
-            })
+        this._request('post', 'mybadges.php', { gid, tid }, cb, errorCb);
     },
-    getMyBadges(token, cb, errorCb) {
-        axios.get("account/badges", {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        })
-            .then(function (response) {
-                cb(response.data);
-            })
-            .catch(function (error) {
-                if (typeof errorCb == "function")
-                    errorCb(error.response.data);
-            })
+
+    getMyBadges(cb, errorCb) {
+        this._request('get', 'account/badges', null, cb, errorCb);
     },
+
     getSpecificBadge(context_code, id, uuid, cb, errorCb) {
-        axios.get("public/getspecificbadge?context_code=" +
-            context_code + "&id=" + id + "&uuid=" + uuid)
-            .then(function (response) {
-                cb(response.data);
-            })
-            .catch(function (error) {
-                if (typeof errorCb == "function")
-                    errorCb(error.response.data);
-            })
+        const url = `public/getspecificbadge?context_code=${context_code}&id=${id}&uuid=${uuid}`;
+        this._request('get', url, null, cb, errorCb);
     },
+
     getSpecificApplication(context_code, id, uuid, cb, errorCb) {
-        axios.get("public/getspecificapplication?context_code=" +
-            context_code + "&id=" + id + "&uuid=" + uuid)
-            .then(function (response) {
-                cb(response.data);
-            })
-            .catch(function (error) {
-                if (typeof errorCb == "function")
-                    errorCb(error.response.data);
-            })
+        const url = `public/getspecificapplication?context_code=${context_code}&id=${id}&uuid=${uuid}`;
+        this._request('get', url, null, cb, errorCb);
     },
-    getMyApplications(token, cb, errorCb) {
-        axios.get("account/applications", {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        })
-            .then(function (response) {
-                cb(response.data);
-            })
-            .catch(function (error) {
-                if (typeof errorCb == "function")
-                    errorCb(error.response.data);
-            })
+
+    getMyApplications(cb, errorCb) {
+        this._request('get', 'account/applications', null, cb, errorCb);
     },
+
     sentEmailRetrieveBadges(email_data, cb, errorCb) {
-        if (typeof email_data == 'string')
-            email_data = {
-                email_address: email_data
-            };
-        axios.post("public/requestmagic", email_data)
-            .then(function (response) {
-                cb(response.data);
-            })
-            .catch(function (error) {
-                if (typeof errorCb == "function")
-                    errorCb(error.response.data);
-            })
+        const payload = typeof email_data === 'string' ? { email_address: email_data } : email_data;
+        this._request('post', 'public/requestmagic', payload, cb, errorCb);
     },
-}
+};
