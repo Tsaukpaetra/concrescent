@@ -566,7 +566,7 @@ export default {
             addonsAvailable: 'contextAddons',
         }),
         selectedCart: function() {
-            if (this.activeCarts)
+            if (typeof this.activeCarts == 'object')
                 return this.activeCarts.find(cart => cart.id == this.cartIdSelected) || {
                     canEdit: false,
                     canPay: false,
@@ -847,6 +847,7 @@ export default {
                         this.loadCart(null);
                         break;
                     case 'Completed':
+                        //TODO: Detect if we're not logged in and thus have to find a different way to go to the right route
                         //Determine if this was a normal Attendee or a group application
                         var path = (this.products[0].context_code == 'A' || this.products[0].context_code == 'S') ?
                             '/myBadges' : '/myApplications';

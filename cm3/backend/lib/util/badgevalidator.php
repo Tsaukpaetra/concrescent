@@ -49,7 +49,9 @@ final class badgevalidator
         \CM3_Lib\models\eventinfo $eventinfo,
         private ?string $eventStartDate = null
     ) {
-        $this->eventStartDate = $eventinfo->GetByID($CurrentUserInfo->GetEventId(),['date_start'])['date_start'];
+        if($CurrentUserInfo->GetEventId()){
+            $this->eventStartDate = $eventinfo->GetByID($CurrentUserInfo->GetEventId(),['date_start'])['date_start'];
+        }
     }
 
     private ?int $payment_id = null;

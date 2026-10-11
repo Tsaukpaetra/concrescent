@@ -19,7 +19,7 @@
               :search="searchText"
             :group-by="groupBy"  @update:group-by="$emit('update:group-by', $event)"
             :group-desc="groupDesc"
-            :show-group-by="showwGroupBy"
+            :show-group-by="showGroupBy"
             >
 
     <template v-slot:top="">
@@ -201,12 +201,13 @@
 
 <script>
 import admin from '../api/admin';
+import { exportTableMixin } from '@/plugins/exportTableMixin';
 import {
     debounce
 } from '@/plugins/debounce';
-import exportFromJSON from 'export-from-json';
 export default {
     components: {},
+    mixins: [exportTableMixin],
     props: {
         'apiPath': {
             type: String
@@ -281,8 +282,12 @@ export default {
         'groupDesc' :{
             type: Boolean
         },
-        'showwGroupBy' :{
+        'showGroupBy' :{
             type: Boolean
+        },
+        exportPrettifiers: {
+            type: Object,
+            default: () => ({})
         },
     },
     data() {
@@ -294,8 +299,6 @@ export default {
             tableOptions: {},
             tableResults: [],
             totalResults: 0,
-            optionExportFormat:'csv',
-            optionExportRawHeaders: false,
         };
     },
     computed: {
@@ -314,6 +317,18 @@ export default {
             if (actionsIx > -1)
                 result.push(result.splice(actionsIx, 1)[0]);
             return result;
+        },
+        availableHeaders() {
+            //Simple list doesn't have any configuration so wysiwyg
+            return this.headers.filter(h => h.value != '__actions');
+        },
+        displayedHeaders() {
+            //Simple list doesn't have any configuration so wysiwyg
+            return this.headers.filter(h => h.value != '__actions').map(h => h.value);
+        },
+        exportBuiltinPrettifiers() {
+            //Simple list doesn't have any configuration so wysiwyg
+            return {};
         },
         pageOptionsForGet: function(){
             const pageOptions = [
@@ -353,52 +368,9 @@ export default {
                 }
             })
         }, 300),
-        doExport: function() {
-            this.loading = true;
-            console.log('doSearch pageOptions', this.pageOptionsForGet);
-            admin.genericGetList(this.apiPath, this.pageOptionsForGet, (results, total) => {
-                this.loading = false;
-                
-                const fileName = 'Export';
-                const exportType =  this.optionExportFormat;
-                if(!this.optionExportRawHeaders){
-                    results = this.makeHeadersPretty(results);
-                }
-                // Iterate through the results and replace explicit null values with an empty string
-                                results = results.map(obj => {
-                    return Object.fromEntries(
-                        Object.entries(obj).map(([key, value]) => [key, value === null ? '' : value])
-                    );
-                });
-                exportFromJSON({
-                    data:results,
-                    fileName,
-                    exportType,
-                    withBOM:true
-                    });
-            })            
-        },
         doEmit: function(eventName, item) {
             this.$emit(eventName, item);
         },
-        makeHeadersPretty(input) {
-            if (typeof input !== 'object') return input;
-            if (Array.isArray(input)) return input.map(this.makeHeadersPretty,this);
-            var that = this;
-            return Object.keys(input).reduce(function (newObj, key) {
-                let val = input[key];
-                let newVal = (typeof val === 'object') && val !== null ? that.makeHeadersPretty.call(that,val) : val;
-                //find new key
-                var newKeyObj = that.headers.find((header) => {
-                    if (header==key) return true;
-                    if(header.value == key) return true;
-                })
-                if(typeof newKeyObj == 'string') newKeyObj = {value:newKeyObj, text:newKeyObj};
-                if(typeof newKeyObj == 'undefined') newKeyObj = {value:key, text:key};
-                newObj[newKeyObj.text] = newVal;
-                return newObj;
-            }, {});
-        }
     },
     watch: {
         search: function(newSearch) {

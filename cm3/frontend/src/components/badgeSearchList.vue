@@ -22,7 +22,7 @@
                 }"
             :group-by="groupBy"  @update:group-by="$emit('update:group-by', $event)"
             :group-desc="groupDesc"
-            :show-group-by="showwGroupBy"
+            :show-group-by="showGroupBy"
               >
 
     <template v-slot:top="">
@@ -295,7 +295,7 @@
             <v-dialog
                 v-model="isExporting"
                 scrollable
-                max-width="500"
+                max-width="800"
                 persistent
             >
               <template v-slot:activator="{ on, attrs }">
@@ -318,7 +318,7 @@
                         <v-row>
                             <v-col
                             cols="12"
-                            sm="8">
+                            sm="4">
                             <p>Format</p>
 
                             <v-btn-toggle v-model="optionExportFormat">
@@ -336,10 +336,19 @@
                             <v-col
                             cols="12"
                             sm="4">
-                            <p>Internal Header names</p>
+                            <p>Internal Header names/values</p>
 
                             <v-switch
                                 v-model="optionExportRawHeaders"
+                                ></v-switch>
+                            </v-col>
+                            <v-col
+                            cols="12"
+                            sm="4">
+                            <p>Include Hidden columns</p>
+
+                            <v-switch
+                                v-model="optionExportIncludeHidden"
                                 ></v-switch>
                             </v-col>
                     </v-row>
@@ -375,13 +384,13 @@
 
 <script>
 import admin from '../api/admin';
+import { exportTableMixin } from '@/plugins/exportTableMixin';
 import payment_status_pill from '@/components/datagridcell/payment_status_pill.vue';
 
 import badgeName from '@/components/datagridcell/badgeName.vue';
 import {
     debounce
 } from '@/plugins/debounce';
-import exportFromJSON from 'export-from-json';
 import ColumnFilterEdit from './columnFilterEdit.vue';
 export default {
     components: {
@@ -389,6 +398,7 @@ export default {
         ColumnFilterEdit,
         badgeName
     },
+    mixins: [exportTableMixin],
     props: {
         'apiPath': {
             type: String
@@ -484,8 +494,14 @@ export default {
         'groupDesc' :{
             type: Boolean
         },
-        'showwGroupBy' :{
+        'showGroupBy' :{
             type: Boolean
+        },
+        // An object mapping header values to an array of transformation functions
+        // e.g., { 'assignments': [val => val.join(', ')] }
+        exportPrettifiers: {
+            type: Object,
+            default: () => ({})
         },
     },
     data() {
@@ -504,9 +520,6 @@ export default {
             displayedQuestionsIx: [],
             columnFilters:[],
             columnFiltersEdit:[],
-
-            optionExportFormat:'csv',
-            optionExportRawHeaders: false,
 
             //TEMP: Until application_Status is in its own component
             applicationStatusIcon: {
@@ -649,6 +662,13 @@ export default {
         },
         columnFiltersList(){
             return this.columnFilters.map(x=> x.split(String.fromCharCode(29)[0]));
+        },
+        exportBuiltinPrettifiers(){
+            return {
+                '__badgeName': (item)=>{
+                    return item.real_name + (item.fandom_name ? ' / ' + item.fandom_name : '');
+                }
+            }
         }
     },
     methods: {
@@ -691,33 +711,6 @@ export default {
                 this.loading = false;
             })
         },300),
-        doExport: function() {
-            this.loading = true;
-            console.log('doExport pageOptions', this.pageOptionsForGet);
-            admin.genericGetList(this.apiPath, this.pageOptionsForGet, (results, total) => {
-                this.loading = false;
-                
-                //TODO: auto-generate name from context info?
-                const fileName = 'Export';
-                const exportType =  this.optionExportFormat;
-                if(!this.optionExportRawHeaders){
-                    results = this.makeHeadersPretty(results);
-                }
-                // Iterate through the results and replace explicit null values with an empty string
-                results = results.map(obj => {
-                    return Object.fromEntries(
-                        Object.entries(obj).map(([key, value]) => [key, value === null ? '' : value])
-                    );
-                });
-
-                exportFromJSON({
-                    data:results,
-                    fileName,
-                    exportType,
-                    withBOM:true
-                    });
-            })            
-        },
         doEmit: function(eventName, item) {
             this.$emit(eventName, item);
         },
@@ -733,24 +726,6 @@ export default {
                 //TODO: Apply personal preferences
                 //this.displayedQuestions = initialQuestions;
             })
-        },
-        makeHeadersPretty(input) {
-            if (typeof input !== 'object') return input;
-            if (Array.isArray(input)) return input.map(this.makeHeadersPretty,this);
-            var that = this;
-            return Object.keys(input).reduce(function (newObj, key) {
-                let val = input[key];
-                let newVal = (typeof val === 'object') && val !== null ? that.makeHeadersPretty.call(that,val) : val;
-                //find new key
-                var newKeyObj = that.availableHeaders.find((header) => {
-                    if (header==key) return true;
-                    if(header.value == key) return true;
-                })
-                if(typeof newKeyObj == 'string') newKeyObj = {value:newKeyObj, text:newKeyObj};
-                if(typeof newKeyObj == 'undefined') newKeyObj = {value:key, text:key};
-                newObj[newKeyObj.text] = newVal;
-                return newObj;
-            }, {});
         },
         addColumnToFilters(input){
             if(this.columnFilters.map(x => this.columnpart(x),this).findIndex(x=>x==input)<0)

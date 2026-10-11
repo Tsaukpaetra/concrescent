@@ -122,7 +122,7 @@
         <v-dialog
             v-model="isExporting"
             scrollable
-            max-width="500"
+            max-width="800"
             persistent
         >
             <template v-slot:activator="{ on, attrs }">
@@ -145,7 +145,7 @@
                     <v-row>
                         <v-col
                         cols="12"
-                        sm="8">
+                        sm="4">
                         <p>Format</p>
 
                         <v-btn-toggle v-model="optionExportFormat">
@@ -163,10 +163,19 @@
                         <v-col
                         cols="12"
                         sm="4">
-                        <p>Internal Header names</p>
+                        <p>Internal Header names/values</p>
 
                         <v-switch
                             v-model="optionExportRawHeaders"
+                            ></v-switch>
+                        </v-col>
+                        <v-col
+                        cols="12"
+                        sm="4">
+                        <p>Include Hidden columns</p>
+
+                        <v-switch
+                            v-model="optionExportIncludeHidden"
                             ></v-switch>
                         </v-col>
                 </v-row>
@@ -201,12 +210,14 @@
 
 <script>
 import admin from '../api/admin';
+import { exportTableMixin } from '@/plugins/exportTableMixin';
 import {
     debounce
 } from '@/plugins/debounce';
 import exportFromJSON from 'export-from-json';
 export default {
     components: {},
+    mixins: [exportTableMixin],
     props: {
         'apiPath': {
             type: String
@@ -284,6 +295,12 @@ export default {
         'value': {
             type: Array
         },
+        // An object mapping header values to an array of transformation functions
+        // e.g., { 'assignments': [val => val.join(', ')] }
+        exportPrettifiers: {
+            type: Object,
+            default: () => ({})
+        },
     },
     data() {
         return {
@@ -348,6 +365,18 @@ export default {
             });
             return this.actions;
         },
+        availableHeaders() {
+            //Simple list doesn't have any configuration so wysiwyg
+            return this.headers.filter(h => h.value != '__actions');
+        },
+        displayedHeaders() {
+            //Simple list doesn't have any configuration so wysiwyg
+            return this.headers.filter(h => h.value != '__actions').map(h => h.value);
+        },
+        exportBuiltinPrettifiers() {
+            //Simple list doesn't have any configuration so wysiwyg
+            return {};
+        },
     },
     methods: {
 
@@ -367,31 +396,6 @@ export default {
                 }
             })
         }, 300),
-        doExport: function() {
-            this.loading = true;
-            console.log('doSearch pageOptions', this.pageOptionsForGet);
-            admin.genericGetList(this.apiPath, this.pageOptionsForGet, (results, total) => {
-                this.loading = false;
-                
-                const fileName = 'Export';
-                const exportType =  this.optionExportFormat;
-                if(!this.optionExportRawHeaders){
-                    results = this.makeHeadersPretty(results);
-                }
-                // Iterate through the results and replace explicit null values with an empty string
-                results = results.map(obj => {
-                    return Object.fromEntries(
-                        Object.entries(obj).map(([key, value]) => [key, value === null ? '' : value])
-                    );
-                });
-                exportFromJSON({
-                    data:results,
-                    fileName,
-                    exportType,
-                    withBOM:true
-                    });
-            })            
-        },
         doEmit: function(eventName, item) {
             switch (eventName) {
                 case '__MoveUp':
@@ -430,24 +434,6 @@ export default {
                 }
             })
         },
-        makeHeadersPretty(input) {
-            if (typeof input !== 'object') return input;
-            if (Array.isArray(input)) return input.map(this.makeHeadersPretty,this);
-            var that = this;
-            return Object.keys(input).reduce(function (newObj, key) {
-                let val = input[key];
-                let newVal = (typeof val === 'object') && val !== null ? that.makeHeadersPretty.call(that,val) : val;
-                //find new key
-                var newKeyObj = that.headers.find((header) => {
-                    if (header==key) return true;
-                    if(header.value == key) return true;
-                })
-                if(typeof newKeyObj == 'string') newKeyObj = {value:newKeyObj, text:newKeyObj};
-                if(typeof newKeyObj == 'undefined') newKeyObj = {value:key, text:key};
-                newObj[newKeyObj.text] = newVal;
-                return newObj;
-            }, {});
-        }
     },
     watch: {
         search: function(newSearch) {
