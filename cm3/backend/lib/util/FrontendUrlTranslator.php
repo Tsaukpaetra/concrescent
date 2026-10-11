@@ -15,7 +15,23 @@ class FrontendUrlTranslator
 
     public function routedURL(string $route)
     {
-        return $this->frontend_host . ($this->isHashMode ? '#/' : '') . $route;
+        // 1. Look for the custom header from the active HTTP request
+        // (PHP automatically prefixes headers with HTTP_ and uppercases them)
+        $clientHeader = $_SERVER['HTTP_X_FRONTEND_BASE_URL'] ?? null;
+
+        if ($clientHeader) {
+            // Trim any trailing slashes from the header and leading slashes from the route
+            // to prevent double-slash bugs (e.g., .../#//users/42)
+            return rtrim($clientHeader, '/') . '/' . ltrim($route, '/');
+        }
+
+        // 2. Fallback to your legacy configuration if the header is missing
+        $base = $this->frontend_host;
+        if ($this->isHashMode) {
+            $base = rtrim($base, '/') . '/#';
+        }
+        
+        return rtrim($base, '/') . '/' . ltrim($route, '/');
     }
 
     public function GetPaymentReturn(string $cart_uuid = '')

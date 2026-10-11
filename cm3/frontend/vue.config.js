@@ -3,15 +3,18 @@ const fs = require('fs');
 const webpack = require('webpack');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 
+const currentPublicPath = process.env.VUE_APP_PUBLIC_PATH || '/';
 module.exports = {
-  productionSourceMap: false,
-  publicPath: '/',
+  productionSourceMap: process.env.SOURCEMAP === 'true',
+  publicPath: currentPublicPath,
+  outputDir: process.env.OUTPUT_DIR || 'dist',
 
   devServer: {
     historyApiFallback: true,
+    allowedHosts: 'all', 
     static: {
         directory: path.join(__dirname, 'customization'),
-        publicPath: '/', 
+        publicPath: currentPublicPath, 
     },
     proxy: {
       '^/api/': {
@@ -39,9 +42,6 @@ module.exports = {
         args[0].title = 'ConCrescent';
         return args;
       });
-    config
-      .plugin('define')
-      .tap((args) => args);
     if (process.env.NODE_ENV === 'production') {
         const customizationDir = path.join(__dirname, 'customization');
         let excludedJsRegex = null;

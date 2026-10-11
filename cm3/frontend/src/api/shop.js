@@ -99,7 +99,7 @@ export default {
         this._request('post', 'account', data, cb, errorCb);
     },
 
-    switchEvent(event_id, cb, errorCb) {
+    switchEvent(token, event_id, cb, errorCb) {
         setTokenRefreshing(true);
         axios.post("account/switchevent", {
             "event_id": event_id

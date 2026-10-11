@@ -1,6 +1,14 @@
 import axios from 'axios';
 import store from '../storage';
 
+
+const frontendOrigin = window.location.origin 
+const frontendPath = process.env.VUE_APP_PUBLIC_PATH     
+const isHashMode = process.env.VUE_APP_HASHMODE === 'true'
+
+// If hash mode is on, inject the '#/', otherwise just use the normal path
+const backendLinkPrefix = `${frontendOrigin}${frontendPath}` + (isHashMode  ? '#/': '')
+
 // State for managing token rotation
 let isRefreshing = false;
 let refreshQueue = [];
@@ -26,11 +34,14 @@ const applyConfigTransformations = (config) => {
         return config;
     }
 
-    // 1. Inject Base URL
+    const path = config.url.replace(/^\//, '');
+    // 1. Inject Base URL if set
     if (window.CM3_CONFIG && window.CM3_CONFIG.apiHostURL) {
         const baseUrl = window.CM3_CONFIG.apiHostURL.replace(/\/$/, '');
-        const path = config.url.replace(/^\//, '');
         config.url = `${baseUrl}/${path}`;
+    } else {
+        // Fall back to a traditional, self-hosted relative route pointing at /api
+        config.url = `/api/${path}`;
     }
 
     // 2. Inject Auth Token
@@ -42,6 +53,9 @@ const applyConfigTransformations = (config) => {
     } else if (shouldHaveAuth) {
         console.log('Calling without authentication', config.url);
     }
+
+    // 3. Inject our return path for the API to generate URLs
+    config.headers['X-Frontend-Base-URL'] = backendLinkPrefix
 
     return config;
 };

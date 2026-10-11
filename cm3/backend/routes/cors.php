@@ -10,17 +10,34 @@ return function (App $app) {
         return $response;
     });
     $app->add(function ($request, $handler) {
-        $methods = RouteContext::fromRequest($request)->getRoutingResults()->getAllowedMethods();
+        $routingContext = RouteContext::fromRequest($request);
+        $methods = $routingContext->getRoutingResults()->getAllowedMethods();
+        
+        // 1. Handle the dynamic origin detection (Resolves the "//Detect?" comment)
+        // Grabs the exact domain making the request (e.g., your local network staging IP or production domain)
+        $origin = $request->getHeaderLine('Origin');
+        $allowOrigin = !empty($origin) ? $origin : '*';
+
+        // 2. Define the allowed headers, explicitly including your new custom tracking header
+        $allowedHeaders = [
+            'X-Requested-With', 
+            'Content-Type', 
+            'Accept', 
+            'Origin', 
+            'Authorization',
+            'X-Frontend-Base-URL'
+        ];
+
         $extraheaders = array(
             'X-Total-Rows'
         );
 
         $response = $handler->handle($request);
+        
         return $response
-              ->withHeader('Access-Control-Allow-Origin', '*')//Detect?
-              ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
-              ->withHeader('Access-Control-Allow-Methods', implode(",", $methods))
-              ->withHeader('Access-Control-Expose-Headers', implode(",", $extraheaders));
-        ;
+            ->withHeader('Access-Control-Allow-Origin', $allowOrigin)
+            ->withHeader('Access-Control-Allow-Headers', implode(', ', $allowedHeaders))
+            ->withHeader('Access-Control-Allow-Methods', implode(',', $methods))
+            ->withHeader('Access-Control-Expose-Headers', implode(',', $extraheaders));
     });
 };

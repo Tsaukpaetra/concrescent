@@ -1,4 +1,3 @@
-import './public-path';
 import Vue from 'vue'
 import App from './App.vue'
 import vuetify from './plugins/vuetify';
@@ -17,12 +16,10 @@ import {
 import vRouter from 'vue-router';
 import routes from './router'
 Vue.use(vRouter);
-const runtimeBase = (window.CM3_CONFIG && window.CM3_CONFIG.publicPath) || '/';
-
 var router = new vRouter({
-    // Use the dynamic path value to keep History mode aligned on subdirectories
-    base: runtimeBase,
-    mode: window.CM3_CONFIG.hashMode ? 'hash' : 'history',
+    // Auto-substitutes during compile
+    base: process.env.VUE_APP_PUBLIC_PATH,
+    mode: process.env.VUE_APP_HASHMODE === 'true' ? 'hash' : 'history',
     //history: global.config.hashMode ? vRouter.createWebHashHistoy() : vRouter.createWebHistory(),
     routes: routes
 })
