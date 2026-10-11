@@ -1065,7 +1065,7 @@ final class badgeinfo
                 ));
                 
                 $badge['assignments'] = $this->g_assignment->Search(new View([
-                    'id','application_id','location_id','category_id','start_time','end_time',
+                    'id','application_id','location_id','category_id','start_time','end_time', 'formatted_time_range',
                     new SelectColumn('short_code', Alias:'location_short_code', JoinedTableAlias:'l'),
                     new SelectColumn('name', Alias: 'location_name', JoinedTableAlias:'l'),
                     new SelectColumn('name',Alias:'category_name', JoinedTableAlias:'lc'),
@@ -1208,7 +1208,7 @@ final class badgeinfo
             ));
 
             $result['assignments'] = $this->g_assignment->Search(new View([
-                'id','application_id','location_id','category_id','start_time','end_time',
+                'id','application_id','location_id','category_id','start_time','end_time','formatted_time_range',
                 new SelectColumn('short_code', Alias:'location_short_code', JoinedTableAlias:'l'),
                 new SelectColumn('name', Alias: 'location_name', JoinedTableAlias:'l'),
                 new SelectColumn('name',Alias:'category_name', JoinedTableAlias:'lc'),
@@ -1890,6 +1890,7 @@ final class badgeinfo
                     $curIx = array_search($newAssignment, $setAssignments, true);
 
                     unset($newAssignment['id']);//Just in case
+                    unset($newAssignment['formatted_time_range']);
                     $newAssignment['application_id'] = $result['id'];
                     $newAssignment['start_time'] = empty($newAssignment['start_time']) ? null : $newAssignment['start_time'] ;
                     $newAssignment['end_time'] = empty($newAssignment['end_time']) ? null : $newAssignment['end_time'] ;
@@ -1912,6 +1913,7 @@ final class badgeinfo
                 //Process modifications
                 foreach (array_uintersect($setAssignments, $currentAssignments, array($this,'compareID')) as $existingAssignment) {
                     $curIx = array_search($existingAssignment, $setAssignments, true);
+                    unset($existingAssignment['formatted_time_range']);
                     $existingAssignment['application_id'] = $result['id'];
                     $existingAssignment['start_time'] = empty($existingAssignment['start_time']) ? null : $existingAssignment['start_time'] ;
                     $existingAssignment['end_time'] = empty($existingAssignment['end_time']) ? null : $existingAssignment['end_time'] ;
