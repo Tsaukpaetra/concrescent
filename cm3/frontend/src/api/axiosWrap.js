@@ -3,7 +3,7 @@ import store from '../storage';
 
 
 const frontendOrigin = window.location.origin 
-const frontendPath = process.env.VUE_APP_PUBLIC_PATH     
+const frontendPath = process.env.VUE_APP_PUBLIC_PATH ?? '/'
 const isHashMode = process.env.VUE_APP_HASHMODE === 'true'
 
 // If hash mode is on, inject the '#/', otherwise just use the normal path

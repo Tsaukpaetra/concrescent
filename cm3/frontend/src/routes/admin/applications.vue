@@ -9,6 +9,7 @@
                                  text: currentContext.application_name2,
                                  value: 'fandom_name',
                              }" :AddHeaders="listAddHeaders" :RemoveHeaders="listRemoveHeaders" showExport
+                :exportPrettifiers="exportAssignmentPrettifiers" 
                 :isEditingItem="sEdit" :actions="listActions" :footerActionsRight="[
                             {
                                 text: 'Import',
@@ -746,6 +747,8 @@ export default {
         ...mapGetters('products', {
             currentContext: 'selectedbadgecontext',
             contextBadges: 'contextBadges',
+            locationEvents: 'locationEvents',
+            locations: 'locations',
         }),
         pageTitle: function() {
             return 'Group Applications - ' + this.currentContext.name;
@@ -816,6 +819,11 @@ export default {
                 this.createError = newval ? "???" : "";
             }
         },
+        exportAssignmentPrettifiers() {
+            return {
+                'assignment_count': this.prettifyAssignments
+            };
+        },
     },
     methods: {
         checkPermission() {
@@ -823,6 +831,12 @@ export default {
 
             this.$emit('updateSubTitle', this.pageTitle);
         },
+        ...mapActions(
+            'products',[
+                'getLocationEvents',
+                'getLocations'
+            ]
+        ),
         editSubmission: function(selectedSubmission) {
             console.log('edit submission from grid', selectedSubmission);
             let that = this;
@@ -859,6 +873,29 @@ export default {
         },
         importSubmission: function(){
             this.importSubmissionDialog = true;
+        },
+        prettifyAssignments: function(value,item) {
+            let valueToUse = ''+value;
+            if(item.assignments_ids) valueToUse = item.assignments_ids;
+            if(valueToUse.length == 0 || valueToUse == '0') return '';
+            return valueToUse.split(',').map((assignment_id) => {
+                if (parseInt(assignment_id) == NaN) return '';
+                let asn = this.locationEvents.find((assignment)=>assignment.id == assignment_id) || {
+                    "id": 0,
+                    "application_id": 0,
+                    "location_id": 0,
+                    "category_id": 0,
+                };
+                let loc = this.locations.find(l => l.id == asn.location_id) || {
+                    "id": 0,
+                    "short_code": "?",
+                    "name": "[Unknown]",
+                    "description": null
+                }
+                return ('[' + loc.short_code + '] ' + loc.name) + ': ' +
+                asn.formatted_time_range;
+
+            }).join('\r\n')
         },
         editBadge: function(selectedBadge) {
             console.log('edit badge selected from grid', selectedBadge);
@@ -1180,6 +1217,8 @@ export default {
         })
 
         await this.$store.dispatch('products/selectContext', this.context_code);
+        await this.getLocations();
+        await this.getLocationEvents();
         this.loading = false;
         this.checkPermission();
         //this.doSearch();

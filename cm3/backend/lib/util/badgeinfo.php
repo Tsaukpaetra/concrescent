@@ -1590,6 +1590,8 @@ final class badgeinfo
                new SelectColumn('context_code', JoinedTableAlias:'grp'),
                new SelectColumn('assignment_count'),
                new SelectColumn('AssignmentCount',EncapsulationFunction:'ifnull(?,0)',Alias:'assignments',JoinedTableAlias:'ac'),
+               new SelectColumn('AssignmentIDs',EncapsulationFunction:'ifnull(?,\'\')',Alias:'assignments_ids',JoinedTableAlias:'ac'),
+               new SelectColumn('FormattedTimes',EncapsulationFunction:'ifnull(?,\'\')',Alias:'assignments_formattedtimes',JoinedTableAlias:'ac'),
                new SelectColumn('LocationIDs',EncapsulationFunction:'ifnull(?,\'\')',Alias:'assignments_locations',JoinedTableAlias:'ac'),
                new SelectColumn('CategoryIDs',EncapsulationFunction:'ifnull(?,\'\')',Alias:'assignments_categories',JoinedTableAlias:'ac'),
                new SelectColumn('application_status'),
@@ -1631,6 +1633,8 @@ final class badgeinfo
                  new Join($this->g_assignment,['application_id'=>'id'],'LEFT',
                  'ac',[
                      new SelectColumn('application_id',true),
+                     new SelectColumn('id',false,'GROUP_CONCAT(? SEPARATOR \',\')','AssignmentIDs'),
+                     new SelectColumn('formatted_time_range',false,'GROUP_CONCAT(? SEPARATOR \';\')','FormattedTimes'),
                      new SelectColumn('location_id',false,'GROUP_CONCAT(? SEPARATOR \',\')','LocationIDs'),
                      new SelectColumn('category_id',false,'GROUP_CONCAT(? SEPARATOR \',\')','CategoryIDs'),
                      new SelectColumn('id',false,'count(?)','AssignmentCount')

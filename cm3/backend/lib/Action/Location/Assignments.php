@@ -83,6 +83,7 @@ final class Assignments
                 'application_id',
                 'location_id',
                 'category_id',
+                'formatted_time_range',
                 'start_time',
                 'end_time',
                 new SelectColumn('real_name', JoinedTableAlias: 's'),

@@ -2,7 +2,7 @@
     <v-tabs-items :value="subTabIx" touchless>
         <v-tab-item value="Badges">
             <badgeSearchList apiPath="Staff/Badge" context_code="S" :AddHeaders="listAddHeaders"
-                :RemoveHeaders="listRemoveHeaders" :isEditingItem="bEdit || bPrint" showExport :actions="listActions"
+                :RemoveHeaders="listRemoveHeaders" :isEditingItem="bEdit || bPrint" showExport :exportPrettifiers="exportStaffPrettifiers" :actions="listActions"
                 @edit="editBadge">
 
                 <template v-slot:[`item.__assigned_positions`]="{ item }">
@@ -263,7 +263,8 @@
 </template>
 <script>
 import {
-    mapActions
+    mapActions,
+    mapGetters
 } from 'vuex';
 import admin from '../../api/admin';
 import {
@@ -472,6 +473,9 @@ export default {
         createError: '',
     }),
     computed: {
+        ...mapGetters('products', {
+            'allStaffPositions': 'allStaffPositions',
+        }),
         listActions: function () {
             var result = [];
             //TODO: Detect permissions
@@ -538,6 +542,11 @@ export default {
                 this.createError = newval ? "???" : "";
             }
         },
+        exportStaffPrettifiers() {
+            return {
+                'assignments': this.prettifyAssignments
+            };
+        },
     },
     methods: {
         checkPermission: () => {
@@ -575,6 +584,26 @@ export default {
             }, () => {
                 this.loading = false;
             })
+        },
+        prettifyAssignments: function(value,item) {
+            let valueToUse = ''+value;
+            if(item.assignments_positions) valueToUse = item.assignments_positions;
+            if(valueToUse.length == 0 || valueToUse == '0') return '';
+            return valueToUse.split(',').map((positionid) => {
+                if (parseInt(positionid) == NaN) return '';
+                let pos = this.allStaffPositions.find((position)=>position.Position_Id == positionid) || {
+                    "Department_Id": 0,
+                    "Department_Name": "Unknown",
+                    "Position_Id": positionid,
+                    "Position_Name": "Unknown position (" + positionid + ")",
+                    "Position_IsExec": 0,
+                    "Position_Active": 0
+                };
+                return (pos.Position_Active ? '' : '[INACTIVE]') +
+                //(pos.Position_IsExec ? '👑 ' : '')  +
+                pos.Department_Name + ': ' + pos.Position_Name;
+
+            }).join('\r\n')
         },
         createBadgeType: function () {
             this.btDialog = true;
