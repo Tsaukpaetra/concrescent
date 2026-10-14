@@ -66,13 +66,45 @@ class DbConnection
             return true;
         }
     }
+    /**
+     * Executes a unit of work within a transaction.
+     * This is the preferred method for all transactional operations
+     * to ensure atomicity and prevent connection leakage.
+     * Otherwise, manual control with the explicit transaction commands
+     * can be used.
+     */
+    public function transactional(callable $callback, string $name = null): mixed
+    {
+        $this->connection->begin_transaction(0, $name);
 
+        try {
+            $result = $callback($this);
+            $this->connection->commit(0, $name);
+            return $result;
+        } catch (\Throwable $e) {
+            // Catching \Throwable catches both Exceptions and Errors (PHP 7+)
+            $this->connection->rollback(0, $name);
+            throw $e;
+        }
+    }
+    /**
+     * @deprecated Use $db->transactional(fn() => ...) instead. 
+     * Manual transaction control is dangerous as it does not guarantee atomicity in case of exceptions.
+     */
     public function transaction_begin(){
         $this->connection->begin_transaction();
     }
+    /**
+     * @deprecated Use $db->transactional(fn() => ...) instead. 
+     * Manual transaction control is dangerous as it does not guarantee atomicity in case of exceptions.
+     */
     public function transaction_commit(){
         $this->connection->commit();
     }
+    /**
+     * @deprecated Use $db->transactional(fn() => ...) instead. 
+     * Manual transaction control is dangerous as it does not guarantee atomicity in case of exceptions.
+     */
     public function transaction_rollback(){
         $this->connection->rollback();
     }

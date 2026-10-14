@@ -6,18 +6,18 @@ abstract class Table
 {
     //Associated database connection
     protected DbConnection $cm_db;
-    protected string $TableName;
+    protected string $TableName = '';
     //String-keyed array of Column
-    public array $ColumnDefs;
+    public array $ColumnDefs = [];
     //string-keyed array of ColumnIndex
-    protected array $IndexDefs;
+    protected array $IndexDefs = [];
     //These must be present in some way if we're referencing an entry
     //name -> bool if it's needed for Insert as well as update
-    public array $PrimaryKeys;
+    public array $PrimaryKeys = [];
     //If an empty array is provided for the return columns in Search, these will be returned by default
-    public array $DefaultSearchColumns;
+    public array $DefaultSearchColumns = [];
     //Availalbe name => View
-    public array $Views;
+    public array $Views = [];
 
     public bool $debugThrowBeforeSelect = false;
     public bool $allowSettingOnUpdatedColumns = false;
@@ -31,11 +31,41 @@ abstract class Table
     {
         $this->cm_db = $cm_db;
         $this->setupTableDefinitions();
+        $this->checkDefinitions();
         $this->CheckTable();
         //Set up the boolcolumns
         $this->boolColumns = array_keys( array_filter($this->ColumnDefs, function(Column $col){
             return str_starts_with(strtolower($col->dbType),'bool');
         }));
+    }
+
+    private function checkDefinitions() {
+        // 2. Defensive check for TableName and ColumnDefs
+        // If setupTableDefinitions failed to populate these, we ensure they aren't uninitialized
+        if (empty($this->TableName)) {
+            // You may choose to throw an exception here as TableName is critical
+            throw new \Exception("Table definition failed: TableName is not set.");
+        }
+        if (empty($this->ColumnDefs)) {
+            throw new \Exception("Table definition failed: ColumnDefs is empty.");
+        }
+
+        // 3. Populate PrimaryKeys if empty
+        // We enumerate ColumnDefs and check the isPrimary property
+        if (empty($this->PrimaryKeys)) {
+            foreach ($this->ColumnDefs as $columnName => $columnDef) {
+                if ($columnDef->isPrimary) {
+                    // Value is true if not auto-increment, false otherwise
+                    $this->PrimaryKeys[$columnName] = !$columnDef->isAutoIncrement;
+                }
+            }
+        }
+
+        // 4. Populate DefaultSearchColumns if empty
+        // If still empty, add the keys of the newly populated PrimaryKeys
+        if (empty($this->DefaultSearchColumns)) {
+            $this->DefaultSearchColumns = array_keys($this->PrimaryKeys);
+        }
     }
 
     public function CheckTable(bool $validateSchema = false): bool
@@ -364,7 +394,7 @@ abstract class Table
         return $count;
     }
 
-    public function Search(View|array|string|null $columns = null, ?array $terms = null, ?array $order = null, int $limit = -1, int $offset = 0, &$resultTotal = null, $initialTableAlias = null)
+    public function Search(View|array|string|null $columns = null, ?array $terms = null, ?array $order = null, int $limit = -1, int $offset = 0, &$resultTotal = null, $initialTableAlias = null, bool $forUpdate = false)
     {
         $errors = array();
         $groupNames = array();
@@ -839,6 +869,11 @@ abstract class Table
 
         $sqlText = $selectParts . $sqlBody .$sqlGrouping . $sqlHaving . $sqlOrdering . $sqlWindowing ;
 
+        //Is this selecting data for (potential) update?
+        if ($forUpdate) {
+            $sqlText .= ' FOR UPDATE';
+        }
+
         if ($this->debugThrowBeforeSelect) {
             $errors[] = 'Throwing intentionally due to debugThrowBeforeSelect';
             $errors[] = 'Params:' . $whereCodes;
@@ -1174,7 +1209,7 @@ abstract class Table
         return $this->GetByID($id) !== false;
     }
 
-    public function GetByID($id, View|array|string|null $columns = null)
+    public function GetByID($id, View|array|string|null $columns = null, bool $forUpdate = false)
     {
 
         //Were we even provided an ID?
@@ -1201,7 +1236,7 @@ abstract class Table
             }
         }
 
-        $result = $this->Search($columns, $terms, limit: 1);
+        $result = $this->Search($columns, $terms, limit: 1, forUpdate: $forUpdate);
         if ($result === false || is_null($result) || count($result) == 0) {
             return false;
         } else {
@@ -1209,7 +1244,7 @@ abstract class Table
         }
     }
 
-    public function GetByIDorUUID($id, $uuid, View|array|string|null $columns = null)
+    public function GetByIDorUUID($id, $uuid, View|array|string|null $columns = null, bool $forUpdate = false)
     {
         //Were we even provided an ID?
         if (!$id && !$uuid) {
@@ -1236,7 +1271,7 @@ abstract class Table
             }
         }
 
-        $result = $this->Search($columns, $terms, limit: 1);
+        $result = $this->Search($columns, $terms, limit: 1, forUpdate: $forUpdate);
         if ($result === false || is_null($result) || count((array)$result) == 0) {
             return false;
         } else {

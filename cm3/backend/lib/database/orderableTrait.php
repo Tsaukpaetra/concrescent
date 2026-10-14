@@ -14,18 +14,18 @@ trait orderableTrait
     //Override the table's Create method
     public function _createOrUpdate_entry( array $entrydata, bool $isNew): array|bool
     {
-        $this->cm_db->transaction_begin();
+        return $this->cm_db->transactional(function() use ($entrydata,$isNew) {
         if($isNew 
         || (isset($entrydata[$this->orderColumn]) && ($entrydata[$this->orderColumn] ?? 0) == 0)
         )
         {
             $entrydata[$this->orderColumn] = $this->GetNextOrder($entrydata);
         }
-        $result = parent::_createOrUpdate_entry($entrydata, $isNew);
-        $this->cm_db->transaction_commit();
-        return $result;
+        return parent::_createOrUpdate_entry($entrydata, $isNew);
+        });
     }
 
+    //Implementation note: Should be in a transaction!
     public function GetNextOrder($entrydata) :int
     {
 
@@ -40,39 +40,27 @@ trait orderableTrait
 
     private function orderBatchUpdate(array $items)
     {
-        $this->cm_db->transaction_begin();
-        $error = false;
         $result = [];
         foreach ($items as $item)
         {
             $resultItem = $this->Update($item);
             if ($resultItem === false)
             {
-                $error = true;
-                //TODO: Collect errors to throw upward
-                break;
+                throw new \Exception("Batch update failed for item: " . json_encode($item));
             }
             $result[] = array_merge($item, $resultItem);
-        }
-        if (!$error)
-        {
-            $this->cm_db->transaction_commit();
-        } else
-        {
-            $this->cm_db->transaction_rollback();
-            //TODO: Populate this
-            //throw new Exception("Error Processing Request", 1);            
         }
         return $result;
     }
 
     public function orderSwitchWith($id1, $id2)
     {
+        return $this->cm_db->transactional(function() use ($id1, $id2) {
         //Inefficient because we're using the Table's functions that check things for us
         //No need to re-implement checks!
         $retrieveColumns = array_merge($this->PrimaryKeys, [$this->orderColumn]);
-        $item1 = $this->GetById($id1, $retrieveColumns);
-        $item2 = $this->GetById($id2, $retrieveColumns);
+        $item1 = $this->GetById($id1, $retrieveColumns,true);
+        $item2 = $this->GetById($id2, $retrieveColumns,true);
         //Check that we have both items
         if ($item1 === false || $item2 === false)
         {
@@ -84,15 +72,17 @@ trait orderableTrait
         $item2[$this->orderColumn] = $swapOrderValue;
         //Save the results
         $this->orderBatchUpdate([$item1, $item2]);
+        });
     }
 
     public function orderMove($id, bool $upwards = true, int $positions = 1)
     {
+        return $this->cm_db->transactional(function() use ($id, $upwards, $positions) {
         //Note, upwards in this case means reduce the order number
         $retrieveColumns = array_merge(array_keys($this->PrimaryKeys), [$this->orderColumn]);
 
         //Retrieve the target
-        $targetItem = $this->GetById($id, array_merge($retrieveColumns, $this->orderGroupColumns));
+        $targetItem = $this->GetById($id, array_merge($retrieveColumns, $this->orderGroupColumns),true);
 
         //Create searchTerms and populate based on the ID given
         $searchTerms = [];
@@ -105,7 +95,7 @@ trait orderableTrait
         $searchTerms[] = new SearchTerm($this->orderColumn, $targetItem[$this->orderColumn], $upwards ? "<=" : ">=");
 
         //Execute search
-        $items = $this->Search($retrieveColumns, $searchTerms, [$this->orderColumn => $upwards], $positions + 1);
+        $items = $this->Search($retrieveColumns, $searchTerms, [$this->orderColumn => $upwards], $positions + 1, forUpdate:true);
 
         //Shortcut: If there an unexpected number of items to move, fix it wholesale
         $total = count($items) - 1;
@@ -135,6 +125,7 @@ trait orderableTrait
         $result = $this->orderBatchUpdate($items);
 
         return $result;
+        });
     }
 
     //To fix a whole group that may have gotten the order too damaged to use
@@ -147,7 +138,7 @@ trait orderableTrait
         $retrieveColumns = array_keys($this->PrimaryKeys);
 
         //Retrieve the target
-        $targetItem = $this->GetById($id, array_merge($retrieveColumns, $this->orderGroupColumns));
+        $targetItem = $this->GetById($id, array_merge($retrieveColumns, $this->orderGroupColumns),true);
 
         //Create searchTerms and populate based on the ID given
         $searchTerms = [];
@@ -157,7 +148,7 @@ trait orderableTrait
         }
 
         //Execute search, preserve any existing order
-        $items = $this->Search($retrieveColumns, $searchTerms, [$this->orderColumn => false]);
+        $items = $this->Search($retrieveColumns, $searchTerms, [$this->orderColumn => false],forUpdate:true);
 
         //Calculate new order value
         array_walk($items, function (&$item, $ix) use ($items) {
