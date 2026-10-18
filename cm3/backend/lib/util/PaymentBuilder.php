@@ -46,6 +46,7 @@ final class PaymentBuilder
         private FrontendUrlTranslator $FrontendUrlTranslator,
         private Mail $Mail
     ) {
+        $badgeinfo->GenerateTokenUrls = true;
     }
 
     public function resetCart($contact_id = null, $requested_by = '[self]')

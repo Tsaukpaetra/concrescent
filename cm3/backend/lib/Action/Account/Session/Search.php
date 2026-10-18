@@ -6,6 +6,7 @@ use CM3_Lib\database\SearchTerm;
 use CM3_Lib\models\contact_session;
 use CM3_Lib\Responder\Responder;
 use CM3_Lib\util\CurrentUserInfo;
+use CM3_Lib\util\badgeinfo;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
@@ -24,7 +25,8 @@ final class Search
     public function __construct(
         private Responder $responder, 
         private contact_session $contact_session,
-        private CurrentUserInfo $user
+        private CurrentUserInfo $user,
+        private badgeinfo $badgeinfo
     )
     {
     }
@@ -47,24 +49,22 @@ final class Search
             $showEphemeral ? null : new SearchTerm('session_type','ephemeral_login_only','!=')
         );
 
-
-        $order = array('token_timestamp' => false);
-
-        $page = ($request->getQueryParams()['page'] ?? 0 > 0) ? (int)$request->getQueryParams()['page'] : 1;
-        $limit = (int)($request->getQueryParams()['itemsPerPage'] ?? 20);
-        $offset = ($page - 1) * $limit;
-        if ($offset < 0) {
-            $offset = 0;
-        }
+        $qp = $request->getQueryParams();
+        $find = $qp['find'] ?? '';
+        $pg = $this->badgeinfo->parseQueryParamsPagination($qp, 'token_timestamp', defaultSortDesc:true);
+        $totalRows = 0;
 
         // Fetch sessions for this contact
         $data = $this->contact_session->Search(
             array(), 
             $whereParts, 
-            $order, 
-            $limit, 
-            $offset
+            $pg['order'], 
+            $pg['limit'], 
+            $pg['offset'],
+            $totalRows
         );
+        
+        $response = $response->withHeader('X-Total-Rows', (string)$totalRows);
 
         // Build the HTTP response
         return $this->responder->withJson($response, $data);

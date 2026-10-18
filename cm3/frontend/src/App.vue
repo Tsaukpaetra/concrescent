@@ -437,9 +437,9 @@ export default {
             return 'account-alert-outline';
         },
         ...mapGetters('cart', {
-            'cartCount': 'cartCount'
         }),
         ...mapGetters('mydata', {
+            'cartCount': 'cartCount',
             'ownedBadgeCount': 'ownedBadgeCount',
             'applicationCount': 'applicationCount',
             'isLoggedIn': 'getIsLoggedIn',
@@ -453,7 +453,8 @@ export default {
             'events': 'events',
             'selectedEvent':'selectedEvent',
             'badgeContexts': 'badgeContexts',
-            'productselectedEvent': 'selectedEvent'
+            'productselectedEvent': 'selectedEvent',
+            'authError' : 'authError'
         }),
         productselectedEventId: {
             get: function() {
@@ -474,10 +475,10 @@ export default {
         },
         adminMode: {
             get: function() {
-                return this.$store.getters['mydata/getAdminMode'];
+                return this.$store.getters['products/getAdminMode'];
             },
             set: function(newAdminMode) {
-                this.$store.dispatch("mydata/setAdminMode", newAdminMode);
+                this.$store.dispatch("products/setAdminMode", newAdminMode);
                 //Bring us back to the home page if we're not there already
                 if (this.$router.currentRoute.name != 'home')
                     this.$router.push("/");
@@ -526,7 +527,7 @@ export default {
                 }
             }
         },
-        ...mapActions('mydata', ['clearAuthError']),
+        ...mapActions('products', ['clearAuthError']),
         async resolveSession() {
             this.clearAuthError();
             // Navigate to login or trigger a refresh logic
@@ -540,11 +541,28 @@ export default {
         dismissError() {
             this.showAuthErrorDialog = false;
             this.clearAuthError();
-        }
+        },
+        handleGlobalMessage(event) {
+            switch (event.data.type){
+                case 'SwitchedEventId': {
+                    //Another tab just switched events, probably
+                    if(this.productselectedEventId != event.data.selectedEvent.id ){
+
+                        this.$store.dispatch("products/selectEventId", event.data.selectedEvent.id);
+                    }
+                } break;
+            }
+        },
     },
     watch: {
         'selectedEvent': function(newSelectedEvent){
             this.initLoadDone = true;
+            
+            // Send a message that we changed the event id, which means the synced token is also fetching for the new id
+            this.$broadcast.postMessage({
+                type: 'SwitchedEventId',
+                selectedEvent: newSelectedEvent
+            });
         },
         'authError': function(authError){
             if(this.isLoggedIn && authError.hasError)
@@ -605,16 +623,21 @@ export default {
         if (this.isLoggedIn) {
             console.log('refreshing token, event id ' + this.productselectedEventId)
             await this.$store.dispatch('mydata/RefreshToken');
-            //await this.$store.dispatch('products/getBadgeContexts');
-        } else {
-
+        } 
+        if (!this.isLoggedIn) {
+            //If the refresh failed, we always want to have event info
+            //console.log('getting initial event info', initialEventID)
+            await this.$store.dispatch('products/getEventInfo').then(async () => {
+                console.log('got event info, loading contexts');
+                //this.selectedEventId = this.productselectedEventId;
+                await this.$store.dispatch('products/getBadgeContexts');
+            });
         }
-        //console.log('getting initial event info', initialEventID)
-        await this.$store.dispatch('products/getEventInfo').then(async () => {
-            console.log('got event info, loading contexts');
-            //this.selectedEventId = this.productselectedEventId;
-            await this.$store.dispatch('products/getBadgeContexts');
-        });
+        this.$broadcast.addEventListener('message', this.handleGlobalMessage);
+    },
+    beforeDestroy() {
+        // IMPORTANT: Unbind the listener when the component is destroyed
+        this.$broadcast.removeEventListener('message', this.handleGlobalMessage);
     }
 };
 </script>

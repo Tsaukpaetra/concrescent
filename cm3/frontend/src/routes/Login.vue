@@ -96,11 +96,13 @@
                 </v-tab-item>
                 <v-tab-item>
                     <v-card>
-                        <v-card-text>Login Success!</v-card-text>
+                        <v-card-text>Login Success!<br>
+                            <div v-if="!(formEMValid || formPWValid)">You can return to the original tab or continue here.</div>
+                        </v-card-text>
                         <v-card-actions>
                             <v-spacer></v-spacer>
                             <v-btn color="green darken-1"
-                                   :to="returnTo">OK</v-btn>
+                                   :to="returnTo">Continue</v-btn>
                         </v-card-actions>
                     </v-card>
                 </v-tab-item>
@@ -167,6 +169,8 @@ export default {
             'sendRetrieveBadgeEmail',
             'loginToken',
             'loginPassword',
+        ]),
+        ...mapActions('products', [
             'setAdminMode'
         ]),
         SendMagicLink() {
@@ -213,37 +217,59 @@ export default {
                         if(this.returnTo.startsWith("/Admin/") && this.isAdmin)  {
                             this.setAdminMode(true);
                         }
-                        this.$router.push(this.returnTo);                        
+                        
+                        // Send a message that we logged in
+                        this.$broadcast.postMessage({
+                            type: 'Logged-in'
+                        });
+                        // 2. Set a timeout: If no one responds in .2 second,
+                        // we are the primary tab or nobody is also on the login screen.
+                        // If we DO get a response, we halt and let them know their options
+                        this.handoffTimeout = setTimeout(() => {
+                            this.$router.push(this.returnTo);
+                        }, 200);                    
                     } else {
-                        this.loginFailReason = success;
+                        this.loginFailReason = success.error.message;
                         this.state = 4;
                     }
                     this.loading = false;
                 });
-                // Presumably they're here from a Magic link
-                // Which *probably* means it was successful, so... clear the cart!
-                //this.$router.replace({ ...this.$router.currentRoute, query: {} });
             }
-        }
+        },
+        handleGlobalMessage(event) {
+            switch (event.data.type){
+                case 'Logged-in': {
+                    //Another tab just logged in and we're waiting for that
+                    //Signal back that we're alive and will take it from here
+                    this.$broadcast.postMessage({
+                        type: 'Logged-in-thanks'
+                    });
+                    //Shove them on their way
+                    console.log('Trying to focus again')
+                    window.focus();
+                    this.state = 3;
+                } break;
+                case 'Logged-in-thanks':{
+                    //another tab is sitting at the login screen and should be trying to focus itself
+                    // Clear the timeout so we don't redirect
+                    clearTimeout(this.handoffTimeout);
+                } break;
+
+            }
+        },
     },
     watch: {
         $route() {
             this.$nextTick(this.completeLogin);
         },
-        'state' : async function(newstate) {
-            if(newstate == 3) {
-                //Trigger a reload of the events and contexts in case more are available now
-                
-                await this.$store.dispatch('products/getEventInfo',true).then(async () => {
-                    console.log('got event info, loading contexts');
-                    //this.selectedEventId = this.productselectedEventId;
-                    await this.$store.dispatch('products/getBadgeContexts', true);
-                });
-            }
-        }
     },
     created() {
+        this.$broadcast.addEventListener('message', this.handleGlobalMessage);
         this.completeLogin();
+    },
+    beforeDestroy() {
+        // IMPORTANT: Unbind the listener when the component is destroyed
+        this.$broadcast.removeEventListener('message', this.handleGlobalMessage);
     }
 };
 </script>

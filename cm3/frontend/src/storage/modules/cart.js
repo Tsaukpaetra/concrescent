@@ -391,7 +391,7 @@ const actions = {
 
 // mutations
 const mutations = {
-    initialiseCart(state) {
+    initialiseData(state) {
         // Check if the ID exists
         if (localStorage.getItem('cart')) {
             // Replace the state object with the stored item

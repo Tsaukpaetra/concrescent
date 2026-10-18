@@ -4,6 +4,13 @@ import Vue from 'vue'
 
 // initial state
 const state = {
+    authError: {
+        hasError: false,
+        message: "",
+        statusCode: null,
+        endpoint: ""
+    },
+    adminMode: false,
     eventinfo: [],
     adminContextToken: '',
     selectedEventId: null,
@@ -32,7 +39,11 @@ const state = {
 
 // getters
 const getters = {
-
+    authError: (state) => state.authError,
+    getAdminMode: (state) => {
+        console.log('!!!!Getting admin mode',state.token != "" , state.adminMode)
+        return state.token != "" && state.adminMode;
+    },
     events: (state) => {
         return state.eventinfo || [];
     },
@@ -108,13 +119,26 @@ const getters = {
 
 // actions
 const actions = {
+    setAuthError({ commit }, errorDetails) {
+        commit('setAuthError', errorDetails);
+    },
+    clearAuthError({ commit }) {
+        commit('clearAuthError');
+    },
+    async setAdminMode({
+        commit,state,dispatch
+    }, newAdminMode) {
+        commit('setAdminMode', newAdminMode);
+        dispatch('resetBadgeContexts',null);
+        await dispatch('getBadgeContexts',null);
+    },
     selectEventId({
         dispatch,
         commit
     }, event_id) {
         return new Promise(async (resolve) => {
             commit('selectEvent', event_id);
-            await dispatch('getBadgeContexts');
+            await dispatch('getEventInfo', true);
             resolve();
         })
     },
@@ -129,7 +153,7 @@ const actions = {
     getEventInfo({
         commit,
         state,
-        rootState,
+        dispatch,
         getters
     }, force) {
 
@@ -139,25 +163,27 @@ const actions = {
 
                 if (isAdmin) {
                     client.getEventInfo()
-                    .then(eventinfo => {
+                    .then(async eventinfo => {
                         commit('setEventInfo', eventinfo);
                         if (state.selectedEventId == null)
                             commit('selectEvent', eventinfo[0].id);
                         else {
                             commit('selectEvent', state.selectedEventId);
                         }
+                        await dispatch('getBadgeContexts');
                         resolve();
                     }).catch(err =>{
                         reject(err)
                     });
                 } else {
-                    client.getEventInfo(eventinfo => {
+                    client.getEventInfo(async eventinfo => {
                         commit('setEventInfo', eventinfo);
                         if (state.selectedEventId == null)
                             commit('selectEvent', eventinfo[0].id);
                         else {
                             commit('selectEvent', state.selectedEventId);
                         }
+                        await dispatch('getBadgeContexts');
                         resolve();
                     })
                 }
@@ -526,6 +552,20 @@ const actions = {
 
 // mutations
 const mutations = {
+    setAuthError(state, details) {
+        state.authError = details;
+    },
+    clearAuthError(state) {
+        state.authError = {
+            hasError: false,
+            message: "",
+            statusCode: null,
+            endpoint: ""
+        };
+    },
+    setAdminMode(state, newAdminMode) {
+        state.adminMode = newAdminMode;
+    },
     setEventInfo(state, eventinfo) {
         state.eventinfo = eventinfo;
         state.gotEventInfo = true;

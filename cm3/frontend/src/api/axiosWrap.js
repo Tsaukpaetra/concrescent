@@ -82,8 +82,8 @@ customInstance.interceptors.response.use(
     (error) => {
         if (error.response && error.response.status === 401) {
             // Capture metadata for the user or helpdesk
-            console.log('unauthorixzeddd!',error.response)
-            store.dispatch('mydata/setAuthError', {
+            console.log('unauthorized returned!',error.response)
+            store.dispatch('products/setAuthError', {
                 hasError: true,
                 message: error.response.data?.error?.message || error.response.data?.message || "Unauthorized",
                 statusCode: error.response.status,

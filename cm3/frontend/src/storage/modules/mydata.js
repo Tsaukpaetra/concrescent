@@ -1,5 +1,4 @@
 import shop from '../../api/shop'
-import admin from '../../api/admin'
 
 // initial state
 const state = {
@@ -7,7 +6,6 @@ const state = {
     username: "",
     permissions: null,
     preferences: {},
-    adminMode: false,
     ownedbadges: [],
     applications: [],
     BadgeRetrievalStatus: false,
@@ -26,17 +24,14 @@ const state = {
     },
     activeCarts: [],
     allCarts: null,
-    authError: {
-        hasError: false,
-        message: "",
-        statusCode: null,
-        endpoint: ""
-    }
 }
 
 
 // getters
 const getters = {
+    cartCount: (state)=>{
+        return state.activeCarts.length;
+    },
     ownedBadgeCount: (state) => {
         return state.ownedbadges == undefined ? 0 : state.ownedbadges.length;
     },
@@ -74,10 +69,6 @@ const getters = {
     },
     getIsLoggedIn: (state) => {
         return state.token != "" && state.contactInfo != undefined && state.contactInfo.id != undefined;
-    },
-    getAdminMode: (state) => {
-        console.log('!!!!Getting admin mode',state.token != "" , state.adminMode)
-        return state.token != "" && state.adminMode;
     },
     getPreferences: (state) => {
         return state.preferences;
@@ -117,7 +108,6 @@ const getters = {
         }
         return "Guest";
     },
-    authError: (state) => state.authError
 }
 
 // actions
@@ -144,11 +134,10 @@ const actions = {
         commit('setToken', token);
         return new Promise((resolve) => {
             shop.switchEvent(token, rootState.products.selectedEventId, async (data) => {
-                    commit('setToken', data.token);
-                    commit('setPermissions', data.permissions);
-                    commit('setUsername', data.username);
-                    commit('setPreferences', data.preferences);
-                    commit('setAdminMode', state.permissions != null && state.permissions != undefined &&state.adminMode)
+                commit('setPermissions', data.permissions);
+                commit('setUsername', data.username);
+                commit('setPreferences', data.preferences);
+                commit('setToken', data.token);
                     await dispatch('products/selectEventId', data.event_id, {
                         root: true
                     });
@@ -183,22 +172,18 @@ const actions = {
                 commit('setPermissions', data.permissions);
                 commit('setUsername', data.username);
                 commit('setPreferences', data.preferences);
-                commit('setAdminMode', data.permissions != undefined)
                 await dispatch('products/selectEventId', data.event_id, {
                     root: true
                 });
                 await dispatch('refreshContactInfo');
+                commit('setOwnedBadges', []);
+                await dispatch('retrieveBadges');
+                await dispatch('retrieveApplications');
                 resolve(true);
             }, (error) => {
                 resolve(error.error?.message);
             });
         })
-    },
-    setAuthError({ commit }, errorDetails) {
-        commit('setAuthError', errorDetails);
-    },
-    clearAuthError({ commit }) {
-        commit('clearAuthError');
     },
     logout({
         commit,
@@ -219,7 +204,6 @@ const actions = {
             "zip_code": "",
             "country": ""
         });
-        commit('setAdminMode', false);
         commit('setOwnedBadges', []);
         commit('setApplications', []);
         commit('setCarts', {
@@ -238,13 +222,7 @@ const actions = {
             root: true
         });
         commit('setToken', "");
-    },
-    async setAdminMode({
-        commit,state,dispatch
-    }, newAdminMode) {
-        commit('setAdminMode', newAdminMode);
-        dispatch('products/resetBadgeContexts',null,{root:true});
-        await dispatch('products/getBadgeContexts',null,{root:true});
+        dispatch('products/setAdminMode', false, {root:true})
     },
     refreshContactInfo({
         commit,
@@ -431,12 +409,16 @@ const actions = {
 // mutations
 const mutations = {
     initialiseData(state) {
-        // Check if the ID exists
-        if (localStorage.getItem('mydata')) {
-            // Replace the state object with the stored item
-            //this.replaceState(
-            Object.assign(state, JSON.parse(localStorage.getItem('mydata')))
-            //);
+        // Check if the ID exists        
+        const storedData = localStorage.getItem('mydata');
+        if (storedData) {
+            try {
+                const parsed = JSON.parse(storedData);
+                // Use Object.assign to merge parsed data into current state
+                Object.assign(state, parsed);
+            } catch (e) {
+                console.error("Failed to parse mydata from localStorage", e);
+            }
         }
     },
 
@@ -451,9 +433,6 @@ const mutations = {
     },
     setUsername(state, newusername) {
         state.username = newusername;
-    },
-    setAdminMode(state, newAdminMode) {
-        state.adminMode = newAdminMode;
     },
     setContactInfo(state, newContactInfo) {
         state.contactInfo = newContactInfo;
@@ -491,17 +470,6 @@ const mutations = {
         //upsert
         state.activeCarts.splice(ix, ix == -1 ? 0 : 1, cartdata);
     },
-    setAuthError(state, details) {
-        state.authError = details;
-    },
-    clearAuthError(state) {
-        state.authError = {
-            hasError: false,
-            message: "",
-            statusCode: null,
-            endpoint: ""
-        };
-    }
 
 }
 

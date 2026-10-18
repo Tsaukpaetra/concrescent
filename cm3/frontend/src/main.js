@@ -13,12 +13,14 @@ import {
     split_carriagereturn
 } from './plugins/split_carriagereturn'
 
+import { debounce } from './plugins/debounce';
+
 import vRouter from 'vue-router';
 import routes from './router'
 Vue.use(vRouter);
 var router = new vRouter({
     // Auto-substitutes during compile
-    base: process.env.VUE_APP_PUBLIC_PATH,
+    base: process.env.VUE_APP_PUBLIC_PATH || '/',
     mode: process.env.VUE_APP_HASHMODE === 'true' ? 'hash' : 'history',
     //history: global.config.hashMode ? vRouter.createWebHashHistoy() : vRouter.createWebHistory(),
     routes: routes
@@ -76,41 +78,54 @@ Vue.use(VuetifyGoogleAutocomplete, {
     apiKey: window.CM3_CONFIG.GoogleAutoCompleteAPIKey
 })
 
+// Create a single channel instance for the entire application
+const appChannel = new BroadcastChannel('vue_app_channel');
+// Expose it globally to all components
+Vue.prototype.$broadcast = appChannel;
+
+const persistedStores = ['cart','mydata','station'];
+
 new Vue({
     vuetify,
     router,
     store,
     beforeCreate() {
-        //Retrieve the cart
-        this.$store.commit('cart/initialiseCart');
-        //Retrieve the users' data
-        this.$store.commit('mydata/initialiseData');
-        //Retrieve the station's data
-        this.$store.commit('station/initialiseData');
-        //Initiate a call to get the products
-        //this.$store.dispatch("products/getAllProducts");
+        //Pre-load the stores
+        persistedStores.forEach((key) => {
+            this.$store.commit(key + '/initialiseData')
+        });
     },
     render: h => h(App)
 }).$mount('#app')
 
+const debouncedSave = debounce((key,state) => {
+    try {
+        localStorage.setItem(key, JSON.stringify(state[key]));
+    } catch (e) {
+        console.error('[Storage] Debounced save failed for ' + key, e);
+    }
+}, 500);
+
 //Set a trigger whenever the cart changes
 store.subscribe((mutation, state) => {
-    //For debug only
-    if (mutation.type.startsWith("products/")) {
-        // Store the state object as a JSON string
-        localStorage.setItem('debug_products', JSON.stringify(state.products));
-    }
-    //Only paying attention to the cart
-    if (mutation.type.startsWith("cart/")) {
-        // Store the state object as a JSON string
-        localStorage.setItem('cart', JSON.stringify(state.cart));
-    }
-    if (mutation.type.startsWith("mydata/")) {
-        // Store the state object as a JSON string
-        localStorage.setItem('mydata', JSON.stringify(state.mydata));
-    }
-    if (mutation.type.startsWith("station/")) {
-        // Store the state object as a JSON string
-        localStorage.setItem('station', JSON.stringify(state.station));
+    //Check if the mutation is not our own init
+    if(mutation.type.endsWith('/initialiseData')) return;
+
+    //If it's a store we're persisting
+    persistedStores.forEach((key) => {
+        if(mutation.type.startsWith(key+'/')){
+            debouncedSave(key,state);
+        }
+    });
+});
+window.addEventListener('storage', async (event) => {
+    // Check if the specific key we use for our state changed
+    if (persistedStores.find(key => event.key == key)){
+        try {
+            //Just trigger the load
+            store.commit(event.key + '/initialiseData')
+        } catch (e) {
+            console.error('[Storage] Error parsing storage data:', e);
+        }
     }
 });

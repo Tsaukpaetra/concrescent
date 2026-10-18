@@ -183,19 +183,19 @@ export default {
             return items;
         },
         ...mapGetters('cart', {
-            'cartCount': 'cartCount'
         }),
         ...mapGetters('mydata', {
+            'cartCount': 'cartCount',
             'ownedBadgeCount': 'ownedBadgeCount',
             'applicationCount': 'applicationCount',
             'isLoggedIn': 'getIsLoggedIn',
             'isAdmin': 'hasPerms',
-            'adminMode': 'getAdminMode',
             'hasEventPerm': 'hasEventPerm',
             'hasGroupPerm': 'hasGroupPerm',
             'getLoggedInName': 'getLoggedInName'
         }),
         ...mapGetters('products', {
+            'adminMode': 'getAdminMode',
             'events': 'events',
             'badgeContexts': 'badgeContexts',
             'productselectedEventId': 'selectedEventId',
