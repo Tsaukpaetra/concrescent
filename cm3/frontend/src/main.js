@@ -74,9 +74,12 @@ Vue.filter('subname', subname)
 Vue.filter('badgeDisplayName', badgeDisplayName)
 Vue.filter('split_carriagereturn', split_carriagereturn)
 
-Vue.use(VuetifyGoogleAutocomplete, {
-    apiKey: window.CM3_CONFIG.GoogleAutoCompleteAPIKey
-})
+//Don't use the  autocomplete if no api key was given
+if (window.CM3_CONFIG && window.CM3_CONFIG.GoogleAutoCompleteAPIKey) {
+    Vue.use(VuetifyGoogleAutocomplete, {
+        apiKey: window.CM3_CONFIG.GoogleAutoCompleteAPIKey
+    });
+}
 
 // Create a single channel instance for the entire application
 const appChannel = new BroadcastChannel('vue_app_channel');

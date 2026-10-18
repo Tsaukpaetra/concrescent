@@ -47,7 +47,7 @@
         </v-row>
 
         <vuetify-google-autocomplete id="map"
-                                     v-if="!readonly"
+                                     v-if="showGoogleAutoComplete"
                                      append-icon="mdi-map-search"
                                      @placechanged="retrieveAddress"
                                      placeholder="Search Address"
@@ -179,6 +179,9 @@ export default {
                 "zip_code": this.contactPostalCode,
                 "country": this.contactCountry
             }
+        },
+        showGoogleAutoComplete(){
+            return !this.readonly && window.CM3_CONFIG.GoogleAutoCompleteAPIKey
         }
     },
     methods: {
