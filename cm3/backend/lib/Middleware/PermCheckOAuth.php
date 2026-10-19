@@ -35,7 +35,10 @@ class PermCheckOAuth
 
         foreach ($this->AllowedScopes as $value) {
             if ($value instanceof PermOAuth) {
-                $hasScope |= $scopes->getValue() & $value->getValue();
+                $hasScope |= $scopes->getValue() & $value->getValue();                
+            } else {
+                //Assume it's the raw value of the PermOauth
+                $hasScope |= $scopes->getValue() & $value;
             }
         }
         //Check if we don't have any required scopes
@@ -43,7 +46,7 @@ class PermCheckOAuth
             $hasScope = $scopes->getValue() > 0;
         }
         if (!$hasScope) {
-            throw new HttpUnauthorizedException($request, 'Not accessible with current scopes. Need one of: ' . implode(',',$this->getCollapsedAllowedScopes()->getKey()));
+            throw new HttpUnauthorizedException($request, 'Not accessible with current scopes. Need one of: ' . implode(',',$this->getCollapsedAllowedScopes()->getKey()) . ' But you have ' .implode(',',$scopes->getKey()));
         }
         return  $handler->handle($request);
     }

@@ -108,6 +108,14 @@ export default [{
         component: () => import( /* webpackChunkName: "Cart" */ './routes/account/profile.vue'),
     },
     {
+        path: '/account/oauthgrant',
+        name: 'oauthgrant',
+        meta: {
+            title: 'Grant external app permissions',
+        },
+        component: () => import( /* webpackChunkName: "Oauth" */ './routes/account/oauth.vue'),
+    },
+    {
         path: '/account/settings',
         name: 'settings',
         meta: {

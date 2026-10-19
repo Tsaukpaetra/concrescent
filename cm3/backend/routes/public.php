@@ -60,6 +60,11 @@ return function (App $app) {
 
             //Request magic link
             $app->post('/requestmagic', \CM3_Lib\Action\Public\SendMagicLink::class);
+
+            //Get the public oauth details
+            $app->get('/getoauth/{client_id}', \CM3_Lib\Action\Public\getOauthClient::class);
+            //Redeem an oauth code for a oauth client
+            $app->post('/redeemoauth', \CM3_Lib\Action\Public\redeemOauth::class);
         }
     );
 };

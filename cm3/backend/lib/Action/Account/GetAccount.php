@@ -52,7 +52,6 @@ class GetAccount
           'state',
           'zip_code',
           'country',
-          'notes',
         ));
         if($result === false){
           //This should not happen, but in case it does, output a dummy
@@ -70,9 +69,15 @@ class GetAccount
               "state"=> "",
               "zip_code"=> "",
               "country"=> "",
-              "notes"=> null          
           ];
         }
+        //If we're Ouath scoped to BASIC, remove everything but the basic info
+        $result = array_intersect_key($result,array_flip([
+            'id',
+            'email_address',
+            'real_name'
+        ]));
+
         // Build the HTTP response
         return $this->responder
             ->withJson($response, $result);

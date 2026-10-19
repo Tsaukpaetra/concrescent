@@ -1,8 +1,8 @@
 window.CM3_CONFIG = {
     AppName: "Registration",
     AppNameAdmin: "ConCrescent",
-    GoogleAutoCompleteAPIKey: 'YourKeyHere',
     apiHostURL: "/api/",
+    GoogleAutoCompleteAPIKey : '',
     themeLight: {
         appbar: '#656cb9',
         appbaradmin: '#006cb9',

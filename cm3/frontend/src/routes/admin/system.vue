@@ -135,6 +135,28 @@
                 </v-card>
             </v-dialog>
         </v-tab-item>
+        <v-tab-item value="Oauth">
+            <simpleList apiPath="AdminOAuthApp" :headerKey="oHeaderKey" :AddHeaders="oAddHeaders" :footerActions="blFooterActions" :isEditingItem="oEdit" :actions="oActions"
+                @create="createOauth" @edit="editOauth">
+                <template v-slot:[`item.active`]="{ item }">
+                    <cell-toggle v-model="item.active" @input="oSetActive(item.client_id, $event)"></cell-toggle>
+                </template>
+            </simpleList>
+            <v-dialog v-model="oDialog" persistent scrollable>
+
+                <v-card>
+                    <v-card-title class="headline">Edit Oauth</v-card-title>
+                    <v-card-text>
+                        <editAdminOauthApp v-model="oSelected"/>
+                    </v-card-text>
+                    <v-card-actions>
+                        <v-spacer></v-spacer>
+                        <v-btn color="default" @click="oDialog = false">Cancel</v-btn>
+                        <v-btn color="primary" @click="saveOauth" >Save</v-btn>
+                    </v-card-actions>
+                </v-card>
+            </v-dialog>
+        </v-tab-item>
 
         <v-dialog v-model="loading" width="200" height="200" close-delay="1200" content-class="elevation-0" persistent>
             <v-card-text class="text-center overflow-hidden">
@@ -169,6 +191,7 @@ import editBadgeAdmin from '@/components/editBadgeAdmin.vue';
 import cellToggle from '@/components/datagridcell/toggleValue.vue';
 import editAppGroup from '@/components/editAppGroup.vue';
 import editEventInfo from '@/components/editEventInfo.vue';
+import editAdminOauthApp from '@/components/editAdminOauthApp.vue';
 
 export default {
     components: {
@@ -179,6 +202,7 @@ export default {
         //editBadgeAdmin,
         editAppGroup,
         editEventInfo,
+        editAdminOauthApp,
         cellToggle
     },
     mixins: [subTabEditorByQueryIdMixin],
@@ -221,6 +245,15 @@ export default {
                     editObject: 'vSelected',
                     editFunction: 'editEvent',
                     dialogToggle: 'vEdit'
+                }
+            },{
+                key: 'Oauth',
+                text: 'Oauth',
+                title: 'Oauth',
+                editor: {
+                    editObject: 'oSelected',
+                    editFunction: 'editOauth',
+                    dialogToggle: 'oEdit'
                 }
             },
         ],
@@ -309,6 +342,30 @@ export default {
         vDialog:false,
         vEdit:false,
         vValid:true,
+
+        oHeaderKey:{
+            text: 'Client ID',
+            align: 'start',
+            value: 'client_id',
+        },
+        oAddHeaders: [{
+            text: 'App Name',
+            value: 'app_name'
+        }, {
+            text: 'Developer Name',
+            value: 'developer_name'
+        }, {
+            text: 'Active',
+            value: 'active'
+        }],
+        oActions:[{
+            name: 'edit',
+            text: 'Edit',
+            icon: 'edit-pencil'
+        }],
+        oSelected: {},
+        oDialog:false,
+        oEdit:false,
 
         loading: false,
         createError: '',
@@ -513,6 +570,49 @@ export default {
             console.log("Saving Event active state", id,active)
             admin.genericPost(url, {active}, () => {
                 this.vEdit = false;
+            }, () => {
+                
+            })
+        },
+        
+        createOauth: function() {
+            this.oDialog = true;
+            this.oEdit = true;
+            this.oSelected = {};
+        },
+        editOauth: function(selectedOauth) {
+            this.loading = true;
+            admin.genericGet('AdminOAuthApp/' + selectedOauth.client_id, null, (editG) => {
+
+                this.oSelected = editG;
+                this.oDialog = true;
+                this.oEdit = true;
+                this.loading = false;
+            }, () => {
+                this.loading = false;
+            })
+        },
+        saveOauth: function() {
+            var url = 'AdminOAuthApp';
+            if (this.oSelected.client_id != undefined)
+                url = url + '/' + this.oSelected.client_id;
+            console.log("Saving Oauth", JSON.parse(JSON.stringify(this.oSelected)))
+            this.loading = false;
+            admin.genericPost(url, this.oSelected, () => {
+
+                this.loading = false;
+                this.oDialog = false;
+                this.oEdit = false;
+            }, () => {
+                this.loading = false;
+            })
+        },
+        oSetActive: function(id,active) {
+            this.oEdit = true;
+            var url = 'AdminOAuthApp/' + id;
+            console.log("Saving AdminOAuthApp active state", id,active)
+            admin.genericPost(url, {active}, () => {
+                this.oEdit = false;
             }, () => {
                 
             })

@@ -239,6 +239,6 @@ final class ListLocationEvents
 
         // Build the HTTP response
         return $this->responder
-            ->withJson($response, $data);
+            ->withNegotiatedResponse($request, $response, $data);
     }
 }

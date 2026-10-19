@@ -178,4 +178,13 @@ export default {
         const payload = typeof email_data === 'string' ? { email_address: email_data } : email_data;
         this._request('post', 'public/requestmagic', payload, cb, errorCb);
     },
+
+    getOauthClientInfo(client_id, cb, errorCb) {
+        this._request('get', 'public/getoauth/' + client_id, null, cb, errorCb);
+    },
+
+    getOauthTokenCode(client_id, scope, expires_in, redirect_uri, pkce_data, cb, errorCb) {
+        const payload = { scope, expires_in, redirect_uri, pkce_data };
+        this._request('post', 'account/createoauthtoken/' + client_id, payload, cb, errorCb);
+    },
 };

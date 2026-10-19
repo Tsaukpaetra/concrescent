@@ -7,6 +7,7 @@ use CM3_Lib\database\SelectColumn as cm_SelectColumn;
 use CM3_Lib\database\View as cm_View;
 use CM3_Lib\database\SearchTerm;
 use CM3_Lib\models\admin\user;
+use CM3_Lib\models\admin\oauth_code;
 use CM3_Lib\models\eventinfo;
 use CM3_Lib\models\application\group;
 use CM3_Lib\util\Permissions;
@@ -15,12 +16,13 @@ use CM3_Lib\AppConfig;
 use CM3_Lib\models\contact_session;
 
 use Branca\Branca;
+use Exception;
 use MessagePack\Packer;
 use MessagePack\BufferUnpacker;
 
 class TokenGenerator
 {
-    public function __construct(private user $user, private eventinfo $eventinfo, private group $group, private Branca $Branca, private AppConfig $config, private contact_session $contactSessionModel)
+    public function __construct(private user $user, private eventinfo $eventinfo, private group $group, private Branca $Branca, private AppConfig $config, private contact_session $contactSessionModel, private oauth_code $oauth_code)
     {
     }
 
@@ -115,32 +117,109 @@ class TokenGenerator
         return $result;
     }
 
-    public function forOAuth($contact_id, $event_id, $oauthPerm, $ttl = 0)
+    public function stageOAuth($client_id, $contact_id, $event_id, PermOAuth $oauthPerm, $ttl = 0, $pkce_data = '') : string
     {
         $event_id = $this->checkEventID($event_id, $contact_id);
+        $conf_ttl = $ttl ? time() - \intval($this->config->get('environment')['token_life']) + $ttl : 0;
+
+        //Assume everything else is dandy, if the client ID is invalid it can't be redeemed anyways
+
+        // Generate a random, unguessable string
+        $rawCode =  $event_id . '.' . $contact_id . '.' . bin2hex(random_bytes(32)) ;
+        $codeHash = hash('sha256', $rawCode);
+        
+        //Toss it into the database
+        $this->oauth_code->Create([
+            'code_hash' => $codeHash,
+            'client_id' => $client_id,
+            'contact_id' => $contact_id,
+            'event_id' => $event_id,
+            'scopes' => $oauthPerm->getValue(),
+            'expires_at' => date('Y-m-d H:i:s',$conf_ttl),
+            'pkce_data'   => $pkce_data
+        ]);
+
+        //Give back the code
+        return $rawCode;
+
+    }
+
+    public function checkOathCode($client_id, $rawCode, $code_verifier =  '')
+    {
+        $code_hash = hash('sha256', $rawCode);
+        $result = $this->oauth_code->GetByID($code_hash,'*');
+
+        //Verify extra verification data
+        if (!empty($result['pkce_data'])) {
+            if (!$code_verifier) {
+                 return false; //return $this->responseWithError($response, 'invalid_grant', 'Code verifier is required for PKCE-enforced requests.');
+            }
+
+            // Split the single database field back into its components
+            list($method, $storedChallenge) = explode(':', $result['pkce_data'], 2);
+
+            // Calculate the challenge from the client's verifier
+            if ($method === 'S256') {
+                // SHA-256 binary hash -> URL Safe Base64 Encoding
+                $calculatedHash = hash('sha256', $code_verifier, true);
+                $calculatedChallenge = rtrim(strtr(base64_encode($calculatedHash), '+/', '-_'), '=');
+            } elseif ($method === 'plain') {
+                $calculatedChallenge = $code_verifier;
+            } else {
+                throw new \Exception('Unsupported transformation method: ' . $method);
+            }
+
+            // 3. Strict timing-attack-safe comparison
+            if (!hash_equals($storedChallenge, $calculatedChallenge)) {
+                return false;
+            }
+        }
+
+        return $result['client_id']??'' == $client_id;
+    }
+
+    public function redeemOauth($client_id, $rawCode)
+    {
+        $code_hash = hash('sha256', $rawCode);
+        
+        $result = $this->oauth_code->GetByID($code_hash,'*');
+        if($result['client_id']??'' != $client_id){
+            throw new Exception('Invalid code or already redeemed');
+        }
+
+        $oauthPerm = new PermOAuth($result['scopes']);
+
 
         // Generate the token proper
         $packer = (new Packer())
             ->extendWith(new OAuthPermissions());
+        
         // Initialize payload
-        $tokenPayload = $packer->pack($contact_id)
-          . $packer->pack($event_id)
+        $tokenPayload = $packer->pack($result['contact_id'])
+          . $packer->pack($result['event_id'])
           . $packer->pack($oauthPerm);
 
-        $result = array();
-        $result['event_id'] = $event_id;
+        $result['access_token'] = $this->Branca->encode($tokenPayload, strtotime($result['expires_at']));
+        $result['token_type'] = 'Bearer';
+        //Fix expires_at to reflect reality
+        $result['expires_at'] = date('Y-m-d H:i:s',\intval($this->config->get('environment')['token_life']) + strtotime($result['expires_at']));
+        $result['expires_in'] = strtotime($result['expires_at']) - time() ;
+        $result['scopes'] = $oauthPerm->getKey();
+        $result['scope'] = implode(' ',(array)$oauthPerm->getKey());
 
-        $conf_ttl = $ttl ? time() - \intval($this->config->get('environment')['token_life']) + $ttl : 0;
-
-        $result['token'] = $this->Branca->encode($tokenPayload, $conf_ttl );
-
-        $result['permissions'] = $oauthPerm->getKey();
+        //Remove useless data
+        unset($result['code_hash']);
+        unset($result['client_id']);
+        unset($result['pkce_data']);
+        unset($result['date_created']);
 
         // Insert a new session record
-        $this->Branca->decode($result['token']);
+        $this->Branca->decode($result['access_token']);
         $timestamp = $this->Branca->timestamp('');
-        $this->createSessionRecord($contact_id, $event_id, 'oauth', $timestamp);
+        $this->createSessionRecord($result['contact_id'], $result['event_id'], 'oauth', $timestamp);
 
+        //We've done it, kill the code
+        $this->oauth_code->Delete(['code_hash' => $code_hash]);
         return $result;
     }
 
@@ -283,7 +362,7 @@ class TokenGenerator
         );
 
         if (count($eventresult) == 0) {
-            throw new \Exception("Invalid event_id or event not available");
+            throw new \Exception("Invalid event_id or event not available [" . $event_id ."]");
         }
 
         //If the event is not active, do some extra checks to see if the contact supplied has permissions

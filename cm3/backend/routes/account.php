@@ -20,7 +20,8 @@ return function (App $app, $container) {
             //Default root, Gets currently logged-in user info, including admin permissions, if applicable
             $app->get('', \CM3_Lib\Action\Account\GetAccount::class)
                 ->add($PermOAuth->withAllowedScopes([
-                    PermOAuth::READ_ACCOUNT
+                    PermOAuth::READ_ACCOUNT_BASIC,
+                    PermOAuth::READ_ACCOUNT_FULL
                 ]));
 
             //Save account details
@@ -40,7 +41,7 @@ return function (App $app, $container) {
                 ->add($PermOAuth);
                 
             // Create an OAuth token
-            $app->post('/createoauthtoken', \CM3_Lib\Action\Account\CreateOAuthToken::class)
+            $app->post('/createoauthtoken/{client_id}', \CM3_Lib\Action\Account\CreateOAuthToken::class)
                 ->add($PermOAuth);
 
             //Switch which event we're talking about
