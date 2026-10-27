@@ -45,6 +45,10 @@ final class Update
 
         // Invoke the Domain with inputs and retain the result
         $data = $this->badgeinfo->UpdateSpecificBadgeUnchecked($params['id'], 'S', $data);
+        if($data === false){
+            //Didn't update, just move on and pretend it did
+            $data = ['id'=>$params['id']];
+        }
 
         if (isset($qp['sendupdate']) && $qp['sendupdate'] == 'true') {
             //TODO: Use the notification framework for this...

@@ -47,10 +47,14 @@ final class Update
 
         // Invoke the Domain with inputs and retain the result
         $data = $this->badgeinfo->UpdateSpecificBadgeUnchecked($params['id'], 'A', $data);
+        if($data === false){
+            //Didn't update, just move on and pretend it did
+            $data = ['id'=>$params['id']];
+        }
 
         if (isset($qp['sendupdate']) && $qp['sendupdate'] == 'true') {
             //TODO: Use the notification framework for this...
-            $badge = $this->badgeinfo->getSpecificBadge($data['id'], 'A', true);
+            $badge = $this->badgeinfo->getSpecificBadge($params['id'], 'A', true);
             $to = $this->CurrentUserInfo->GetContactEmail($badge['contact_id']);
             $template = 'payment-' .$badge['payment_status'];
             try {

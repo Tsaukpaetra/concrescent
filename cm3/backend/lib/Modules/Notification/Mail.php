@@ -245,9 +245,9 @@ class Mail
                     }
                 }
             }
-            if (is_null($template) || is_string($template)) {
+            if (!isset($template) || !is_array($template)) {
                 if($throwOnMissing) {
-                    throw new \Exception('Unable to load mail template "' . $template . '"');
+                    throw new \Exception('Unable to load mail template "' . $context . '-' . $name . '"');
                 } else {
                     //Just return a blank template that's inactive
                     $template = array_merge($this->defaultSchema, [

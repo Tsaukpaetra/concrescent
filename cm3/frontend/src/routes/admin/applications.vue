@@ -120,6 +120,17 @@
                             <v-toolbar-title>Edit Badge</v-toolbar-title>
                             <v-spacer></v-spacer>
                             <v-toolbar-items>
+                                <v-tooltip bottom>
+                                    <template v-slot:activator="{ on, attrs }">
+                                        <v-btn color="primary" dark
+                                            v-bind="attrs"
+                                            v-on="on"
+                                            @click="eloadBadgeDataDialog = true">
+                                            <v-icon>mdi-subdirectory-arrow-left</v-icon>
+                                        </v-btn>
+                                    </template>
+                                    <span>Open parent submission</span>
+                                </v-tooltip>
                                 <v-menu offset-y open-on-hover>
                                     <template v-slot:activator="{ on, attrs }">
                                         <v-btn :color="bModified ? 'green' : 'primary'" dark v-bind="attrs" v-on="on">
@@ -143,7 +154,7 @@
                         </v-toolbar>
                     </v-card-title>
                     <v-card-text class="pa-0">
-                        <editBadgeAdmin v-model="bSelected" @save="saveBadge" />
+                        <EditSubbadge v-model="bSelected" @save="saveBadge" />
                     </v-card-text>
                 </v-card>
             </v-dialog>
@@ -461,6 +472,7 @@ import importWizard from '@/components/importWizard.vue';
 import cellAssignments from '@/components/datagridcell/cellAssignments.vue';
 import cellToggle from '@/components/datagridcell/toggleValue.vue';
 import EmailTemplateEditor from '../../components/EmailTemplateEditor.vue';
+import EditSubbadge from '../../components/editSubbadge.vue';
 
 export default {
     components: {
@@ -472,6 +484,7 @@ export default {
         addonTypeForm,
         formQuestionEditList,
         editBadgeAdmin,
+        EditSubbadge,
         importWizard,
         cellAssignments,
         cellToggle,
@@ -697,8 +710,8 @@ export default {
         eExistingTemplates:[],
         eNameTranslation: {
             'payment-Completed': {
-                text: 'Cart payment completed',
-                tip: 'Transaction confirmation email'
+                text: 'Cart payment completed and application confirmed',
+                tip: 'Transaction confirmation email, Sent when application confirms their acceptance by  paying or finishing the cart'
             },
             'payment-Incomplete': {
                 text: 'Cart payment incomplete',
@@ -735,6 +748,14 @@ export default {
             'application-Waitlisted': {
                 text: 'Application Waitlisted',
                 tip: 'Sent when application is waitlisted'
+            },
+            'subbadge-Completed': {
+                text: 'Cart payment completed, message for sub-badges',
+                tip: 'Transaction confirmation Badge email'
+            },
+            'subbadgeapplication-Accepted': {
+                text: 'Application Completed for sub badges',
+                tip: 'Sent when sending update on an accepted application'
             },
         },
         eloadBadgeDataDialog: false,
@@ -899,30 +920,28 @@ export default {
         },
         editBadge: function(selectedBadge) {
             console.log('edit badge selected from grid', selectedBadge);
-            let that = this;
-            that.loading = true;
-            admin.genericGet('Application/' + this.context_code + '/Submission/' + selectedBadge.application_id, null, function(editBadge) {
-                that.bSelected = editBadge;
-                that.loading = false;
-                that.bEdit = true;
-                that.$nextTick(() => {
-                    that.bModified = false;
+            this.loading = true;
+            admin.genericGet('Application/' + this.context_code +(selectedBadge.application_id != undefined ? '/Submission/' + selectedBadge.application_id :'' ) + '/Applicant/' + selectedBadge.id, null, (editBadge) => {
+                this.bSelected = editBadge;
+                this.loading = false;
+                this.bEdit = true;
+                this.$nextTick(() => {
+                    this.bModified = false;
                 })
 
             }, function() {
-                that.loading = false;
+                this.loading = false;
             })
         },
         saveBadge: function(sendStatus) {
             console.log('saving badge', this.bSelected);
-            let that = this;
-            that.loading = true;
-            admin.genericPost('Application/' + this.context_code + '/Submission/' + this.bSelected.id + "?sendupdate=" + (sendStatus ? "true" : "false"), this.bSelected, function(SavedDetails) {
-                that.bSelected = {};
-                that.loading = false;
-                that.bEdit = false;
-                that.bSaved = true;
-                that.bSavedDetails = SavedDetails;
+            this.loading = true;
+            admin.genericPost('Application/' + this.context_code +'/Submission/' + this.bSelected.application_id + '/Applicant/' + this.bSelected.id + "?sendupdate=" + (sendStatus ? "true" : "false"), this.bSelected, (SavedDetails) => {
+                this.bSelected = {};
+                this.loading = false;
+                this.bEdit = false;
+                this.bSaved = true;
+                this.bSavedDetails = SavedDetails;
                 //Process assignment updates
                 SavedDetails.assignments.forEach((e) =>{
                     if(e.action == 'deleted')
@@ -932,12 +951,12 @@ export default {
 
                 });
 
-                that.$nextTick(() => {
-                    that.bModified = false;
+                this.$nextTick(() => {
+                    this.bModified = false;
                 })
 
             }, function() {
-                that.loading = false;
+                this.loading = false;
             })
         },
         createBadgeType: function() {

@@ -295,6 +295,8 @@ abstract class Table
                             ),
                             $sqlText
                         );
+                    } else {
+                        $id = false;
                     }
                 }
             } else {

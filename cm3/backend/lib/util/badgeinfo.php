@@ -721,7 +721,7 @@ final class badgeinfo
         ], resultTotal: $totalRows, initialTableAlias: 'b');
 
         foreach ($g_data as &$badge) {
-            $badge = $this->addComputedColumns($badge, false);
+            $badge = $this->addComputedColumns($badge, false, false);
         }
 
         return $g_data;
@@ -1742,9 +1742,14 @@ final class badgeinfo
                 );
                 break;
             default:
-                $result['subbadges'] = $this->g_badge->Search(array(
+                $result['subbadges'] = array_map(function($badge) use ($result) {
+                    $badge['context_code'] = $result['context_code'];
+                    $badge['payment_id'] = $result['payment_id'];                    
+                    return  $this->addComputedColumns($badge,true,false);
+                }, $this->g_badge->Search(array(
                     'id',
                     'display_id',
+                    'uuid',
                     'real_name',
                     'fandom_name',
                     'name_on_badge',
@@ -1757,7 +1762,7 @@ final class badgeinfo
                     $this->CurrentUserInfo->GetPerms()->EventPerms->isBadge_Ice() ?  'ice_phone_number' : null,
                 ), array(
                     new SearchTerm('application_id', $result['id'])
-                ));
+                )));
         }
         //If user has contact permissions, add that in
         if ($this->CurrentUserInfo->hasEventPerm(PermEvent::Contact_Full)) {
@@ -1843,8 +1848,8 @@ final class badgeinfo
                     $newAssignment['date_of_birth'] = empty($newAssignment['date_of_birth']) ? '1000-01-01' : $newAssignment['date_of_birth'] ;
 
                     $newAssignment['id'] = $this->g_badge->Create($newAssignment)['id'];
-                    //Tag this badge as new...?
-                    $newAssignment['created'] = true;
+                    array_merge($newAssignment,$this->g_badge->GetByID($newAssignment['id'],
+                    ['uuid']));
 
                     //If completed payment and accepted add display ID
                     if ($newAssignment['display_id'] ??null==null && in_array(
@@ -1853,6 +1858,7 @@ final class badgeinfo
                     )) {
                         $newAssignment['display_id'] = $this->setNextDisplayIDSpecificSubBadge($newAssignment['id'], $result['context_code']);
                     }
+                    $newAssignment['action']  = 'created';
                     //Save back to the subbadges
                     $setSubbadges[$curIx] = $newAssignment;
                 }
@@ -1860,19 +1866,27 @@ final class badgeinfo
                 foreach (array_udiff($currentSubbadges, $setSubbadges, array($this,'compareID')) as $deletedAssignment) {
                     $deletedAssignment['application_id'] = $result['id'];
                     $this->g_badge->Delete($deletedAssignment);
+                    $deletedAssignment['action'] = 'deleted';
+                    $setSubbadges[$curIx] = $deletedAssignment;
                 }
                 //Process modifications
                 foreach (array_uintersect($setSubbadges, $currentSubbadges, array($this,'compareID')) as $existingAssignment) {
                     $curIx = array_search($existingAssignment, $setSubbadges, true);
                     $existingAssignment['application_id'] = $result['id'];
-                    $this->g_badge->Update($existingAssignment);
-
+                    unset($existingAssignment['uuid']);
+                    $modResult = $this->g_badge->Update($existingAssignment);
+                    $existingAssignment = array_merge($existingAssignment,$this->g_badge->GetByID($existingAssignment['id'],
+                    ['uuid']));
                     //If completed payment and accepted add display ID
                     if (($existingAssignment['display_id'] ??null)==null && in_array(
                         $result['application_status']??'',
                         ['PendingAcceptance','Accepted','Onboarding','Active']
                     )) {
                         $existingAssignment['display_id'] = $this->setNextDisplayIDSpecificSubBadge($existingAssignment['id'], $result['context_code']);
+                    }
+                    // Preserve action set by setCartItem (created/updated) unless already assigned
+                    if (!isset($existingAssignment['action'])) {
+                        $existingAssignment['action'] = $modResult === false ? 'none' : 'updated';
                     }
                     //Save back to the subbadges
                     $setSubbadges[$curIx] = $existingAssignment;
@@ -1923,8 +1937,11 @@ final class badgeinfo
                     $existingAssignment['application_id'] = $result['id'];
                     $existingAssignment['start_time'] = empty($existingAssignment['start_time']) ? null : $existingAssignment['start_time'] ;
                     $existingAssignment['end_time'] = empty($existingAssignment['end_time']) ? null : $existingAssignment['end_time'] ;
-                    $this->g_assignment->Update($existingAssignment);
-                    $existingAssignment['action'] = 'updated';
+                    $modResult = $this->g_assignment->Update($existingAssignment);
+                    // Preserve action set by setCartItem (created/updated) unless already assigned
+                    if (!isset($existingAssignment['action'])) {
+                        $existingAssignment['action'] = $modResult === false ? 'none' : 'updated';
+                    }
 
                     //Save back to the Assignments
                     $setAssignments[$curIx] = $existingAssignment;
@@ -1938,7 +1955,7 @@ final class badgeinfo
         }
     }
 
-    public function addComputedColumns(array $result, $includeImageData = false): array
+    public function addComputedColumns(array $result, $includeImageData = false, bool $includeURLs = true): array
     {
         //Add some computed helper columns
         switch ($result['name_on_badge']) {
@@ -1970,16 +1987,18 @@ final class badgeinfo
         $result['badge_id_display'] = $result['context_code'] . $result['display_id'];
         $result['qr_data'] = 'CM*' . $result['context_code'] . $result['display_id'] . '*' . $result['uuid'];
         $result['event_id'] = $this->CurrentUserInfo->GetEventId();
-        //Only do this if the user is a event admin or this is their own badge
-        if($this->GenerateTokenUrls && ($result['contact_id'] == $this->CurrentUserInfo->GetContactId() 
-        || $this->CurrentUserInfo->HasEventPerm(PermEvent::EventAdmin))){
-            //Add in the retrieve url
-            $result['retrieve_url'] = $this->FrontendUrlTranslator->GetBadgeLoad($result);
-            //Add in the cart url
-            $result['cart_url'] = $this->FrontendUrlTranslator->GetCartLoad($result);
-        } else {
-            $result['retrieve_url'] = $this->FrontendUrlTranslator->routedURL('mybadges?obfusctated');
-            $result['cart_url'] = $this->FrontendUrlTranslator->routedURL('cart?id='. $result['payment_id']);
+        if($includeURLs){
+            //Only do this if the user is a event admin or this is their own badge
+            if($this->GenerateTokenUrls && ($result['contact_id']??0 == $this->CurrentUserInfo->GetContactId() 
+            || $this->CurrentUserInfo->HasEventPerm(PermEvent::EventAdmin))){
+                //Add in the retrieve url
+                $result['retrieve_url'] = $this->FrontendUrlTranslator->GetBadgeLoad($result);
+                //Add in the cart url
+                $result['cart_url'] = $this->FrontendUrlTranslator->GetCartLoad($result);
+            } else {
+                $result['retrieve_url'] = $this->FrontendUrlTranslator->routedURL('mybadges?obfusctated');
+                $result['cart_url'] = $this->FrontendUrlTranslator->routedURL('cart?id='. $result['payment_id']);
+            }
         }
 
         if ($includeImageData) {

@@ -72,7 +72,7 @@
                             border: '1px solid rgba(0, 0, 0, 0.12)',
                             marginLeft: '-1px',
                             borderRadius: (index === 0 ? (footerActions.length == 1 ? '4px 4px 4px 4px' : '4px 0 0 4px') : index === footerActions.length - 1 ? '0 4px 4px 0' : '0') + ' !important'
-                        }" @click="doEmit(action.name, item)">
+                        }" @click="doEmit(action.name)">
                         <v-icon
                             v-if="!!action.icon && (action.iconOnly || !action.text || $vuetify.breakpoint.smAndDown)"
                             :color="action.color || ''">

@@ -1139,28 +1139,40 @@ final class PaymentBuilder
                 $groupApp = $this->badgeinfo->getASpecificGroupApplication($item['id'] ?? 0, $item['context_code'], true);
                 $this->Mail->SendTemplate($to, $item['context_code'], $template, $groupApp, null);
 
-                // //Send the application status
-                // $template = $cartitem['context_code'] . '-application-' .$cartitem['application_status'];
-                //
-                // try {
-                //     //Attempt to send mail
-                //     $to = $this->CurrentUserInfo->GetContactEmail($cartitem['contact_id']);
-                //     if (!$this->Mail->SendTemplate($to, $template, $cartitem, $cartitem['notify_email'])) {
-                //         $errors['sentUpdate'] =  false;
-                //     }
-                // } catch (\Exception $e) {
-                //     //Oops, couldn't send. Oh well?
-                //     $errors['sentUpdate'] = $e->getMessage();
-                // }
                 //Only if payment is complete should we send out the badge emails
+                $template = str_replace('payment-', 'subbadge-', $template);
                 $badgeItems = [];
+                // Use $item['subbadges'] from the cart (not $groupApp) - it has the action
+                if (isset($item['subbadges']) && is_array($item['subbadges'])) {
+                    foreach ($item['subbadges'] as &$subbadge) {
+                        if(false === array_search($subbadge['action'],['created','updated'], true )) continue;
+                        // Merge in parent details for the template
+                        $subbadge = array_merge($subbadge,array_intersect_key($item,array_flip([
+                            'context_code',
+                            'application_status',
+                            'badge_type_id',
+                            'badge_type_name',
+                            'badge_type_payable_onsite',
+                            'badge_type_payment_deferred',
+                            'contact_id'                            
+                        ])));
+                        $subbadge['payment_id'] = $this->cart['id'];
+                        $subbadge['payment_status'] = $this->cart['payment_status'];
+                        $subbadge['contact_id'] = $to;
+                        $badgeItems[] = $this->badgeinfo->addComputedColumns($subbadge,true,false);
+                    }
+                }
             }
-
             try {
                 //Attempt to send mail(s)
                 $anyFail = false;
                 foreach ($badgeItems as $badge) {
-                    $anyFail |= !($this->Mail->SendTemplate($to,$item['context_code'], $template, $badge, $badge['notify_email'] ?? null)['sent']);
+                    // Use notify_email if present, sending to it with original contact email as CC
+                    if (!empty($badge['notify_email'])) {
+                        $anyFail |= !($this->Mail->SendTemplate($badge['notify_email'], $item['context_code'], $template, $badge, $to)['sent']);
+                    } else {
+                        $anyFail |= !($this->Mail->SendTemplate($to, $item['context_code'], $template, $badge, null)['sent']);
+                    }
                 }
                 return !$anyFail;
             } catch (\Exception $e) {

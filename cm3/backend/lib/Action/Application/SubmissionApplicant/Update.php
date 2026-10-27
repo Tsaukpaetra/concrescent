@@ -6,13 +6,11 @@ use CM3_Lib\models\application\submissionapplicant;
 use CM3_Lib\models\application\submission;
 use CM3_Lib\models\application\badgetype;
 
-use CM3_Lib\database\SelectColumn;
-use CM3_Lib\database\SearchTerm;
-use CM3_Lib\database\View;
-use CM3_Lib\database\Join;
+use CM3_Lib\util\badgeinfo;
+use CM3_Lib\util\CurrentUserInfo;
+use CM3_Lib\Modules\Notification\Mail;
 
 use CM3_Lib\Responder\Responder;
-use Fig\Http\Message\StatusCodeInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
@@ -30,8 +28,15 @@ final class Update
      * @param Responder $responder The responder
      * @param eventinfo $eventinfo The service
      */
-    public function __construct(private Responder $responder, private submissionapplicant $submissionapplicant, private submission $submission, private badgetype $badgetype)
-    {
+    public function __construct(
+        private Responder $responder,
+        private submissionapplicant $submissionapplicant,
+        private submission $submission,
+        private badgetype $badgetype,
+        private badgeinfo $badgeinfo,
+        private Mail $Mail,
+        private CurrentUserInfo $CurrentUserInfo,
+    ) {
     }
 
     /**
@@ -46,28 +51,60 @@ final class Update
     {
         // Extract the form data from the request body
         $data = (array)$request->getParsedBody();
+        $qp = $request->getQueryParams();
 
         //Confirm permission to read this submission applicant
-        $submissioninfo = $this->submission->GetByID($params['application_id'], new View(
-            array(
-                new SelectColumn('id', JoinedTableAlias:'a')
-            ),
-            array(
-                new Join($this->badgetype, array('id'=>'badge_type_id', new SearchTerm('group_id', $params['group_id']))),
-                new Join($this->submissionapplicant, array('application_id'=>'id', new SearchTerm('id', $params['id'])), 'LEFT', 'a')
-            )
-        ));
+        $current = $this->badgeinfo->GetSpecificBadge($params['id'],$params['context_code']);
 
-        if ($submissioninfo === false) {
-            throw new HttpBadRequestException($request, 'Invalid submission specified');
+        if ($current === false) {
+            throw new HttpNotFoundException($request);
         }
 
-        //Confirm the target entity belongs to the selected application
+        //If application_id was given, confirm it's a match
+        if(isset($params['application_id'])){
+            if ($current['application_id'] != $params['application_id']) {
+                throw new HttpBadRequestException($request, 'Invalid submission specified');
+            }
+        } else {
+            //TODO: Verify it's in the right event and  context and that the user has permission
+        }
 
-        $data['id'] = $params['id'];
+        $this->badgeinfo->UpdateSpecificBadgeUnchecked($params['id'], $params['context_code'], $data);
 
         // Invoke the Domain with inputs and retain the result
-        $data = $this->submissionapplicant->Update($data);
+        $this->submissionapplicant->Update($data);
+        // Optionally send an email to this sub-badge (controlled by notify query param)
+        if (isset($qp['sendupdate']) && $qp['sendupdate'] == 'true') {
+            //Fetch it again
+            $updated = $this->badgeinfo->GetSpecificBadge($params['id'],$params['context_code'],true);
+            
+            $template =  'subbadgeapplication-' .$updated['application_status'];
+
+            // Send to notify_email if present, contact email as CC
+            if (!empty($subbadge['notify_email'])) {
+                $this->Mail->SendTemplate(
+                    $updated['notify_email'],
+                    $updated['context_code'],
+                    $template,
+                    $updated,
+                    $updated['contact_email_address'],
+                    $updated['contact_id'] ?? 0,
+                    $this->CurrentUserInfo->GetContactId()
+                );
+            } else {
+                $this->Mail->SendTemplate(
+                    $updated['contact_email_address'],
+                    $updated['context_code'],
+                    $template,
+                    $updated,
+                    null,
+                    $updated['contact_id'] ?? 0,
+                    $this->CurrentUserInfo->GetContactId()
+                );
+            }
+
+
+        }
 
         // Build the HTTP response
         return $this->responder

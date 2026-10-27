@@ -38,64 +38,7 @@
                     </v-card-title>
 
                     <v-card-text>
-                        <v-container>
-                            <badgeGenInfo v-model="editedItem" />
-
-                            <h3>Notify email</h3>
-                            <v-row>
-                                <v-col cols="12"
-                                       sm="6"
-                                       md="6">
-                                    <v-text-field label="Email address to send badge to"
-                                                  v-model="editedItem.notify_email"
-                                                  :rules="RulesEmail"></v-text-field>
-                                </v-col>
-                                <v-col cols="12"
-                                       sm="6"
-                                       md="6">
-                                    <v-checkbox dense
-                                                hide-details
-                                                v-model="editedItem.can_transfer"
-                                                true-value="1"
-                                                false-value="0">
-                                        <template v-slot:label>
-                                            <small>Allow badge transfer to the owner of this email.</small>
-                                        </template>
-                                    </v-checkbox>
-                                </v-col>
-                            </v-row>
-
-                            <h3>In case of Emergency</h3>
-                            <v-row>
-
-                                <v-col cols="12"
-                                       sm="6"
-                                       md="3">
-                                    <v-text-field label="Emergency Contact Name"
-                                                  v-model="editedItem.ice_name"></v-text-field>
-                                </v-col>
-                                <v-col cols="12"
-                                       sm="6"
-                                       md="3">
-                                    <v-text-field label="Relationship"
-                                                  v-model="editedItem.ice_relationship"></v-text-field>
-                                </v-col>
-                                <v-col cols="12"
-                                       sm="6"
-                                       md="3">
-                                    <v-text-field label="Email address"
-                                                  v-model="editedItem.ice_email_address"
-                                                  :rules="RulesEmail"></v-text-field>
-                                </v-col>
-                                <v-col cols="12"
-                                       sm="6"
-                                       md="3">
-                                    <v-text-field label="Phone Number"
-                                                  v-model="editedItem.ice_phone_number"
-                                                  :rules="RulesPhone"></v-text-field>
-                                </v-col>
-                            </v-row>
-                        </v-container>
+                        <edit-subbadge v-model="editedItem"></edit-subbadge>
                     </v-card-text>
 
                     <v-card-actions>
@@ -145,11 +88,11 @@
 </template>
 
 <script>
-import badgeGenInfo from '@/components/badgeGenInfo.vue';
+import EditSubbadge from './editSubbadge.vue';
 export default {
 
     components: {
-        badgeGenInfo,
+        EditSubbadge,
     },
     props: {
         'value': {

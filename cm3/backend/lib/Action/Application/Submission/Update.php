@@ -63,6 +63,50 @@ final class Update
                     null,$badge['contact_id'], $this->CurrentUserInfo->GetContactId());
                 $data['sentUpdate'] = $sendResult['sent'];
                 $data['sentResult'] = $sendResult['result'];
+
+                // Send application-status emails to each sub-badge
+                if (isset($data['subbadges']) && is_array($data['subbadges'])) {
+                    $template =  'subbadgeapplication-' .$badge['application_status'];
+                    foreach ($data['subbadges'] as &$subbadge) {
+                        // Build context_code and payment_id for template rendering
+                        $subbadge = array_merge($subbadge,array_intersect_key($badge,array_flip([
+                            'context_code',
+                            'application_status',
+                            'badge_type_id',
+                            'badge_type_name',
+                            'badge_type_payable_onsite',
+                            'badge_type_payment_deferred',
+                            'contact_id'                            
+                        ])));
+                        $subbadge['payment_id'] = $badge['payment_id'] ?? null;
+                        $subbadge['payment_status'] = $badge['payment_status'];
+                        $subbadge['contact_id'] = $to;
+                        $subbadge['context_code'] = $params['context_code'];
+                        $subbadge = $this->badgeinfo->addComputedColumns($subbadge,true,false);
+                        // Send to notify_email if present, contact email as CC
+                        if (!empty($subbadge['notify_email'])) {
+                            $this->Mail->SendTemplate(
+                                $subbadge['notify_email'],
+                                $params['context_code'],
+                                $template,
+                                $subbadge,
+                                $to,
+                                $badge['contact_id'],
+                                $this->CurrentUserInfo->GetContactId()
+                            );
+                        } else {
+                            $this->Mail->SendTemplate(
+                                $to,
+                                $params['context_code'],
+                                $template,
+                                $subbadge,
+                                null,
+                                $badge['contact_id'],
+                                $this->CurrentUserInfo->GetContactId()
+                            );
+                        }
+                    }
+                }
             } catch (\Exception $e) {
                 //Oops, couldn't send. Oh well?
                 $data['sentUpdate'] = false;
