@@ -112,12 +112,12 @@ abstract class Table
     {
         return $this->_createOrUpdate_entry($entryData, true);
     }
-    public function Update(array $entryData): array|bool
+    public function Update(array $entryData, bool $returnFalseOnNotModified = false): array|bool
     {
-        return $this->_createOrUpdate_entry($entryData, false);
+        return $this->_createOrUpdate_entry($entryData, false, $returnFalseOnNotModified);
     }
 
-    protected function _createOrUpdate_entry(array $entrydata, bool $isNew): array|bool
+    protected function _createOrUpdate_entry(array $entrydata, bool $isNew, bool $returnFalseOnNotModified = false): array|bool
     {
         //Do some initial checking
         $failCheck = false;
@@ -132,6 +132,11 @@ abstract class Table
             if (array_key_exists($columnName, $entrydata)) {
                 //If we're not explicitly enabling data setting in On Update columns, eliminate any mention of it
                 if(!$this->allowSettingOnUpdatedColumns && !empty($columnDef->customPostfix) && stripos($columnDef->customPostfix,'on update') !== false){
+                    unset($entrydata[$columnName]);
+                    continue;
+                }
+                //Generated virtual columns cannot be written to; strip them from the data
+                if (!empty($columnDef->customPostfix) && stripos($columnDef->customPostfix, 'generated') !== false) {
                     unset($entrydata[$columnName]);
                     continue;
                 }
@@ -296,7 +301,10 @@ abstract class Table
                             $sqlText
                         );
                     } else {
-                        $id = false;
+                        if($returnFalseOnNotModified)
+                        {
+                            $id = false;
+                        }
                     }
                 }
             } else {
@@ -565,7 +573,7 @@ abstract class Table
                             }
                             $sqlBody .= ', ';
                         } else {
-                            $errors[] ="Unable to add select column in subQuery join for $join->Table->dbTableName:\n" . print_r($value, true);
+                            $errors[] ="Unable to add select column in subQuery join for " . $join->Table->dbTableName() . ":\n" . print_r($value, true);
                         }
                     }
 

@@ -1937,7 +1937,7 @@ final class badgeinfo
                     $existingAssignment['application_id'] = $result['id'];
                     $existingAssignment['start_time'] = empty($existingAssignment['start_time']) ? null : $existingAssignment['start_time'] ;
                     $existingAssignment['end_time'] = empty($existingAssignment['end_time']) ? null : $existingAssignment['end_time'] ;
-                    $modResult = $this->g_assignment->Update($existingAssignment);
+                    $modResult = $this->g_assignment->Update($existingAssignment, true);
                     // Preserve action set by setCartItem (created/updated) unless already assigned
                     if (!isset($existingAssignment['action'])) {
                         $existingAssignment['action'] = $modResult === false ? 'none' : 'updated';
