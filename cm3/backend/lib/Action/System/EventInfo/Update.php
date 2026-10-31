@@ -1,8 +1,7 @@
 <?php
 
-namespace CM3_Lib\Action\EventInfo;
+namespace CM3_Lib\Action\System\EventInfo;
 
-use CM3_Lib\database\SearchTerm;
 use CM3_Lib\models\eventinfo;
 use CM3_Lib\Responder\Responder;
 use Fig\Http\Message\StatusCodeInterface;
@@ -12,7 +11,7 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * Action.
  */
-final class Read
+final class Update
 {
     /**
      * The constructor.
@@ -36,14 +35,10 @@ final class Read
     {
         // Extract the form data from the request body
         $data = (array)$request->getParsedBody();
-        //TODO: Actually do something with submitted data. Also, provide some sane defaults
-
-        $whereParts = array(
-          new SearchTerm('id', $params['id'])
-        );
+        $data['id'] = $params['id'];
 
         // Invoke the Domain with inputs and retain the result
-        $data = $this->eventinfo->GetByID($params['id'],"*");
+        $data = $this->eventinfo->Update($data);
 
         // Build the HTTP response
         return $this->responder

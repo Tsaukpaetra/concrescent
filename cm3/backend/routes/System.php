@@ -29,42 +29,29 @@ return function (App $app, $container) {
             $app->post('/{id}', \CM3_Lib\Action\System\ErrorLog\Update::class)
             ->add($globalPerm);
         },
-        // '/BadgeType' => function (RouteCollectorProxy $app) use ($globalPerm, $staffView) {
-        //     $app->get('', \CM3_Lib\Action\System\ErrorLogType\Search::class)
-        //     ->add($staffView);
-        //     $app->post('', \CM3_Lib\Action\System\ErrorLogType\Create::class)
-        //     ->add($globalPerm);
-        //     $app->get('/{id}', \CM3_Lib\Action\System\ErrorLogType\Read::class)
-        //     ->add($staffView);
-        //     $app->post('/{id}', \CM3_Lib\Action\System\ErrorLogType\Update::class)
-        //     ->add($globalPerm);
-        //     $app->delete('/{id}', \CM3_Lib\Action\System\ErrorLogType\Delete::class)
-        //     ->add($globalPerm);
-        // },
-        // '/Department' => function (RouteCollectorProxy $app) use ($globalPerm, $staffView) {
-        //     $app->get('', \CM3_Lib\Action\Staff\Department\Search::class)
-        //     ->add($staffView);
-        //     $app->post('', \CM3_Lib\Action\Staff\Department\Create::class)
-        //     ->add($globalPerm);
-        //     $app->get('/{id}', \CM3_Lib\Action\Staff\Department\Read::class)
-        //     ->add($staffView);
-        //     $app->post('/{id}', \CM3_Lib\Action\Staff\Department\Update::class)
-        //     ->add($globalPerm);
-        //     $app->delete('/{id}', \CM3_Lib\Action\Staff\Department\Delete::class)
-        //     ->add($globalPerm);
-        //     $app->group('/{department_id}/Position', function (RouteCollectorProxy $app) use ($globalPerm, $staffView) {
-        //         $app->get('', \CM3_Lib\Action\Staff\Position\Search::class)
-        //         ->add($staffView);
-        //         $app->post('', \CM3_Lib\Action\Staff\Position\Create::class)
-        //         ->add($globalPerm);
-        //         $app->get('/{id}', \CM3_Lib\Action\Staff\Position\Read::class)
-        //         ->add($staffView);
-        //         $app->post('/{id}', \CM3_Lib\Action\Staff\Position\Update::class)
-        //         ->add($globalPerm);
-        //         $app->delete('/{id}', \CM3_Lib\Action\Staff\Position\Delete::class)
-        //         ->add($globalPerm);
-        //     });
-        // },
+
+        '/EventInfo' =>
+        function (RouteCollectorProxy $app) use ($globalPerm) {
+            
+            $accessPerm = $globalPerm->withAllowedPerms(array(
+                PermEvent::EventAdmin()
+            ));
+            $app->get('', \CM3_Lib\Action\System\EventInfo\Search::class);
+            $app->post('', \CM3_Lib\Action\System\EventInfo\Create::class)
+            ->add($accessPerm);
+
+            //Import and export functions
+            $app->post('/import', \CM3_Lib\Action\System\EventInfo\Import::class)
+                ->add($globalPerm);
+            $app->post('/export', \CM3_Lib\Action\System\EventInfo\Export::class)
+                ->add($globalPerm);
+
+            $app->get('/{id}', \CM3_Lib\Action\System\EventInfo\Read::class);
+            $app->post('/{id}', \CM3_Lib\Action\System\EventInfo\Update::class)
+            ->add($accessPerm);
+            $app->delete('/{id}', \CM3_Lib\Action\System\EventInfo\Delete::class)
+            ->add($accessPerm);
+        }
     );
 
     $app->group(

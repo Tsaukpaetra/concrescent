@@ -98,5 +98,13 @@ const result = [{
         },
         component: () => import( /* webpackChunkName: "admin_payments" */ './routes/admin/payment.vue'),
     },
+    {
+        path: 'ImportExport',
+        name: 'ImportExport',
+        meta: {
+            title: 'Import / Export',
+        },
+        component: () => import( /* webpackChunkName: "admin_importexport" */ './routes/admin/importexport.vue'),
+    },
 ];
 export default result;

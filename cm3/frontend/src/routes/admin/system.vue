@@ -111,7 +111,7 @@
             </v-dialog>
         </v-tab-item>
         <v-tab-item value="Events">
-            <simpleList apiPath="EventInfo" :AddHeaders="vAddHeaders" :footerActions="blFooterActions" :isEditingItem="vEdit" :actions="vActions"
+            <simpleList apiPath="System/EventInfo" :AddHeaders="vAddHeaders" :footerActions="blFooterActions" :isEditingItem="vEdit" :actions="vActions"
                 @create="createEvent" @edit="editEvent">
                 <template v-slot:[`item.menu_icon`]="{ item }">
                     <v-icon size="60">mdi-{{ item.menu_icon }}</v-icon>
@@ -538,7 +538,7 @@ export default {
         },
         editEvent: function(selectedEvent) {
             this.loading = true;
-            admin.genericGet('EventInfo/' + selectedEvent.id, null, (editG) => {
+            admin.genericGet('System/EventInfo/' + selectedEvent.id, null, (editG) => {
 
                 this.vSelected = editG;
                 this.vDialog = true;
@@ -550,7 +550,7 @@ export default {
             })
         },
         saveEvent: function() {
-            var url = 'EventInfo';
+            var url = 'System/EventInfo';
             if (this.vSelected.id != undefined)
                 url = url + '/' + this.vSelected.id;
             console.log("Saving Event", JSON.parse(JSON.stringify(this.vSelected)))
@@ -566,7 +566,7 @@ export default {
         },
         vSetActive: function(id,active) {
             this.vEdit = true;
-            var url = 'EventInfo/' + id;
+            var url = 'System/EventInfo/' + id;
             console.log("Saving Event active state", id,active)
             admin.genericPost(url, {active}, () => {
                 this.vEdit = false;

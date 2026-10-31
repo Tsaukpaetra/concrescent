@@ -1,6 +1,6 @@
 <?php
 
-namespace CM3_Lib\Action\EventInfo;
+namespace CM3_Lib\Action\System\EventInfo;
 
 use CM3_Lib\models\eventinfo;
 use CM3_Lib\Responder\Responder;
@@ -11,7 +11,7 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * Action.
  */
-final class Update
+final class Delete
 {
     /**
      * The constructor.

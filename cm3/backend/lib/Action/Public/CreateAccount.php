@@ -63,7 +63,7 @@ class CreateAccount
 
         $result = $this->contact->Create($data);
 
-        //If this is the first contact ever, promote them to global Admin and create the first e vent
+        //If this is the first contact ever, promote them to global Admin and create the first event
         if($result['id'] == 1) {
             $perms = new UserPermissions();
             $perms->IsPermanentGlobalAdmin = true;
@@ -83,16 +83,16 @@ class CreateAccount
                 'staff_end' => date('Y/m/d'),
                 'notes' => 'Default event'
             ]);
-            //Get their newly-minted admin token
-            $result = $this->TokenGenerator->forUser(1,1)['token'];
+            //Get their full admin token (with permissions)
+            $result = $this->TokenGenerator->forUser(1, 1);
         } else {
-            //Since they're new, make a bare token
-            $result = $this->TokenGenerator->forLoginOnly(
+            //Generate a full token directly — avoids the two-step
+            //createAccount → switchEvent flow that causes timestamp collisions
+            $result = $this->TokenGenerator->forUser(
                 $result['id'],
                 $data['event_id']
             );
         }
-
 
         // Build the HTTP response
         return $this->responder

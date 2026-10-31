@@ -1,6 +1,6 @@
 <?php
 
-namespace CM3_Lib\Action\EventInfo;
+namespace CM3_Lib\Action\System\EventInfo;
 
 use CM3_Lib\database\SearchTerm;
 use CM3_Lib\models\eventinfo;

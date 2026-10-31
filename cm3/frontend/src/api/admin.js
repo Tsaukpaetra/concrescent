@@ -108,7 +108,7 @@ export default {
     // Note: We use the standard axios directly here to return actual Promises to the caller
 
     getEventInfo() {
-        return axios.get('EventInfo').then(res => res.data);
+        return axios.get('System/EventInfo').then(res => res.data);
     },
 
     getBadgeContexts() {
@@ -144,5 +144,40 @@ export default {
 
     getAllStaffPositions() {
         return axios.get('Staff/Department/AllPositions').then(res => res.data);
-    }
+    },
+
+    // --- EVENT IMPORT/EXPORT ---
+
+    /**
+     * Export event configuration data for the import wizard.
+     * Event ID is resolved from the user's token automatically.
+     * @param {string[]} include - Array of entity types to include
+     *   ('groups', 'promos', 'questions', 'templates', 'locations',
+     *    'location_categories', 'format_maps', 'formats')
+     *   Note: badge types, addons, and their mappings are nested under 'groups'
+     * @param {string[]} contextCodes - Optional filter by context codes
+     * @returns {Promise<Object>} The exported data object
+     */
+    exportEventData(include, contextCodes) {
+        return axios.post('System/EventInfo/export', {
+            include: include || [],
+            context_codes: contextCodes || [],
+        }).then(res => res.data);
+    },
+
+    /**
+     * Import event configuration data from an exported JSON blob.
+     * @param {Object} data - The full exported data object
+     * @param {Object} options - Import options
+     * @param {boolean} options.dry_run - Preview without writing
+     * @param {string} options.mode - 'create' or 'upsert'
+     * @param {string[]} options.context_codes - Filter context codes
+     * @returns {Promise<Object>} Import results summary
+     */
+    importEventData(data, options) {
+        return axios.post('System/EventInfo/import', {
+            ...data,
+            options: options || {},
+        }).then(res => res.data);
+    },
 };
