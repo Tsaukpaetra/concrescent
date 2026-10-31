@@ -28,6 +28,23 @@ var router = new vRouter({
 
 import store from './storage'
 
+// Initialize persisted stores BEFORE creating the router guard, so
+// beforeEach can correctly read mydata/getIsLoggedIn on page refresh.
+const persistedStores = ['cart','mydata','station'];
+persistedStores.forEach((key) => {
+    store.commit(key + '/initialiseData')
+});
+
+// Redirect unauthenticated users from Admin routes to Login
+router.beforeEach((to, from, next) => {
+    if (to.path.startsWith('/Admin/') || to.path === '/Admin') {
+        if (!store.getters['mydata/getIsLoggedIn']) {
+            return next({ path: '/login', query: { returnTo: to.fullPath, reason: 'admin' } });
+        }
+    }
+    next();
+});
+
 //Phat editor, creates the component v-md-editor
 import VueMarkdownEditor from '@kangc/v-md-editor';
 import VMdPreview from '@kangc/v-md-editor/lib/preview';
@@ -86,18 +103,10 @@ const appChannel = new BroadcastChannel('vue_app_channel');
 // Expose it globally to all components
 Vue.prototype.$broadcast = appChannel;
 
-const persistedStores = ['cart','mydata','station'];
-
 new Vue({
     vuetify,
     router,
     store,
-    beforeCreate() {
-        //Pre-load the stores
-        persistedStores.forEach((key) => {
-            this.$store.commit(key + '/initialiseData')
-        });
-    },
     render: h => h(App)
 }).$mount('#app')
 

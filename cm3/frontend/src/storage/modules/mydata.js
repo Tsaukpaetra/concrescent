@@ -131,13 +131,34 @@ const actions = {
         commit,
         rootState
     }, token) {
-        commit('setToken', token);
+        // determine if `token` is a rich object (from createAccount) or a string (from token refresh)
+        const isRichToken = token && typeof token === 'object' && token.token && token.event_id;
         return new Promise((resolve) => {
-            shop.switchEvent(token, rootState.products.selectedEventId, async (data) => {
-                commit('setPermissions', data.permissions);
-                commit('setUsername', data.username);
-                commit('setPreferences', data.preferences);
-                commit('setToken', data.token);
+            if (isRichToken) {
+                // createAccount now returns a full token — use it directly, no switchEvent needed
+                commit('setToken', token.token);
+                commit('setPermissions', token.permissions);
+                commit('setUsername', token.username);
+                commit('setPreferences', token.preferences);
+                dispatch('products/selectEventId', token.event_id, { root: true })
+                    .then(async () => {
+                        await dispatch('refreshContactInfo');
+                        commit('setOwnedBadges', []);
+                        await dispatch('retrieveBadges');
+                        await dispatch('retrieveApplications');
+                        resolve(true);
+                    })
+                    .catch((err) => {
+                        dispatch('logout');
+                        resolve(err || "Failed to select event")
+                    });
+            } else {
+                // legacy / token-refresh path: call switchEvent to get a full token
+                shop.switchEvent(token, rootState.products.selectedEventId, async (data) => {
+                    commit('setPermissions', data.permissions);
+                    commit('setUsername', data.username);
+                    commit('setPreferences', data.preferences);
+                    commit('setToken', data.token);
                     await dispatch('products/selectEventId', data.event_id, {
                         root: true
                     });
@@ -150,9 +171,8 @@ const actions = {
                 (error) => {
                     dispatch('logout');
                     resolve(error || "Failed, maybe the link expired?")
-                }
-            );
-
+                });
+            }
         })
     },
     RefreshToken({

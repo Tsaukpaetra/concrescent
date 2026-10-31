@@ -152,6 +152,29 @@ export default {
         event_id: function() {
             return this.$store.getters['products/selectedEventId'];
         },
+        loginReasonText() {
+            const reason = this.$route.query.reason;
+            if (reason === 'admin') {
+                return 'You must be logged in to access the admin panel.';
+            }
+            return '';
+        },
+        loginTitle() {
+            const reason = this.$route.query.reason;
+            // Admin context — use admin-appropriate title for the login forms
+            if (reason === 'admin' && this.state <= 1) {
+                return 'Admin Login';
+            }
+            // Default titles based on current tab / flow step
+            switch (this.state) {
+                case 0: return 'Retrieve badges';
+                case 1: return 'Login';
+                case 2: return 'Email sent!';
+                case 3: return 'Logged in!';
+                case 4: return 'Failed!';
+                default: return 'Login';
+            }
+        },
         returnTo: function() {
             const currentRoute = this.$router.currentRoute;
             if (currentRoute.query != undefined && currentRoute.query.returnTo != undefined)
@@ -197,6 +220,10 @@ export default {
                 event_id: this.event_id
             }).then((success) => {
                 if (success === true) {
+                    // Set admin mode if redirecting to an admin route (consistent with token flow)
+                    if (this.returnTo.startsWith("/Admin/") && this.isAdmin) {
+                        this.setAdminMode(true);
+                    }
                     this.$router.push(this.returnTo);
                 } else {
                     this.loginFailReason = success;
@@ -264,6 +291,10 @@ export default {
         },
     },
     created() {
+        // If redirected from an admin route, jump straight to the password form
+        if (this.$route.query.reason === 'admin') {
+            this.state = 1;
+        }
         this.$broadcast.addEventListener('message', this.handleGlobalMessage);
         this.completeLogin();
     },

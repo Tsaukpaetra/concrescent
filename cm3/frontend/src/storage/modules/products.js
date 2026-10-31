@@ -104,14 +104,13 @@ const getters = {
      * based on the user's permissions in the root state.
      */
     apiClient: (state, getters, rootState) => {
-        const isAdmin = rootState.mydata.permissions != null 
-            && rootState.mydata.permissions != undefined
-            && rootState.mydata.adminMode === true;
-
+console.log('apiClient retrieved',{
+            client: getters.getAdminMode ? admin : shop,
+            isAdmin: getters.getAdminMode
+        })
         return {
-            client: isAdmin ? admin : shop,
-            token: isAdmin ? rootState.mydata.token : null,
-            isAdmin: isAdmin
+            client: getters.getAdminMode ? admin : shop,
+            isAdmin: getters.getAdminMode
         };
     }
 
@@ -130,7 +129,13 @@ const actions = {
     }, newAdminMode) {
         commit('setAdminMode', newAdminMode);
         dispatch('resetBadgeContexts',null);
-        await dispatch('getBadgeContexts',null);
+        // Only refresh contexts if we already know the event ID.
+        // During initial load the route watcher may enable admin mode
+        // before getEventInfo finishes; App.created() will fetch contexts
+        // once the event ID is available, so we skip the no-op here.
+        if (state.selectedEventId != null) {
+            await dispatch('getBadgeContexts',null);
+        }
     },
     selectEventId({
         dispatch,
@@ -202,14 +207,18 @@ const actions = {
         getters
     }, force) {
         return new Promise((resolve, reject) => {
-            if (state.selectedEventId == null)
-                return reject('Unable to get context if the event ID is not known');
+            if (state.selectedEventId == null) {
+                // Event info hasn't loaded yet. Don't reject — callers like
+                // selectContext / checkPermission expect this to be safe to call.
+                // App.vue's created() will load contexts once the event ID is available.
+                return resolve();
+            }
 
             if (!state.gotBadgeContexts || force) {
-                const { client, token, isAdmin } = getters.apiClient;
 
-                if (isAdmin) {
-                    client.getBadgeContexts()
+                if (getters.getAdminMode) {
+                    console.log('get contexts as admin')
+                    admin.getBadgeContexts()
                     .then(contexts => {
                         commit('setBadgeContexts', contexts);
                         resolve();
@@ -217,7 +226,8 @@ const actions = {
                         reject(err)
                     });
                 } else {
-                    client.getBadgeContexts(state.selectedEventId, contexts => {
+                    console.log('get contexts as normal')
+                    shop.getBadgeContexts(state.selectedEventId, contexts => {
                         commit('setBadgeContexts', contexts);
                         resolve();
                     })
@@ -233,6 +243,11 @@ const actions = {
         state
     }, context_code) {
         return new Promise(async (resolve, reject) => {
+            // If the event hasn't been selected yet, skip — it will be
+            // called again once App.vue's created() finishes loading events.
+            if (state.selectedEventId == null) {
+                return resolve();
+            }
             try {
                 await dispatch('getBadgeContexts');
                 commit('setBadgeContextSelected', context_code);

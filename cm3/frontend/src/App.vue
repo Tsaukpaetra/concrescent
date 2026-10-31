@@ -479,8 +479,11 @@ export default {
             },
             set: function(newAdminMode) {
                 this.$store.dispatch("products/setAdminMode", newAdminMode);
-                //Bring us back to the home page if we're not there already
-                if (this.$router.currentRoute.name != 'home')
+                //Bring us back to the home page if we're not there already,
+                //unless the current route is already /Admin/ (the route watcher
+                //just set adminMode for us — don't fight the navigation).
+                const isAdminRoute = this.$route.path.startsWith('/Admin/');
+                if (this.$router.currentRoute.name != 'home' && !isAdminRoute)
                     this.$router.push("/");
             }
         },
@@ -572,7 +575,13 @@ export default {
         }  ,
         '$route': function(to, from) {
             console.log("Route changed from " + from.name + " to " + to.name);
-            
+
+            // Implicitly enable admin mode when entering an Admin route and user has permissions
+            if (to.path.startsWith('/Admin/') && this.isAdmin && !this.adminMode) {
+                console.log('Implicitly enabling admin mode for route', to.path);
+                this.adminMode = true;
+            }
+
             // If we are moving to a completely different route name
             if (to.name !== from.name) {
                 document.title = this.appTitle;
