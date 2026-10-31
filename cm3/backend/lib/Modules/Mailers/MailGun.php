@@ -33,19 +33,10 @@ class MailGun extends PHPMailer
         $endpoint = $this->config['api_url'] ?? 'https://api.mailgun.net';
         $uri = $endpoint . '/v3/' . $this->config['domain'] .'/messages.mime';
 
-        //Make the to string
-        $formattedAddresses = array_map(function($recipient) {
-            $email = $recipient[0];
-            $name = $recipient[1];
-            
-            return empty($name) ? $email : '"' . $name . '" <' . $email . '>';
-        }, $this->to);
-
         $payload = [
-            'to' => implode(', ', $formattedAddresses),
+            'to' => $this->friendlyEmailArray(array_merge($this->to,$this->cc,$this->bcc )),
             'message' => $this->createFieldFile($rawMime, 'message.mime'),
         ];
-
 
         foreach ([
             'tag',
@@ -160,17 +151,22 @@ class MailGun extends PHPMailer
         $payload = '';
 
         foreach ($fields as $name => $value) {
-            $payload .= "--" . $boundary . "\r\n";
+            // If the value is an array, treat each item as a separate form-data field with the same name
+            $values = is_array($value) ? $value : [$value];
 
-            // Check if the field is a CURLFile instance
-            if (is_object($value) && method_exists($value, 'getData')) {
-                $payload .= "Content-Disposition: form-data; name=\"" . $name . "\"; filename=\"" . $value->getFilename() . "\"\r\n";
-                $payload .= "Content-Type: " . $value->getMimeType() . "\r\n\r\n";
-                $payload .= $value->getData() . "\r\n";
-            } else {
-                // Treat the field as a regular text parameter
-                $payload .= "Content-Disposition: form-data; name=\"" . $name . "\"\r\n\r\n";
-                $payload .= $value . "\r\n";
+            foreach ($values as $val) {
+                $payload .= "--" . $boundary . "\r\n";
+
+                // Check if the field is a CURLFile instance
+                if (is_object($val) && method_exists($val, 'getData')) {
+                    $payload .= "Content-Disposition: form-data; name=\"" . $name . "\"; filename=\"" . $val->getFilename() . "\"\r\n";
+                    $payload .= "Content-Type: " . $val->getMimeType() . "\r\n\r\n";
+                    $payload .= $val->getData() . "\r\n";
+                } else {
+                    // Treat the field as a regular text parameter
+                    $payload .= "Content-Disposition: form-data; name=\"" . $name . "\"\r\n\r\n";
+                    $payload .= $val . "\r\n";
+                }
             }
         }
 
@@ -204,5 +200,15 @@ class MailGun extends PHPMailer
             public function getFilename() { return $this->f; }
             public function getMimeType() { return $this->m; }
         };
+    }
+
+    protected function friendlyEmailArray(array $emails)
+    {
+        return array_map(function ($recipient) {
+            $email = $recipient[0];
+            $name = $recipient[1];
+
+            return empty($name) ? $email : '"' . $name . '" <' . $email . '>';
+        }, $emails);
     }
 }
