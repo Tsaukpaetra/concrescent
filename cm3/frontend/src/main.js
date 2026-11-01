@@ -135,6 +135,7 @@ window.addEventListener('storage', async (event) => {
     if (persistedStores.find(key => event.key == key)){
         try {
             //Just trigger the load
+            console.log('App storage updated, loading ', event.key)
             store.commit(event.key + '/initialiseData')
         } catch (e) {
             console.error('[Storage] Error parsing storage data:', e);

@@ -16,18 +16,15 @@
                 <v-toolbar color="primary"
                            dark
                            flat>
-                    <v-toolbar-title v-show="state==0">Retrieve badges</v-toolbar-title>
-                    <v-toolbar-title v-show="state==1">Login</v-toolbar-title>
-                    <v-toolbar-title v-show="state==2">Email sent!</v-toolbar-title>
-                    <v-toolbar-title v-show="state==3">Logged in!</v-toolbar-title>
-                    <v-toolbar-title v-show="state==4">Failed!</v-toolbar-title>
+                    <v-toolbar-title>{{ loginTitle }}</v-toolbar-title>
 
                 </v-toolbar>
                 <v-tab-item>
                     <v-card class="px-4">
                         <v-form @submit.prevent="SendMagicLink"
                                 v-model="formEMValid">
-                            {{$route.params.message}}
+                            <div v-if="loginReasonText" class="login-reason-text">{{ loginReasonText }}</div>
+                            <div v-else-if="$route.params.message">{{ $route.params.message }}</div>
                             <v-card-text>
                                 <v-text-field label="Email used to register"
                                               v-model="email"
@@ -53,7 +50,8 @@
                     <v-card class="px-4">
                         <v-form @submit.prevent="login"
                                 v-model="formPWValid">
-                            {{$route.params.message}}
+                            <div v-if="loginReasonText" class="login-reason-text">{{ loginReasonText }}</div>
+                            <div v-else-if="$route.params.message">{{ $route.params.message }}</div>
                             <v-card-text>
                                 <v-text-field id="username"
                                               label="Username"

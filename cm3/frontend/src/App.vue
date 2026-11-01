@@ -10,7 +10,7 @@
                           label="Selected event"
                           :items="events"
                           item-text="display_name"
-                          item-value="id">                          
+                          item-value="id">
                     <template v-slot:item="{ item, on, attrs }">
                         <v-list-item v-bind="attrs" v-on="on">
                             <v-list-item-avatar v-if="isAdmin">
@@ -169,6 +169,7 @@
 
 
 <script>
+import { debounce } from './plugins/debounce';
 import {
     mapState,
     mapGetters,
@@ -181,7 +182,10 @@ export default {
         showAuthErrorDialog:false,
         subHead: null,
         subTabs: [],
-        subTabIx: -1
+        subTabIx: -1,
+        suppressWatcherEmit: false,
+        inSwitch: false,
+        pendingSwitchEventId: null,
     }),
     components: {
         PrintDaemon: () => import( /* webpackChunkName: "printDaemon" */ '@/components/formatpieces/printDaemon.vue')
@@ -460,18 +464,48 @@ export default {
             get: function() {
                 return this.$store.getters['products/selectedEventId'];
             },
-            set: function(event_id) {
+            set: debounce(async function(event_id) {
                 console.log('Switching event to ' + event_id);
-                this.$store.dispatch("products/selectEventId", event_id);
-                //TODO: This should trigger a reload of everything!
+                // Set this BEFORE the commit — Vue 2 watchers fire synchronously
+                // on state changes, so if we set it after, the watcher will
+                // broadcast a stale event/token pair.
+                this.suppressWatcherEmit = true;
+
+                // Update state immediately so the v-select reflects the change.
+                this.$store.commit('products/selectEvent', event_id);
+
                 if (this.isLoggedIn) {
-                    this.$store.dispatch("mydata/RefreshToken");
+                    // RefreshToken → loginToken → switchEvent → selectEventId.
+                    // That chain loads event info + badge contexts for the token's
+                    // event (data.event_id from the server). We must NOT call
+                    // selectEventId again in the setter — loginToken already does
+                    // it, and a second call would reset caches or fire a duplicate
+                    // API with an invalid/rotated token.
+                    await this.$store.dispatch("mydata/RefreshToken");
+
+                    // Emit after a tick — by now the token is committed,
+                    // selectedEvent is set, and the watcher is suppressed.
+                    this.$nextTick(() => {
+                        const token = this.$store.getters['mydata/getAuthToken'];
+                        this.$broadcast.postMessage({
+                            type: 'SwitchedEventId',
+                            selectedEvent: this.selectedEvent,
+                            token: token
+                        });
+                    });
+                } else {
+                    // Anonymous users — no token rotation needed, load directly.
+                    // The watcher will emit the broadcast normally.
+                    this.suppressWatcherEmit = false;
+                    await this.$store.dispatch("products/selectEventId", event_id);
                 }
-                //Since we don't broadcase that change and it's not properly reactive
-                //Navigate to the Home page
+
+                this.suppressWatcherEmit = false;
+
+                // Navigate to the Home page
                 if (this.$router.currentRoute.name != 'home')
                     this.$router.push("/");
-            }
+            },1000, {leading: true, trailing: true})
         },
         adminMode: {
             get: function() {
@@ -545,13 +579,66 @@ export default {
             this.showAuthErrorDialog = false;
             this.clearAuthError();
         },
-        handleGlobalMessage(event) {
+        async handleGlobalMessage(event) {
             switch (event.data.type){
                 case 'SwitchedEventId': {
-                    //Another tab just switched events, probably
-                    if(this.productselectedEventId != event.data.selectedEvent.id ){
+                    // If another tab switched to the same event we already have, nothing to do.
+                    if(event.data.selectedEvent.id == this.productselectedEventId) return;
+                    console.log('Another tab switched to event', event.data.selectedEvent.id, '(we have', this.productselectedEventId + ')')
 
-                        this.$store.dispatch("products/selectEventId", event.data.selectedEvent.id);
+                    // If we're already processing a switch, queue the latest
+                    // event ID so we catch up to where the sender ended up.
+                    if (this.inSwitch) {
+                        this.pendingSwitchEventId = event.data.selectedEvent.id;
+                        return;
+                    }
+
+                    // Don't start a new switch while one is still in flight —
+                    // overlapping dispatches trigger the watcher which
+                    // broadcasts back, which triggers another dispatch, etc.
+                    this.inSwitch = true;
+                    try {
+                        // If the sender included the new token, we only need to
+                        // wait when we DON'T already have it — meaning our
+                        // storage hasn't caught up yet.  We poll the token until
+                        // it changes.
+                        const incomingToken = event.data.token;
+                        if (incomingToken && incomingToken !== this.$store.getters['mydata/getAuthToken']) {
+                            const maxWait = 3000; // safety valve
+                            const start = Date.now();
+                            const waitForToken = () => new Promise(resolve => {
+                                const check = () => {
+                                    if (this.$store.getters['mydata/getAuthToken'] === incomingToken) {
+                                        resolve(true);
+                                    } else if (Date.now() - start > maxWait) {
+                                        resolve(false); // give up
+                                    } else {
+                                        requestAnimationFrame(check);
+                                    }
+                                };
+                                requestAnimationFrame(check);
+                            });
+                            const gotToken = await waitForToken();
+                            if (!gotToken) {
+                                console.warn('Token did not propagate in time, switching anyway');
+                            }
+                        }
+
+                        // Await the dispatch so it finishes before any new switch
+                        await this.$store.dispatch("products/selectEventId", event.data.selectedEvent.id);
+                    } finally {
+                        // Process any queued switch that arrived while we were busy.
+                        const pend = this.pendingSwitchEventId;
+                        this.pendingSwitchEventId = null;
+                        this.inSwitch = false;
+
+                        if (pend && pend !== this.productselectedEventId) {
+                            console.log('Processing queued switch to', pend);
+                            // Recursive call — it will set inSwitch again if needed.
+                            this.handleGlobalMessage({
+                                data: { type: 'SwitchedEventId', selectedEvent: { id: pend } }
+                            });
+                        }
                     }
                 } break;
             }
@@ -559,9 +646,14 @@ export default {
     },
     watch: {
         'selectedEvent': function(newSelectedEvent){
+            //We can never deliberately switch to the "we don't have events loaded yet" placeholder event
+            if(newSelectedEvent.id == 0) return;
             this.initLoadDone = true;
-            
-            // Send a message that we changed the event id, which means the synced token is also fetching for the new id
+            console.log('Event switched to', newSelectedEvent)
+            // During the logged-in path, the setter emits after RefreshToken
+            // completes, with the fresh token.  Only emit here for anonymous users.
+            if (this.suppressWatcherEmit) return;
+            // Anonymous user — emit directly (no token to carry).
             this.$broadcast.postMessage({
                 type: 'SwitchedEventId',
                 selectedEvent: newSelectedEvent
@@ -635,7 +727,7 @@ export default {
         } 
         if (!this.isLoggedIn) {
             //If the refresh failed, we always want to have event info
-            //console.log('getting initial event info', initialEventID)
+            console.log('Anonymous getting initial event info')
             await this.$store.dispatch('products/getEventInfo').then(async () => {
                 console.log('got event info, loading contexts');
                 //this.selectedEventId = this.productselectedEventId;

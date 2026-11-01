@@ -27,6 +27,7 @@ const state = {
     locationEvents:[],
     allStaffPositions:[],
     gotEventInfo: false,
+    gettingEventInfo: false,
     gotBadgeContexts: false,
     gotBadges: {},
     gotQuestions: {},
@@ -129,11 +130,10 @@ const actions = {
     }, newAdminMode) {
         commit('setAdminMode', newAdminMode);
         dispatch('resetBadgeContexts',null);
-        // Only refresh contexts if we already know the event ID.
-        // During initial load the route watcher may enable admin mode
-        // before getEventInfo finishes; App.created() will fetch contexts
-        // once the event ID is available, so we skip the no-op here.
         if (state.selectedEventId != null) {
+            // Re-fetch event info from the correct API (admin vs public)
+            // now that the admin mode has changed.
+            await dispatch('getEventInfo', true);
             await dispatch('getBadgeContexts',null);
         }
     },
@@ -163,8 +163,21 @@ const actions = {
     }, force) {
 
         return new Promise((resolve, reject) => {
+            // Skip if already loading (prevents race from concurrent selectEventId calls)
+            if (state.gettingEventInfo && !force) {
+                return resolve();
+            }
             if (!state.gotEventInfo || force) {
+                // If already in-flight and not forced, wait for the existing call
+                if (state.gettingEventInfo) {
+                    return resolve();
+                }
+                state.gettingEventInfo = true;
                 const { client, token, isAdmin } = getters.apiClient;
+
+                const finish = () => {
+                    state.gettingEventInfo = false;
+                };
 
                 if (isAdmin) {
                     client.getEventInfo()
@@ -179,18 +192,31 @@ const actions = {
                         resolve();
                     }).catch(err =>{
                         reject(err)
-                    });
+                    }).finally(finish);
                 } else {
-                    client.getEventInfo(async eventinfo => {
-                        commit('setEventInfo', eventinfo);
-                        if (state.selectedEventId == null)
-                            commit('selectEvent', eventinfo[0].id);
-                        else {
-                            commit('selectEvent', state.selectedEventId);
+                    client.getEventInfo(
+                        async eventinfo => {
+                            try {
+                                commit('setEventInfo', eventinfo);
+                                if (state.selectedEventId == null)
+                                    commit('selectEvent', eventinfo[0].id);
+                                else {
+                                    commit('selectEvent', state.selectedEventId);
+                                }
+                                await dispatch('getBadgeContexts');
+                                resolve();
+                            } finally {
+                                finish();
+                            }
+                        },
+                        async err => {
+                            try {
+                                reject(err);
+                            } finally {
+                                finish();
+                            }
                         }
-                        await dispatch('getBadgeContexts');
-                        resolve();
-                    })
+                    );
                 }
             } else {
                 resolve();

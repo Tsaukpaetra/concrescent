@@ -48,10 +48,14 @@ const applyConfigTransformations = (config) => {
     const token = store.getters['mydata/getAuthToken'];
     const shouldHaveAuth = !config.url.includes('public/');
     
-    if (token && (config.headers?.Authorization || '') == '') {
-        config.headers.Authorization = `Bearer ${token}`;
-    } else if (shouldHaveAuth) {
-        console.log('Calling without authentication', config.url);
+    if (!config.headers.Authorization) {
+        if (token) {
+            // Header is missing, but we have a token to inject
+            config.headers.Authorization = `Bearer ${token}`;
+        } else if (shouldHaveAuth) {
+            // Should have auth, but neither a pre-existing header nor a token exists
+            console.log('Calling without authentication', config.url);
+        }
     }
 
     // 3. Inject our return path for the API to generate URLs
