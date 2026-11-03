@@ -1,256 +1,299 @@
 <template>
-<v-card>
-    <v-sheet
-        class="pa-3"
-    >Pretty chart goes here
-    <v-skeleton-loader
-      class="mx-auto"
-      max-width="300"
-      type="card"
-      loading
-    >Pretty chart goes here</v-skeleton-loader>
-  </v-sheet>
-  <v-sheet>
-    <v-data-table :options.sync="tableOptions"
-              :server-items-length="totalResults"
-              :loading="loading"
-              :headers="headers"
-              :items-per-page="-1"
-              disable-sort
-              group-by="context_name"
-              :show-group-by="false"
-              :items="tableResults"
-              class="elevation-1 fill-height"
-              :search="searchText">
-                <!-- <template v-slot:item="{ item, index }">
-                    <h3 v-if="contextIsDifferentFromPrior(item, index)">Type: {{ badgeContexts.find(cx => cx.context_code == item["context_code"])?.name }}</h3>
-                    <tr>
-                        <td v-for="(header, key) in headers" :key="key">{{ item[header.value] }}</td>
-                    </tr>
-                </template> -->
-                <!-- <template v-slot:[`group.header`]="{ group }">
-                    {{ badgeContexts.find(cx => cx.context_code == group)?.name }}
-                </template> -->
-                
-      <template v-slot:[`group.header`]="{ group, isOpen, toggle }">
-        <td
-          class="grey lighten-2"
-          dense
-          :colspan="headers.length"
+    <v-card>
+        <v-toolbar flat dense color="grey-lighten-4">
+            <v-toolbar-title>Badge Statistics</v-toolbar-title>
+        </v-toolbar>
+
+        <v-tree-data-table
+            :headers="headers"
+            :items="treeData"
+            :loading="loading"
+            itemIDname="id"
+            itemParentIDname="parent_id"
+            class="elevation-1 badge-stats-tree"
+            dense
         >
-            <v-btn
-              icon
-              rounded small
-            @click="toggle"
-            >
-              <v-icon>mdi-{{  isOpen ? 'minus' : 'plus' }}</v-icon>
-            </v-btn>
-            {{ group }}
-        </td>
-      </template>
-                <template v-slot:[`item.badge_type_id`]="{ item }">
-                    {{ getBadge(item.context_code,item.badge_type_id)?.name }}
-                </template>
-    </v-data-table>
-  </v-sheet>
-    
-    <v-dialog v-model="loading"
-              width="200"
-              height="200"
-              close-delay="1200"
-              content-class="elevation-0"
-              persistent>
-        <v-card-text class="text-center overflow-hidden">
-            <v-progress-circular :size="150"
-                                 class="mb-0"
-                                 indeterminate />
-        </v-card-text>
-    </v-dialog>
-</v-card>
+            <template v-slot:[`item.context_name`]="{ item }">
+                <span class="px-1 font-weight-bold" v-if="item.context_name">{{ item.context_name }}</span>
+                <span class="px-1 font-weight-medium" v-else-if="item.badge_name">{{ item.badge_name }}</span>
+                <span v-else-if="item.period">{{ item.period }}</span>
+            </template>
+
+            <template v-slot:[`item.paid_count`]="{ item }">
+                <span class="text-center">{{ item.paid_count }}<span class="grey--text text--accent-3">({{ item.paid_total }})</span></span>
+            </template>
+
+            <template v-slot:[`item.printed_count`]="{ item }">
+                <span class="text-center">{{ item.printed_count }}<span class="grey--text text--accent-3">({{ item.printed_total }})</span></span>
+            </template>
+
+            <template v-slot:[`item.checked_in_count`]="{ item }">
+                <span class="text-center">{{ item.checked_in_count }}<span class="grey--text text--accent-3">({{ item.checked_in_total }})</span></span>
+            </template>
+
+            <template v-slot:[`item.total_count`]="{ item }">
+                <span class="text-center" :class="{'font-weight-bold': item.context_name, 'font-weight-medium': !item.context_name && item.badge_name}">{{ item.total_count }}</span>
+            </template>
+
+            <template v-slot:no-data>
+                <div class="text-center grey--text mt-4">No data available</div>
+            </template>
+
+            <template v-slot:loading>
+                <v-row align="center" justify="center" style="width: 100%;">
+                    <v-progress-circular indeterminate size="48"></v-progress-circular>
+                </v-row>
+            </template>
+        </v-tree-data-table>
+
+        <v-dialog v-model="loading" width="200" persistent>
+            <v-card-text class="text-center overflow-hidden">
+                <v-progress-circular :size="150" indeterminate></v-progress-circular>
+            </v-card-text>
+        </v-dialog>
+    </v-card>
 </template>
+
 <script>
 import admin from '../../api/admin';
-import {
-    debounce
-} from '@/plugins/debounce';
-
-import {
-    mapActions,
-    mapState,
-    mapGetters
-} from 'vuex'
+import vTreeDataTable from '../../components/v-tree-data-table.vue';
+import { mapActions, mapState } from 'vuex';
 
 export default {
-    components: {
-
-    },
-    props: [
-        'subTabIx'
-    ],
+    components: { vTreeDataTable },
+    props: ['subTabIx'],
     data: () => ({
-        searchText: '',
         loading: false,
-        isExporting:false,
-        tableOptions: {},
         rawResults: {},
-        totalResults: 0,
-        optionExportFormat:'csv',
-        optionExportRawHeaders: false,
-        apiAddParams:{},
 
-        headers:[
-            {
-                align: 'start',
-                text: 'Badge Type',
-                value: 'badge_type_id',
-            },
-            {
-                text: 'count',
-                value: 'count',
-            },
-            {
-                text: 'total',
-                value: 'total',
-            },
+        headers: [
+            { text: 'Context / Badge Type / Period', value: 'context_name', width: '200', align: 'left' },
+            { text: 'Paid', value: 'paid_count', width: '75', align: 'center' },
+            { text: 'Printed', value: 'printed_count', width: '75', align: 'center' },
+            { text: 'Checked In', value: 'checked_in_count', width: '80', align: 'center' },
+            { text: 'Total', value: 'total_count', width: '70', align: 'center' },
         ],
-
-        detailsDialog: false,
-
     }),
     computed: {
-        ...mapGetters('products', {
-            'badgeContexts': 'badgeContexts',
-        }),
-        ...mapState('products',{
-            badges:'badges'
-        }),
-        pageOptionsForGet: function(){
-            const pageOptions = [
-                'sortBy',
-                'sortDesc',
-                'page',
-                'itemsPerPage'
-            ].reduce((a, e) => (a[e] = this.tableOptions[e], a),  {...this.apiAddParams});
-            if (this.searchText) pageOptions['find'] = this.searchText;
-            if (this.context_code) pageOptions['context_code'] = this.context_code;
-            //If exporting, force pagination to all
-            if(this.isExporting) {
-                pageOptions['itemsPerPage'] = -1;
-                pageOptions['page'] = 1;
+        ...mapState('products', ['badgecontexts', 'badges']),
+
+        // Build a flat array of tree nodes from nested rawResults.
+        // rawResults structure: { [contextCode]: { [badgeTypeId]: [mergedRow, ...] } }
+        // Each mergedRow has: period, paid_count, paid_total, printed_count,
+        //   printed_total, checked_in_count, checked_in_total
+        //
+        // Tree levels:
+        //   Level 1: Context folders (leaf: false)
+        //   Level 2: Badge Type folders (leaf: false)
+        //   Level 3: Period leaves (leaf: true, only rows with count > 0)
+        //
+        // Display logic for the tree column:
+        //   - Context nodes show context_name (translated via badgeContextMap, fallback: "Context X")
+        //   - Badge type nodes show badge_name (looked up from badges[contextCode])
+        //   - Period leaves show period key (e.g. "24-01")
+        //
+        // Vue.set on state.badges[state.badgecontextselected.context_code]
+        // replaces the array reference, so mapState computed properties
+        // correctly notify Vue of changes.
+        //
+        // The hash comparison in v-tree-data-table prevents infinite loops
+        // when this computed re-evaluates without actual data changes.
+        treeData() {
+            if (!this.rawResults || typeof this.rawResults !== 'object' || Object.keys(this.rawResults).length === 0) {
+                return [];
             }
-            return pageOptions;
-        },
-        tableResults: function() {
-            var result = []
-            //Loop the contexts
-            for(var cx in this.rawResults){
-                //loop the badge IDs
-                for(var ix in this.rawResults[cx]){
-                    //Splat the last item of the badge and add context code as a new property
-                    result.push({"context_code":cx,
-                    "context_name": this.badgeContexts.find(c => c.context_code == cx)?.name || "Context not yet loaded: " + cx,
-                     ...this.rawResults[cx][ix].slice(-1)[0]});
+
+            // Use mapState mapped properties (badgecontexts, badges)
+            var badgeContexts = this.badgecontexts || [];
+            var badges = this.badges || {};
+
+            // Build context name map inline
+            var badgeContextMap = {};
+            for (var ci = 0; ci < badgeContexts.length; ci++) {
+                badgeContextMap[badgeContexts[ci].context_code] =
+                    badgeContexts[ci].name || badgeContexts[ci].context_code;
+            }
+
+            var result = [];
+
+            for (var contextCode in this.rawResults) {
+                if (!this.rawResults.hasOwnProperty(contextCode)) continue;
+
+                var contextRaw = this.rawResults[contextCode];
+                // Skip if context has no data or data isn't an object
+                if (!contextRaw || typeof contextRaw !== 'object') continue;
+
+                var contextName = badgeContextMap[contextCode] || ('Context ' + contextCode);
+                var contextBadgeList = (badges && badges[contextCode]) || [];
+
+                // Compute context-level totals by summing all periods across all badge types
+                var ctxPaid = 0, ctxPrinted = 0, ctxCheckedIn = 0, ctxTotal = 0;
+                var badgeTypeIds = Object.keys(contextRaw);
+
+                for (var bi = 0; bi < badgeTypeIds.length; bi++) {
+                    var badgeTypeId = badgeTypeIds[bi];
+                    var periodRows = contextRaw[badgeTypeId];
+                    if (!Array.isArray(periodRows)) continue;
+
+                    for (var pi = 0; pi < periodRows.length; pi++) {
+                        var row = periodRows[pi];
+                        if (!row || !row.paid_count && !row.printed_count && !row.checked_in_count) continue;
+
+                        ctxPaid += row.paid_count || 0;
+                        ctxPrinted += row.printed_count || 0;
+                        ctxCheckedIn += row.checked_in_count || 0;
+                        ctxTotal += row.total_count || 0;
+                    }
+                }
+
+                // Push context folder FIRST (before its children)
+                result.push({
+                    id: 'cx_' + contextCode,
+                    parent_id: null,
+                    context_name: contextName,
+                    paid_count: ctxPaid,
+                    paid_total: ctxPaid,
+                    printed_count: ctxPrinted,
+                    printed_total: ctxPrinted,
+                    checked_in_count: ctxCheckedIn,
+                    checked_in_total: ctxCheckedIn,
+                    total_count: ctxTotal,
+                    total_total: ctxTotal,
+                    leaf: false,
+                });
+
+                // Push badge type folders and their period leaves
+                for (var bi = 0; bi < badgeTypeIds.length; bi++) {
+                    var badgeTypeId = badgeTypeIds[bi];
+                    var periodRows = contextRaw[badgeTypeId];
+                    if (!Array.isArray(periodRows) || periodRows.length === 0) continue;
+
+                    // Sum totals from active periods
+                    var bPaid = 0, bPrinted = 0, bCheckedIn = 0, bTotal = 0;
+                    var badgePeriodLeaves = [];
+
+                    for (var pi = 0; pi < periodRows.length; pi++) {
+                        var row = periodRows[pi];
+                        if (!row) continue;
+
+                        var paidC = row.paid_count || 0;
+                        var printedC = row.printed_count || 0;
+                        var checkedInC = row.checked_in_count || 0;
+
+                        if (!paidC && !printedC && !checkedInC && !row.total_count) continue; // skip all-zero rows
+
+                        bPaid += paidC;
+                        bPrinted += printedC;
+                        bCheckedIn += checkedInC;
+                        bTotal += row.total_count || 0;
+
+                        badgePeriodLeaves.push({
+                            id: 'cx_' + contextCode + '|bt_' + badgeTypeId + '|p_' + row.period,
+                            parent_id: 'cx_' + contextCode + '|bt_' + badgeTypeId,
+                            context_name: '',
+                            badge_name: '',
+                            period: row.period,
+                            paid_count: paidC,
+                            paid_total: row.paid_total || 0,
+                            printed_count: printedC,
+                            printed_total: row.printed_total || 0,
+                            checked_in_count: checkedInC,
+                            checked_in_total: row.checked_in_total || 0,
+                            total_count: row.total_count || 0,
+                            leaf: true,
+                        });
+                    }
+
+                    // Sort periods ascending
+                    badgePeriodLeaves.sort(function(a, b) {
+                        return a.period < b.period ? -1 : 1;
+                    });
+
+                    // If no active periods, skip this badge type
+                    if (badgePeriodLeaves.length === 0) continue;
+
+                    // Lookup badge name from Vuex
+                    var badgeName = '';
+                    if (contextBadgeList && contextBadgeList.length > 0) {
+                        var badge = contextBadgeList.find(function(b) {
+                            return b.id == badgeTypeId;
+                        });
+                        if (badge) badgeName = badge.name || '';
+                    }
+
+                    // Badge type folder node
+                    var badgeNodeId = 'cx_' + contextCode + '|bt_' + badgeTypeId;
+                    result.push({
+                        id: badgeNodeId,
+                        parent_id: 'cx_' + contextCode,
+                        context_name: '',
+                        badge_name: badgeName,
+                        paid_count: bPaid,
+                        paid_total: bPaid,
+                        printed_count: bPrinted,
+                        printed_total: bPrinted,
+                        checked_in_count: bCheckedIn,
+                        checked_in_total: bCheckedIn,
+                        total_count: bTotal,
+                        total_total: bTotal,
+                        leaf: false,
+                    });
+
+                    // Push period leaf nodes into the flat result
+                    for (var li = 0; li < badgePeriodLeaves.length; li++) {
+                        result.push(badgePeriodLeaves[li]);
+                    }
                 }
             }
+
             return result;
-        }
+        },
     },
     methods: {
-        checkPermission() {
-            console.log('Hey! Listen!');
-            //this.doSearch();
-        },
-        ...mapActions('products', [
-            'getContextBadges',
-        ]),
-        doSearch: function() {
-            this.loading = true;
-            admin.genericGetList('Stats/Badge', {...this.pageOptionsForGet, 'badge_groups':'payment_status,printed,checked_in', 'range_start':'2036-01-01'}, (results, total) => {
-                this.rawResults = results;
-                this.totalResults = total;
-                this.loading = false;
-                
-                //Make sure we have context for anything loaded
-                for(var context in results){
-                    console.log('ensure context', context)
-                    this.getContextBadges(context);
+        ...mapActions('products', ['getBadgeContexts', 'getContextBadges']),
+
+        async doLoad() {
+            // Load badge contexts and badges for all contexts so names display correctly
+            try {
+                await this.getBadgeContexts();
+                // Load badges for every available context
+                var promises = [];
+                for (var i = 0; i < this.badgecontexts.length; i++) {
+                    promises.push(this.getContextBadges(this.badgecontexts[i].context_code));
                 }
-            })
-        },
-        doExport: function() {
-            this.loading = true;
-            console.log('doSearch pageOptions', this.pageOptionsForGet);
-            admin.genericGetList('Stats/Badge', this.pageOptionsForGet, (results, total) => {
-                this.loading = false;
-                
-                const fileName = 'Export';
-                const exportType =  this.optionExportFormat;
-                if(!this.optionExportRawHeaders){
-                    results = this.makeHeadersPretty(results);
-                }
-                // Iterate through the results and replace explicit null values with an empty string
-                                results = results.map(obj => {
-                    return Object.fromEntries(
-                        Object.entries(obj).map(([key, value]) => [key, value === null ? '' : value])
-                    );
-                });
-                exportFromJSON({
-                    data:results,
-                    fileName,
-                    exportType,
-                    withBOM:true
-                    });
-            })            
-        },
-        doEmit: function(eventName, item) {
-            this.$emit(eventName, item);
-        },
-        makeHeadersPretty(input) {
-            if (typeof input !== 'object') return input;
-            if (Array.isArray(input)) return input.map(this.makeHeadersPretty,this);
-            var that = this;
-            return Object.keys(input).reduce(function (newObj, key) {
-                let val = input[key];
-                let newVal = (typeof val === 'object') && val !== null ? that.makeHeadersPretty.call(that,val) : val;
-                //find new key
-                var newKeyObj = that.headers.find((header) => {
-                    if (header==key) return true;
-                    if(header.value == key) return true;
-                })
-                if(typeof newKeyObj == 'string') newKeyObj = {value:newKeyObj, text:newKeyObj};
-                if(typeof newKeyObj == 'undefined') newKeyObj = {value:key, text:key};
-                newObj[newKeyObj.text] = newVal;
-                return newObj;
-            }, {});
-        },
-        contextIsDifferentFromPrior(item,index) {
-            // Check if the current item's property is different from the previous item's property
-            if (index > 0) {
-                const previousItem = this.tableResults[index - 1];
-                return item.context_code !== previousItem.context_code;
+                await Promise.all(promises);
+            } catch (err) {
+                console.error('Badge context load failed', err);
             }
-            return true;
         },
-        getBadge(context_code,badge_type_id){
-            var context = this.badges[context_code];
-            if(context == undefined) return undefined;
-            var badge = context.find(b => b.id == badge_type_id);
-            return badge;
-        }
+
+        doSearch() {
+            this.loading = true;
+            admin.genericGetList('Stats/Badge', {}, (results, total) => {
+                this.rawResults = results || {};
+                this.totalResults = total || 0;
+                this.loading = false;
+            }, (err) => {
+                console.error('Badge stats fetch failed', err);
+                this.loading = false;
+            });
+        },
     },
     watch: {
         $route() {
-            this.$nextTick(this.checkPermission);
-        },
-        tableOptions: {
-            handler() {
-                this.doSearch()
-            },
-            deep: true,
+            this.doSearch();
         },
     },
     created() {
-        this.checkPermission();
-    }
+        this.doLoad().then(() => {
+            this.doSearch();
+        });
+    },
 };
 </script>
+
+<style scoped>
+.badge-stats-tree .v-tree-data-table .expandable-node {
+    padding: 0;
+}
+</style>
