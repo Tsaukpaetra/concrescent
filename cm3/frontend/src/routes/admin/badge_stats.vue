@@ -2,6 +2,98 @@
     <v-card>
         <v-toolbar flat dense color="grey-lighten-4">
             <v-toolbar-title>Badge Statistics</v-toolbar-title>
+            <v-spacer></v-spacer>
+
+            <!-- Contexts selector -->
+            <v-autocomplete
+                v-model="selectedContexts"
+                :items="contextItems"
+                item-value="context_code"
+                item-text="name"
+                chips
+                chip
+                multiple
+                clearable
+                dense
+                outlined
+                small-chips
+                label="Contexts"
+                placeholder="All contexts"
+                hide-details
+                class="ml-2"
+                style="max-width: 240px;"
+            />
+
+            <!-- Period selector -->
+            <v-select
+                v-model="period"
+                :items="periodOptions"
+                item-value="value"
+                item-text="label"
+                dense
+                outlined
+                label="Period"
+                hide-details
+                class="ml-2"
+                style="max-width: 130px;"
+            />
+
+            <!-- Date range -->
+            <v-menu
+                v-model="startMenu"
+                :close-on-content-click="false"
+                transition="scale-transition"
+                offset-y
+                min-width="auto"
+            >
+                <template v-slot:activator="{ on, attrs }">
+                    <v-text-field
+                        v-model="rangeStart"
+                        :label="rangeStart ? formatDate(rangeStart) : 'Start date'"
+                        prepend-icon="mdi-calendar"
+                        dense
+                        outlined
+                        clearable
+                        hide-details
+                        v-bind="attrs"
+                        v-on="on"
+                        class="ml-2"
+                        style="max-width: 160px;"
+                    />
+                </template>
+                <v-date-picker v-model="rangeStart" no-title @input="startMenu = false" />
+            </v-menu>
+
+            <v-menu
+                v-model="endMenu"
+                :close-on-content-click="false"
+                transition="scale-transition"
+                offset-y
+                min-width="auto"
+            >
+                <template v-slot:activator="{ on, attrs }">
+                    <v-text-field
+                        v-model="rangeEnd"
+                        :label="rangeEnd ? formatDate(rangeEnd) : 'End date'"
+                        prepend-icon="mdi-calendar"
+                        dense
+                        outlined
+                        clearable
+                        hide-details
+                        v-bind="attrs"
+                        v-on="on"
+                        class="ml-2"
+                        style="max-width: 160px;"
+                    />
+                </template>
+                <v-date-picker v-model="rangeEnd" no-title @input="endMenu = false" />
+            </v-menu>
+
+            <!-- Search button -->
+            <v-btn color="primary" dark @click="doSearch" class="ml-2" small :disabled="loading">
+                <v-icon left small>mdi-magnify</v-icon>
+                Search
+            </v-btn>
         </v-toolbar>
 
         <v-tree-data-table
@@ -20,19 +112,19 @@
             </template>
 
             <template v-slot:[`item.paid_count`]="{ item }">
-                <span class="text-center">{{ item.paid_count }}<span class="grey--text text--accent-3">({{ item.paid_total }})</span></span>
+                <span class="text-center">{{ item.paid_count }}<template v-if="item.leaf"><span class="grey--text text--accent-3">({{ item.paid_total }})</span></template></span>
             </template>
 
             <template v-slot:[`item.printed_count`]="{ item }">
-                <span class="text-center">{{ item.printed_count }}<span class="grey--text text--accent-3">({{ item.printed_total }})</span></span>
+                <span class="text-center">{{ item.printed_count }}<template v-if="item.leaf"><span class="grey--text text--accent-3">({{ item.printed_total }})</span></template></span>
             </template>
 
             <template v-slot:[`item.checked_in_count`]="{ item }">
-                <span class="text-center">{{ item.checked_in_count }}<span class="grey--text text--accent-3">({{ item.checked_in_total }})</span></span>
+                <span class="text-center">{{ item.checked_in_count }}<template v-if="item.leaf"><span class="grey--text text--accent-3">({{ item.checked_in_total }})</span></template></span>
             </template>
 
             <template v-slot:[`item.total_count`]="{ item }">
-                <span class="text-center" :class="{'font-weight-bold': item.context_name, 'font-weight-medium': !item.context_name && item.badge_name}">{{ item.total_count }}</span>
+                <span class="text-center" :class="{'font-weight-bold': item.context_name, 'font-weight-medium': !item.context_name && item.badge_name}">{{ item.total_count }}<template v-if="item.leaf"><span class="grey--text text--accent-3">({{ item.total_total }})</span></template></span>
             </template>
 
             <template v-slot:no-data>
@@ -73,9 +165,29 @@ export default {
             { text: 'Checked In', value: 'checked_in_count', width: '80', align: 'center' },
             { text: 'Total', value: 'total_count', width: '70', align: 'center' },
         ],
+
+        // Filters
+        selectedContexts: [],
+        period: '%Y-%m-%d',
+        rangeStart: null,
+        rangeEnd: null,
+        startMenu: false,
+        endMenu: false,
+
+        periodOptions: [
+            { label: 'Daily', value: '%Y-%m-%d' },
+            { label: 'Weekly', value: '%Y-%u' },
+            { label: 'Monthly', value: '%Y-%m' },
+            { label: 'Yearly', value: '%Y' },
+        ],
     }),
     computed: {
         ...mapState('products', ['badgecontexts', 'badges']),
+
+        // Items for the context autocomplete
+        contextItems() {
+            return this.badgecontexts || [];
+        },
 
         // Build a flat array of tree nodes from nested rawResults.
         // rawResults structure: { [contextCode]: { [badgeTypeId]: [mergedRow, ...] } }
@@ -127,7 +239,8 @@ export default {
                 var contextBadgeList = (badges && badges[contextCode]) || [];
 
                 // Compute context-level totals by summing all periods across all badge types
-                var ctxPaid = 0, ctxPrinted = 0, ctxCheckedIn = 0, ctxTotal = 0;
+                // Folder nodes show cumulative totals for both count and total fields.
+                var ctxPaidT = 0, ctxPrintedT = 0, ctxCheckedInT = 0, ctxTotalT = 0;
                 var badgeTypeIds = Object.keys(contextRaw);
 
                 for (var bi = 0; bi < badgeTypeIds.length; bi++) {
@@ -135,30 +248,36 @@ export default {
                     var periodRows = contextRaw[badgeTypeId];
                     if (!Array.isArray(periodRows)) continue;
 
+                    // Find last period's cumulative total for this badge type
+                    var lastRow = null;
                     for (var pi = 0; pi < periodRows.length; pi++) {
                         var row = periodRows[pi];
-                        if (!row || !row.paid_count && !row.printed_count && !row.checked_in_count) continue;
+                        if (row && (row.paid_count || row.printed_count || row.checked_in_count || row.total_count)) {
+                            lastRow = row;
+                        }
+                    }
 
-                        ctxPaid += row.paid_count || 0;
-                        ctxPrinted += row.printed_count || 0;
-                        ctxCheckedIn += row.checked_in_count || 0;
-                        ctxTotal += row.total_count || 0;
+                    if (lastRow) {
+                        ctxPaidT += lastRow.paid_total || 0;
+                        ctxPrintedT += lastRow.printed_total || 0;
+                        ctxCheckedInT += lastRow.checked_in_total || 0;
                     }
                 }
 
                 // Push context folder FIRST (before its children)
+                // Count equals total for folder nodes
                 result.push({
                     id: 'cx_' + contextCode,
                     parent_id: null,
                     context_name: contextName,
-                    paid_count: ctxPaid,
-                    paid_total: ctxPaid,
-                    printed_count: ctxPrinted,
-                    printed_total: ctxPrinted,
-                    checked_in_count: ctxCheckedIn,
-                    checked_in_total: ctxCheckedIn,
-                    total_count: ctxTotal,
-                    total_total: ctxTotal,
+                    paid_count: ctxPaidT,
+                    paid_total: ctxPaidT,
+                    printed_count: ctxPrintedT,
+                    printed_total: ctxPrintedT,
+                    checked_in_count: ctxCheckedInT,
+                    checked_in_total: ctxCheckedInT,
+                    total_count: ctxTotalT,
+                    total_total: ctxTotalT,
                     leaf: false,
                 });
 
@@ -168,10 +287,8 @@ export default {
                     var periodRows = contextRaw[badgeTypeId];
                     if (!Array.isArray(periodRows) || periodRows.length === 0) continue;
 
-                    // Sum totals from active periods
-                    var bPaid = 0, bPrinted = 0, bCheckedIn = 0, bTotal = 0;
+                    // Build period leaf nodes
                     var badgePeriodLeaves = [];
-
                     for (var pi = 0; pi < periodRows.length; pi++) {
                         var row = periodRows[pi];
                         if (!row) continue;
@@ -181,11 +298,6 @@ export default {
                         var checkedInC = row.checked_in_count || 0;
 
                         if (!paidC && !printedC && !checkedInC && !row.total_count) continue; // skip all-zero rows
-
-                        bPaid += paidC;
-                        bPrinted += printedC;
-                        bCheckedIn += checkedInC;
-                        bTotal += row.total_count || 0;
 
                         badgePeriodLeaves.push({
                             id: 'cx_' + contextCode + '|bt_' + badgeTypeId + '|p_' + row.period,
@@ -212,6 +324,9 @@ export default {
                     // If no active periods, skip this badge type
                     if (badgePeriodLeaves.length === 0) continue;
 
+                    // Cumulative totals come from the last period — used for both count and total
+                    var lastLeaf = badgePeriodLeaves[badgePeriodLeaves.length - 1];
+
                     // Lookup badge name from Vuex
                     var badgeName = '';
                     if (contextBadgeList && contextBadgeList.length > 0) {
@@ -221,21 +336,20 @@ export default {
                         if (badge) badgeName = badge.name || '';
                     }
 
-                    // Badge type folder node
-                    var badgeNodeId = 'cx_' + contextCode + '|bt_' + badgeTypeId;
+                    // Badge type folder node: count equals total (cumulative)
                     result.push({
-                        id: badgeNodeId,
+                        id: 'cx_' + contextCode + '|bt_' + badgeTypeId,
                         parent_id: 'cx_' + contextCode,
                         context_name: '',
                         badge_name: badgeName,
-                        paid_count: bPaid,
-                        paid_total: bPaid,
-                        printed_count: bPrinted,
-                        printed_total: bPrinted,
-                        checked_in_count: bCheckedIn,
-                        checked_in_total: bCheckedIn,
-                        total_count: bTotal,
-                        total_total: bTotal,
+                        paid_count: lastLeaf.paid_total || 0,
+                        paid_total: lastLeaf.paid_total || 0,
+                        printed_count: lastLeaf.printed_total || 0,
+                        printed_total: lastLeaf.printed_total || 0,
+                        checked_in_count: lastLeaf.checked_in_total || 0,
+                        checked_in_total: lastLeaf.checked_in_total || 0,
+                        total_count: lastLeaf.total_count || 0,
+                        total_total: lastLeaf.total_count || 0,
                         leaf: false,
                     });
 
@@ -251,6 +365,17 @@ export default {
     },
     methods: {
         ...mapActions('products', ['getBadgeContexts', 'getContextBadges']),
+
+        formatDate(date) {
+            if (!date) return '';
+            // Format as YYYY-MM-DD for display
+            const d = new Date(date);
+            if (isNaN(d)) return date;
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        },
 
         async doLoad() {
             // Load badge contexts and badges for all contexts so names display correctly
@@ -269,7 +394,37 @@ export default {
 
         doSearch() {
             this.loading = true;
-            admin.genericGetList('Stats/Badge', {}, (results, total) => {
+            const params = {};
+
+            // Period format
+            if (this.period) {
+                params.period = this.period;
+            }
+
+            // Date range
+            if (this.rangeStart) {
+                const d = new Date(this.rangeStart);
+                if (!isNaN(d)) {
+                    params.range_start = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                }
+            }
+            if (this.rangeEnd) {
+                const d = new Date(this.rangeEnd);
+                if (!isNaN(d)) {
+                    params.range_end = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                }
+            }
+
+            // Contexts — send as cx_<code> params
+            if (Array.isArray(this.selectedContexts) && this.selectedContexts.length > 0) {
+                for (const ctx of this.selectedContexts) {
+                    params['cx_' + ctx] = '';
+                }
+            } else {
+                // Empty = all contexts (no cx_ params needed — backend returns all)
+            }
+
+            admin.genericGetList('Stats/Badge', params, (results, total) => {
                 this.rawResults = results || {};
                 this.totalResults = total || 0;
                 this.loading = false;

@@ -55,6 +55,13 @@ final class statsgen
         $columns[] = new SelectColumn($periodColumn, true, 'DATE_FORMAT(?, "' . $this->cm_db->connection->real_escape_string($intervalFormat) . '")', 'period');
         // Count rows per group
         $columns[] = new SelectColumn('id', false, 'count(*)', 'count');
+        // Ensure date_created is always in SELECT for range filtering.
+        // The WHERE builder needs to resolve columns it references; without
+        // this, range filters on date_created fail for Printed/CheckedIn
+        // sources whose periodColumn is a different column.
+        if ($periodColumn !== 'date_created' && $badges->HasColumn('date_created')) {
+            $columns[] = new SelectColumn('date_created', false);
+        }
         foreach ($groupColumns as $column) {
             if ($badges->HasColumn($column) || $badges->HasColumn('time_' . $column)) {
                 switch ($column) {
@@ -112,8 +119,15 @@ final class statsgen
         // --- Handle cumulative seeding when rangeStart is specified ---
         $cumulationCurrent = array_fill_keys(array_keys($groupings), 0);
         if (!is_null($rangeStart)) {
+            // Deep-copy the SearchTerms so mutating Operation doesn't affect
+            // subsequent getBadgeStats calls (Search.php passes SearchTerms
+            // by reference and the same objects are reused for each source).
+            $whereCopy = array_map(function ($t) {
+                return is_null($t) ? null : clone $t;
+            }, $where);
+
             // Modify the first SearchTerm to "<" so we get only records before rangeStart
-            $where[0]->Operation = '<';
+            $whereCopy[0]->Operation = '<';
             // Modify the date column: group by false, wrap in MAX for cumulative count
             $columns[1]->GroupBy = false;
             $columns[1]->EncapsulationFunction = 'MAX(' . $columns[1]->EncapsulationFunction . ')';
@@ -121,7 +135,7 @@ final class statsgen
             // Seed the cumulative counters from records before rangeStart
             // $badges->debugThrowBeforeSelect = true;
             $cumView = new View($columns, $join !== null ? [$join] : null);
-            foreach ($badges->Search($cumView, $where) as $cumulation) {
+            foreach ($badges->Search($cumView, $whereCopy) as $cumulation) {
                 $cumulationCurrent[$this->getGroupingKey($cumulation, $groupColumns)] = $cumulation['count'];
             }
         }
