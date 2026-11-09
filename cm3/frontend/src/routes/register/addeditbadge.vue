@@ -1,5 +1,6 @@
 <template>
-<v-stepper v-model="step"
+<v-stepper ref="stepper"
+           v-model="step"
            :vertical="true">
         <v-stepper-step :editable="reachedStep >= 0"
                         :complete="reachedStep > 0"
@@ -61,7 +62,8 @@
                     Availability: {{selectedBadge.dates_available}}<br>
                     Ages:  {{selectedBadge.age_range}}<br>
                     <badgePerksRender :description="selectedBadge ? selectedBadge.description : '' "
-                                      :rewardlist="rewardlist"></badgePerksRender>
+                                      :rewardlist="rewardlist"
+                                      @perk-height-ready="stepperReflow"></badgePerksRender>
                 </v-card-text>
             </v-card>
         </v-sheet>
@@ -108,7 +110,8 @@
                 </v-expansion-panel-header>
                 <v-expansion-panel-content>
                     <badgePerksRender :description="addon.description"
-                                      :rewardlist="addon.rewards"></badgePerksRender>
+                                      :rewardlist="addon.rewards"
+                                      @perk-height-ready="stepperReflow"></badgePerksRender>
                 </v-expansion-panel-content>
             </v-expansion-panel>
 
@@ -657,6 +660,12 @@ export default {
                 this.checkBadge();
             //}
             this.autoSaveBadge();
+            // Force layout reflow when entering step 1 so badgePerksRender
+            // (which renders markdown asynchronously) doesn't cause the
+            // "Continue" button to be positioned behind other elements.
+            if (newStep === 1) {
+                this.stepperReflow();
+            }
         },
         'badgeGenInfoData.date_of_birth': function() {
             this.checkBadge();
@@ -793,13 +802,11 @@ export default {
                 console.log('owned badge  ' + editIx)
                 cartItem = this.$store.getters['mydata/getBadgeAsCart'](editIx);
                 this.editBadgePriorBadgeId = cartItem.badge_type_id;
-                this.reachedStep = 4;
             } else if (editAppIx != undefined) {
                 // Load up the badge from the owned badges
                 console.log('application  ' + editAppIx)
                 cartItem = this.$store.getters['mydata/getApplicationAsCart'](editAppIx);
                 this.editBadgePriorBadgeId = cartItem.badge_type_id;
-                this.reachedStep = 4;
             } else if (isNaN(this.cartIx)) {
                 // It's a new badge or they're back here from a refresh/navigation
                 console.log('refreshed')
@@ -867,6 +874,12 @@ export default {
                     _this.addonsSelected = addons.map(addon => addon['addon_id']);
                     //Touch the real name so it re-validates
                     this.real_name = this.real_name;
+                    // Ensure reachedStep accounts for sub-badges step (5) on group apps
+                    if (_this.isGroupApp && _this.selectedBadge && _this.selectedBadge.max_applicant_count > 0) {
+                        _this.reachedStep = Math.max(_this.reachedStep, 5);
+                    } else {
+                        _this.reachedStep = Math.max(_this.reachedStep, 4);
+                    }
 
                 }, 200);
             }
@@ -945,6 +958,24 @@ export default {
         setValidGenInfo(isValid) {
             console.log('setValidGenInfo', isValid);
             this.validGenInfo = isValid;
+        },
+        stepperReflow() {
+            // Vuetify locks step heights with inline `height` styles.
+            // Clearing the active step's inline height lets content
+            // size naturally again.
+            // Guard: only act when the *active* step contains a
+            // badgePerksRender.  The event fires whenever any
+            // badgePerksRender finishes parsing markdown, which may
+            // happen while another step is still active (the child
+            // component is mounted but hidden via v-show).  Clearing
+            // the wrong step's height causes it to unexpectedly
+            // expand — e.g. step 0 un-collapsing.
+            this.$nextTick(() => {
+                const active = this.$refs.stepper?.$el?.querySelector('.v-stepper__content--active');
+                if (active && active.querySelector('.badge-perks-render')) {
+                    active.style.height = '';
+                }
+            });
         },
     },
     components: {
