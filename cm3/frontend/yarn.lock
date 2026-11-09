@@ -1400,6 +1400,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@kurkle/color@npm:^0.3.0":
+  version: 0.3.4
+  resolution: "@kurkle/color@npm:0.3.4"
+  checksum: b95c6abe0241ba1745b3c84de3b464296b95ce577110b54f46e6c6dcc9a0966491533df43812bd6c66f92cf818e385d1390b280cd5851d4afb52fc37f8a6c0b9
+  languageName: node
+  linkType: hard
+
 "@leichtgewicht/ip-codec@npm:^2.0.1":
   version: 2.0.5
   resolution: "@leichtgewicht/ip-codec@npm:2.0.5"
@@ -3441,6 +3448,15 @@ __metadata:
     ansi-styles: ^4.1.0
     supports-color: ^7.1.0
   checksum: fe75c9d5c76a7a98d45495b91b2172fa3b7a09e0cc9370e5c8feb1c567b85c4288e2b3fded7cfdd7359ac28d6b3844feb8b82b8686842e93d23c827c417e83fc
+  languageName: node
+  linkType: hard
+
+"chart.js@npm:^4.6.1":
+  version: 4.6.1
+  resolution: "chart.js@npm:4.6.1"
+  dependencies:
+    "@kurkle/color": ^0.3.0
+  checksum: 9374b61ed887661b8bff9ee1bf98d223a2f77f65c43096b2ee7ae7842baa79475ce3375defd4636869624e64350882e32869c228038f7cfaf12b4e7fcb43c6d5
   languageName: node
   linkType: hard
 
@@ -6090,6 +6106,7 @@ __metadata:
     "@vue/cli-plugin-eslint": ^5.0.3
     "@vue/cli-service": ^5.0.3
     axios: ^0.26.1
+    chart.js: ^4.6.1
     css-loader: ^6
     csv-parse: ^5.6.0
     eslint: ^8.23.0

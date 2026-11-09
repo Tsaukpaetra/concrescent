@@ -69,9 +69,9 @@ final class Search
             $badge_type_ids = array_filter(explode(',', $badge_type_ids_delimited ?? ''), function ($v) {
                 return !empty($v);
             });
-            //If none were specified, specify them all
+            //If none were specified, specify them all (including inactive)
             if(empty($badge_type_ids)){
-                $badge_type_ids = $this->badgeinfo->GetValidTypeIdsForContext($context_code);
+                $badge_type_ids = $this->badgeinfo->GetValidTypeIdsForContext($context_code, false);
             }
 
             $badge = $this->badgeFromContext($context_code);
@@ -197,17 +197,232 @@ final class Search
                 }
             }
 
+            // Align hole-filling: each badge type should have periods up to
+            // the max period found across ALL sources for that badge type.
+            // Collect max period per badge type from the merged data.
+            $badgeMaxPeriod = [];
+            $badgeMinPeriod = [];
+            foreach ($statsByPeriod as $key => $row) {
+                $btId = $row['badge_type_id'];
+                $p = $row['period'];
+                if (!isset($badgeMaxPeriod[$btId]) || $p > $badgeMaxPeriod[$btId]) {
+                    $badgeMaxPeriod[$btId] = $p;
+                }
+                if (!isset($badgeMinPeriod[$btId]) || $p < $badgeMinPeriod[$btId]) {
+                    $badgeMinPeriod[$btId] = $p;
+                }
+            }
+
+            // Convert MySQL format to PHP format for DateTime operations
+            $dateFormat = $this->statsgen->getDateFormatFromMySQLFormat($period);
+            $interval = $this->statsgen->getIntervalFromFormat($period);
+
+            // For each badge type, extend periods to the max if sources ended earlier.
+            foreach ($badgeMaxPeriod as $btId => $maxPeriod) {
+                if (!isset($badgeMinPeriod[$btId])) continue;
+
+                $startDate = \DateTime::createFromFormat('!' . $dateFormat, $badgeMinPeriod[$btId]);
+                $endDate = \DateTime::createFromFormat('!' . $dateFormat, $maxPeriod);
+
+                if (!$startDate || !$endDate) continue;
+                if ($endDate < $startDate) continue;
+
+                $existingPeriods = [];
+                foreach ($statsByPeriod as $key => $row) {
+                    if ($row['badge_type_id'] == $btId) {
+                        $existingPeriods[$row['period']] = $key;
+                    }
+                }
+
+                $currentDate = clone $startDate;
+                while ($currentDate <= $endDate) {
+                    $periodKey = $currentDate->format($dateFormat);
+                    if (!isset($existingPeriods[$periodKey])) {
+                        $statsKey = $context_code . '|' . $btId . '|' . $periodKey;
+                        $statsByPeriod[$statsKey] = [
+                            'context_code'       => $context_code,
+                            'badge_type_id'      => $btId,
+                            'period'             => $periodKey,
+                            'paid_count'         => 0,
+                            'paid_total'         => 0,
+                            'printed_count'      => 0,
+                            'printed_total'      => 0,
+                            'checked_in_count'   => 0,
+                            'checked_in_total'   => 0,
+                            'total_count'        => 0,
+                            'total_total'        => 0,
+                        ];
+                    }
+                    $currentDate->add(new \DateInterval($interval));
+                }
+            }
+
             // Flatten into the final results structure
             foreach ($statsByPeriod as $row) {
                 $context_code = $row['context_code'];
                 $badgeTypeId  = $row['badge_type_id'];
-                unset($row['context_code'], $row['badge_type_id']);
+                unset($row['context_code']);
+                // Keep badge_type_id for the cumulative loop below
                 // Append to context → badge type → flat list
                 if (!isset($results[$context_code][$badgeTypeId])) {
                     $results[$context_code][$badgeTypeId] = [];
                 }
                 $results[$context_code][$badgeTypeId][] = $row;
             }
+
+            // Compute pre-range seeds per badge type (once, not per source) so
+            // cumulative totals represent all-time counts from the start of the range.
+            // Initialize seeds for ALL selected badge types first so the injection
+            // and cumulative loop always have a key to look up.
+            $preRangeSeeds = []; // ['badgeTypeId' => ['paid' => N, 'total' => N, 'printed' => N, 'checked_in' => N]]
+            foreach ($badge_type_ids as $btId) {
+                $preRangeSeeds[$btId] = ['paid' => 0, 'total' => 0, 'printed' => 0, 'checked_in' => 0];
+            }
+            if (!empty($rangeStart) && !empty($badge_type_ids)) {
+                $ids = array_map('intval', $badge_type_ids);
+                $rangeDate = date_format($rangeStart, 'Y-m-d H:i:s');
+
+                // Total seed: count ALL records before rangeStart
+                $preCols = [];
+                $preCols[] = new \CM3_Lib\database\SelectColumn('badge_type_id', true, JoinedTableAlias: $joinAlias);
+                $preCols[] = new \CM3_Lib\database\SelectColumn('id', false, 'count(*)', 'cnt');
+                if ($badge->HasColumn('date_created')) {
+                    $preCols[] = new \CM3_Lib\database\SelectColumn('date_created', false);
+                }
+                // Each column that a WHERE clause references must be in SELECT
+                if ($badge->HasColumn('payment_status')) {
+                    $preCols[] = new \CM3_Lib\database\SelectColumn('payment_status', false, JoinedTableAlias: $joinAlias);
+                }
+                if ($badge->HasColumn('time_printed')) {
+                    $preCols[] = new \CM3_Lib\database\SelectColumn('time_printed', false);
+                }
+                if ($badge->HasColumn('time_checked_in')) {
+                    $preCols[] = new \CM3_Lib\database\SelectColumn('time_checked_in', false);
+                }
+                $preWhere = [new SearchTerm('date_created', $rangeDate, '<')];
+                $preView = new \CM3_Lib\database\View($preCols, $join !== null ? [$join] : null);
+                foreach ($badge->Search($preView, $preWhere) as $pr) {
+                    $preRangeSeeds[(string)$pr['badge_type_id']]['total'] = (int)($pr['cnt'] ?? 0);
+                }
+
+                // Paid seed: count paid records (Completed/RefundedInPart) before rangeStart
+                $paidWhere = [
+                    new SearchTerm('date_created', $rangeDate, '<'),
+                    new SearchTerm('payment_status', ['Completed', 'RefundedInPart'], 'in', JoinedTableAlias: $joinAlias),
+                ];
+                $paidView = new \CM3_Lib\database\View($preCols, $join !== null ? [$join] : null);
+                foreach ($badge->Search($paidView, $paidWhere) as $pr) {
+                    $preRangeSeeds[(string)$pr['badge_type_id']]['paid'] = (int)($pr['cnt'] ?? 0);
+                }
+
+                // Printed seed: count records with time_printed IS NOT NULL before rangeStart
+                $printedWhere = [
+                    new SearchTerm('date_created', $rangeDate, '<'),
+                    new SearchTerm('time_printed', null, 'IS NOT'),
+                ];
+                $printedView = new \CM3_Lib\database\View($preCols, $join !== null ? [$join] : null);
+                foreach ($badge->Search($printedView, $printedWhere) as $pr) {
+                    $preRangeSeeds[(string)$pr['badge_type_id']]['printed'] = (int)($pr['cnt'] ?? 0);
+                }
+
+                // Checked-in seed: count records with time_checked_in IS NOT NULL before rangeStart
+                $checkedInWhere = [
+                    new SearchTerm('date_created', $rangeDate, '<'),
+                    new SearchTerm('time_checked_in', null, 'IS NOT'),
+                ];
+                $checkedInView = new \CM3_Lib\database\View($preCols, $join !== null ? [$join] : null);
+                foreach ($badge->Search($checkedInView, $checkedInWhere) as $pr) {
+                    $preRangeSeeds[(string)$pr['badge_type_id']]['checked_in'] = (int)($pr['cnt'] ?? 0);
+                }
+            }
+
+            // Inject pre-seed rows for badge types that have pre-range data
+            // but no in-range data at all. Without this they'd be invisible.
+            $seedPeriod = !empty($badgeMinPeriod) ? min($badgeMinPeriod) : '';
+            if ($seedPeriod !== '') {
+                $seedDate = \DateTime::createFromFormat('!' . $dateFormat, $seedPeriod);
+                if ($seedDate) {
+                    $seedPeriod = $seedDate->format($dateFormat);
+                }
+            }
+            foreach ($preRangeSeeds as $badgeTypeId => $seeds) {
+                $hasData = false;
+                if (isset($results[$context_code][$badgeTypeId])) {
+                    foreach ($results[$context_code][$badgeTypeId] as $r) {
+                        if ($r['total_count'] || $r['paid_count'] || $r['printed_count'] || $r['checked_in_count']) {
+                            $hasData = true;
+                            break;
+                        }
+                    }
+                    // Also check if a row for seedPeriod already exists
+                    // (prevents duplicates when injection period matches in-range data)
+                    $hasSeedPeriod = false;
+                    foreach ($results[$context_code][$badgeTypeId] as $r) {
+                        if (isset($r['period']) && $r['period'] === $seedPeriod) {
+                            $hasSeedPeriod = true;
+                            break;
+                        }
+                    }
+                } else {
+                    $hasSeedPeriod = false;
+                }
+                if (!$hasData && !$hasSeedPeriod && $seeds['total'] > 0) {
+                    if (!isset($results[$context_code][$badgeTypeId])) {
+                        $results[$context_code][$badgeTypeId] = [];
+                    }
+                    $results[$context_code][$badgeTypeId][] = [
+                        'badge_type_id'      => $badgeTypeId,
+                        'period'             => $seedPeriod,
+                        'paid_count'         => 0,
+                        'paid_total'         => 0,
+                        'printed_count'      => 0,
+                        'printed_total'      => 0,
+                        'checked_in_count'   => 0,
+                        'checked_in_total'   => 0,
+                        'total_count'        => 0,
+                        'total_total'        => 0,
+                    ];
+                }
+            }
+
+            // Sort periods and fix cumulative totals.
+            // Seed each running total with its pre-range count so cumulative
+            // represents all-time totals visible from the first period.
+            foreach ($results as $contextCode => &$badgeTypes) {
+                foreach ($badgeTypes as &$rows) {
+                    // Sort periods ascending
+                    usort($rows, function($a, $b) {
+                        return $a['period'] < $b['period'] ? -1 : ($a['period'] > $b['period'] ? 1 : 0);
+                    });
+
+                    // Fix cumulative totals for all four column types
+                    $countFields = [
+                        'paid' => 'paid_count',
+                        'printed' => 'printed_count',
+                        'checked_in' => 'checked_in_count',
+                        'total' => 'total_count',
+                    ];
+                    $totalFields = [
+                        'paid' => 'paid_total',
+                        'printed' => 'printed_total',
+                        'checked_in' => 'checked_in_total',
+                        'total' => 'total_total',
+                    ];
+
+                    $badgeTypeId = $rows[0]['badge_type_id'] ?? '';
+                    $seeds = $preRangeSeeds[$badgeTypeId] ?? ['paid' => 0, 'total' => 0, 'printed' => 0, 'checked_in' => 0];
+
+                    foreach ($countFields as $key => $countField) {
+                        $totalField = $totalFields[$key];
+                        $running = $seeds[$key] ?? 0;
+                        foreach ($rows as &$row) {
+                            $running += $row[$countField];
+                            $row[$totalField] = $running;
+                        }
+                    }
+                }
+            }
+            unset($rows);
         }
 
         // Build the HTTP response

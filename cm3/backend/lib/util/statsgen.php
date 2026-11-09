@@ -88,14 +88,12 @@ final class statsgen
         // has an empty joins array but still carries the SELECT columns.
         $view = new View($columns, $join !== null ? [$join] : null);
 
-        // $badges->debugThrowBeforeSelect = true;
         $rawresults = $badges->Search($view, $where, ['period']);
 
         // If we got nothing back, return empty results (no crash).
         // With no data and no range filter, there's nothing to aggregate.
-        // With a range filter, $nothingInRange below will flag cumulative
-        // seeding, but if the DB returned zero rows the cumulative search
-        // also yields nothing, so we just return the empty structure.
+        // With a range filter, the empty result means no records matched,
+        // so there's nothing to accumulate either.
         if (count($rawresults) === 0) {
             return [];
         }
@@ -116,32 +114,9 @@ final class statsgen
             }
         });
 
-        // --- Handle cumulative seeding when rangeStart is specified ---
-        $cumulationCurrent = array_fill_keys(array_keys($groupings), 0);
-        if (!is_null($rangeStart)) {
-            // Deep-copy the SearchTerms so mutating Operation doesn't affect
-            // subsequent getBadgeStats calls (Search.php passes SearchTerms
-            // by reference and the same objects are reused for each source).
-            $whereCopy = array_map(function ($t) {
-                return is_null($t) ? null : clone $t;
-            }, $where);
-
-            // Modify the first SearchTerm to "<" so we get only records before rangeStart
-            $whereCopy[0]->Operation = '<';
-            // Modify the date column: group by false, wrap in MAX for cumulative count
-            $columns[1]->GroupBy = false;
-            $columns[1]->EncapsulationFunction = 'MAX(' . $columns[1]->EncapsulationFunction . ')';
-
-            // Seed the cumulative counters from records before rangeStart
-            // $badges->debugThrowBeforeSelect = true;
-            $cumView = new View($columns, $join !== null ? [$join] : null);
-            foreach ($badges->Search($cumView, $whereCopy) as $cumulation) {
-                $cumulationCurrent[$this->getGroupingKey($cumulation, $groupColumns)] = $cumulation['count'];
-            }
-        }
-
         // --- Accumulate the results ---
         $results = array_fill_keys(array_keys($groupings), []);
+        $cumulationCurrent = array_fill_keys(array_keys($groupings), 0);
 
         // Determine range start/end for hole-filling
         if (is_null($rangeStart)) {

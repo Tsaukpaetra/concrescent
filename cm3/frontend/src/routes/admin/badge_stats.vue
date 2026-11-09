@@ -24,6 +24,40 @@
                 style="max-width: 240px;"
             />
 
+            <!-- Badge type selector -->
+            <v-select
+                v-model="selectedBadgeTypes"
+                :items="badgeSelectItems"
+                item-text="name"
+                item-value="id"
+                chips
+                chip
+                multiple
+                clearable
+                dense
+                outlined
+                small-chips
+                label="Badge types"
+                placeholder="All badge types"
+                hide-details
+                class="ml-2"
+                style="max-width: 280px;"
+            />
+
+            <!-- Column selector -->
+            <v-select
+                v-model="selectedColumn"
+                :items="columnOptions"
+                item-value="value"
+                item-text="label"
+                dense
+                outlined
+                label="Column"
+                hide-details
+                class="ml-2"
+                style="max-width: 140px;"
+            />
+
             <!-- Period selector -->
             <v-select
                 v-model="period"
@@ -96,6 +130,11 @@
             </v-btn>
         </v-toolbar>
 
+        <!-- Chart showing badge statistics -->
+        <v-card-text class="pa-0" v-if="rawResults && Object.keys(rawResults).length > 0">
+            <badgeChart :key="'chart-' + selectedColumn + '-' + (selectedBadgeTypes || []).join(',')" :chart-data="chartData" :loading="loading" :column="selectedColumn" />
+        </v-card-text>
+
         <v-tree-data-table
             :headers="headers"
             :items="treeData"
@@ -149,10 +188,11 @@
 <script>
 import admin from '../../api/admin';
 import vTreeDataTable from '../../components/v-tree-data-table.vue';
+import badgeChart from '../../components/badgeChart.vue';
 import { mapActions, mapState } from 'vuex';
 
 export default {
-    components: { vTreeDataTable },
+    components: { vTreeDataTable, badgeChart },
     props: ['subTabIx'],
     data: () => ({
         loading: false,
@@ -174,12 +214,24 @@ export default {
         startMenu: false,
         endMenu: false,
 
+        // Badge type selection
+        selectedBadgeTypes: [],
+
         periodOptions: [
+            { label: 'Hourly', value: '%Y-%m-%d %H' },
             { label: 'Daily', value: '%Y-%m-%d' },
             { label: 'Weekly', value: '%Y-%u' },
             { label: 'Monthly', value: '%Y-%m' },
             { label: 'Yearly', value: '%Y' },
         ],
+
+        columnOptions: [
+            { label: 'Paid', value: 'paid_count' },
+            { label: 'Printed', value: 'printed_count' },
+            { label: 'Checked In', value: 'checked_in_count' },
+            { label: 'Total', value: 'total_count' },
+        ],
+        selectedColumn: 'total_count',
     }),
     computed: {
         ...mapState('products', ['badgecontexts', 'badges']),
@@ -187,6 +239,44 @@ export default {
         // Items for the context autocomplete
         contextItems() {
             return this.badgecontexts || [];
+        },
+
+        // Badge type items for the multi-select, grouped by context.
+        // Uses a composite key 'contextCode:badgeTypeId' so badge types
+        // with the same ID in different contexts are not merged.
+        badgeSelectItems() {
+            const map = {};
+            for (const ctx in this.rawResults) {
+                if (!this.rawResults.hasOwnProperty(ctx)) continue;
+                const ctxRaw = this.rawResults[ctx];
+                if (!ctxRaw || typeof ctxRaw !== 'object') continue;
+                const badgeList = (this.badges && this.badges[ctx]) || [];
+                for (const btId in ctxRaw) {
+                    if (!ctxRaw.hasOwnProperty(btId)) continue;
+                    const badge = badgeList.find(b => b.id == btId);
+                    const name = badge ? badge.name : ('Badge ' + btId);
+                    const ctxName = (this.badgeContextMap || {})[ctx] || ctx;
+                    const key = ctx + ':' + btId;
+                    if (!map[key]) {
+                        map[key] = {
+                            id: key,
+                            name: ctxName + ' — ' + name,
+                            contextCode: ctx,
+                            badgeTypeId: btId,
+                        };
+                    }
+                }
+            }
+            return Object.values(map);
+        },
+
+        badgeContextMap() {
+            var map = {};
+            var contexts = this.badgecontexts || [];
+            for (var i = 0; i < contexts.length; i++) {
+                map[contexts[i].context_code] = contexts[i].name || contexts[i].context_code;
+            }
+            return map;
         },
 
         // Build a flat array of tree nodes from nested rawResults.
@@ -261,6 +351,7 @@ export default {
                         ctxPaidT += lastRow.paid_total || 0;
                         ctxPrintedT += lastRow.printed_total || 0;
                         ctxCheckedInT += lastRow.checked_in_total || 0;
+                        ctxTotalT += lastRow.total_total || 0;
                     }
                 }
 
@@ -289,9 +380,15 @@ export default {
 
                     // Build period leaf nodes
                     var badgePeriodLeaves = [];
+                    var seenPeriods = {}; // deduplicate by period string
                     for (var pi = 0; pi < periodRows.length; pi++) {
                         var row = periodRows[pi];
                         if (!row) continue;
+
+                        // Deduplicate: skip duplicate (context, badgeType, period) tuples
+                        var periodKey = contextCode + '|' + badgeTypeId + '|' + row.period;
+                        if (seenPeriods[periodKey]) continue;
+                        seenPeriods[periodKey] = true;
 
                         var paidC = row.paid_count || 0;
                         var printedC = row.printed_count || 0;
@@ -312,6 +409,7 @@ export default {
                             checked_in_count: checkedInC,
                             checked_in_total: row.checked_in_total || 0,
                             total_count: row.total_count || 0,
+                            total_total: row.total_total || 0,
                             leaf: true,
                         });
                     }
@@ -348,8 +446,8 @@ export default {
                         printed_total: lastLeaf.printed_total || 0,
                         checked_in_count: lastLeaf.checked_in_total || 0,
                         checked_in_total: lastLeaf.checked_in_total || 0,
-                        total_count: lastLeaf.total_count || 0,
-                        total_total: lastLeaf.total_count || 0,
+                        total_count: lastLeaf.total_total || 0,
+                        total_total: lastLeaf.total_total || 0,
                         leaf: false,
                     });
 
@@ -362,9 +460,173 @@ export default {
 
             return result;
         },
+
+        /**
+         * Build chart data from rawResults.
+         * Format: one bar (column count) + one line (column cumulative total)
+         * per badge type. X-axis is periods (timeline).
+         */
+        chartData() {
+            // Access these via `this.` so Vue 2 tracks them as reactive
+            // dependencies. Local copies are for use inside closures.
+            var selectedColumn = this.selectedColumn;
+            var selectedBadgeTypes = this.selectedBadgeTypes;
+            var selectedContexts = this.selectedContexts;
+            var results = this.rawResults;
+            if (!results || typeof results !== 'object' || Object.keys(results).length === 0) {
+                return { labels: [], datasets: [] };
+            }
+
+            // Apply context filter if needed
+            if (Array.isArray(selectedContexts) && selectedContexts.length > 0) {
+                var filtered = {};
+                for (var i = 0; i < selectedContexts.length; i++) {
+                    if (results[selectedContexts[i]]) {
+                        filtered[selectedContexts[i]] = results[selectedContexts[i]];
+                    }
+                }
+                results = filtered;
+            }
+            if (!results || typeof results !== 'object' || Object.keys(results).length === 0) {
+                return { labels: [], datasets: [] };
+            }
+
+            var allBadgeTypes = {};
+            var periodSet = {};
+
+            for (var contextCode in results) {
+                if (!results.hasOwnProperty(contextCode)) continue;
+                var ctxRaw = results[contextCode];
+                if (!ctxRaw || typeof ctxRaw !== 'object') continue;
+
+                for (var badgeTypeId in ctxRaw) {
+                    if (!ctxRaw.hasOwnProperty(badgeTypeId)) continue;
+                    var rows = ctxRaw[badgeTypeId];
+                    if (!Array.isArray(rows) || rows.length === 0) continue;
+
+                    var key = contextCode + '|' + badgeTypeId;
+                    allBadgeTypes[key] = {
+                        contextCode: contextCode,
+                        badgeTypeId: badgeTypeId,
+                        name: this.badgeNameFor(contextCode, badgeTypeId),
+                    };
+
+                    for (var ri = 0; ri < rows.length; ri++) {
+                        if (rows[ri] && rows[ri].period) {
+                            periodSet[rows[ri].period] = true;
+                        }
+                    }
+                }
+            }
+
+            var periods = Object.keys(periodSet).sort();
+            if (periods.length === 0 || Object.keys(allBadgeTypes).length === 0) {
+                return { labels: [], datasets: [] };
+            }
+
+            // Filter to selected badge types (empty = all)
+            // selectedBadgeTypes contains composite keys like "A:1"
+            // Build a lookup set for fast matching
+            var selectedSet = {};
+            if (selectedBadgeTypes && selectedBadgeTypes.length > 0) {
+                for (var si = 0; si < selectedBadgeTypes.length; si++) {
+                    selectedSet[selectedBadgeTypes[si]] = true;
+                }
+            }
+            var filteredBtKeys = Object.keys(allBadgeTypes).filter(function(k) {
+                if (Object.keys(selectedSet).length === 0) return true;
+                var compositeKey = allBadgeTypes[k].contextCode + ':' + allBadgeTypes[k].badgeTypeId;
+                return selectedSet[compositeKey];
+            });
+
+            var datasets = [];
+            var colorIdx = 0;
+            var COLORS = ['#3f51b5', '#009688', '#ff9800', '#f44336', '#9c27b0',
+                          '#2196f3', '#4caf50', '#ff5722', '#795548', '#607d8b'];
+            var countSuffix = '_count';
+            var totalSuffix = '_total';
+            var countField = selectedColumn;
+            var totalField = selectedColumn.replace(countSuffix, totalSuffix);
+            var colLabel = this.columnLabel(selectedColumn);
+
+            for (var bi = 0; bi < filteredBtKeys.length; bi++) {
+                var bt = allBadgeTypes[filteredBtKeys[bi]];
+                var ctxRaw = results[bt.contextCode];
+                var rows = ctxRaw[bt.badgeTypeId] || [];
+                var rowsByPeriod = {};
+                for (var ri = 0; ri < rows.length; ri++) {
+                    if (rows[ri] && rows[ri].period) {
+                        rowsByPeriod[rows[ri].period] = rows[ri];
+                    }
+                }
+
+                var color = COLORS[colorIdx % COLORS.length];
+                colorIdx++;
+
+                // Bar data: selected column's period count
+                var barData = periods.map(function(p) {
+                    var row = rowsByPeriod[p];
+                    return (row && row[countField]) || 0;
+                });
+
+                // Line data: running cumulative of the selected column's totals
+                var runningTotal = 0;
+                var lineData = periods.map(function(p) {
+                    var row = rowsByPeriod[p];
+                    if (row && row[totalField]) {
+                        runningTotal = row[totalField];
+                    }
+                    return runningTotal;
+                });
+
+                datasets.push({
+                    label: bt.name + ' (' + colLabel + ')',
+                    type: 'bar',
+                    data: barData,
+                    backgroundColor: color,
+                    yAxisID: 'y',
+                    order: 2,
+                    barPercentage: 0.85,
+                    categoryPercentage: 0.8,
+                    stack: 'count',
+                });
+                datasets.push({
+                    label: bt.name + ' (Running total)',
+                    type: 'line',
+                    data: lineData,
+                    borderColor: color,
+                    pointBackgroundColor: color,
+                    pointRadius: 3,
+                    fill: false,
+                    yAxisID: 'yCumulative',
+                    order: 1,
+                });
+            }
+
+            return { labels: periods, datasets: datasets };
+        },
     },
     methods: {
         ...mapActions('products', ['getBadgeContexts', 'getContextBadges']),
+
+        /**
+         * Format badge name from Vuex badges store.
+         */
+        badgeNameFor(contextCode, badgeTypeId) {
+            var list = (this.badges && this.badges[contextCode]) || [];
+            var badge = list.find(function(b) { return b.id == badgeTypeId; });
+            return badge ? badge.name : ('Badge ' + badgeTypeId);
+        },
+
+        columnLabel(metric) {
+            var labels = {
+                paid_count: 'Paid',
+                printed_count: 'Printed',
+                checked_in_count: 'Checked In',
+                total_count: 'Total',
+            };
+            return labels[metric] || metric;
+        },
 
         formatDate(date) {
             if (!date) return '';
