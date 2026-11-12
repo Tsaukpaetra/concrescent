@@ -1989,7 +1989,7 @@ final class badgeinfo
         $result['event_id'] = $this->CurrentUserInfo->GetEventId();
         if($includeURLs){
             //Only do this if the user is a event admin or this is their own badge
-            if($this->GenerateTokenUrls && ($result['contact_id']??0 == $this->CurrentUserInfo->GetContactId() 
+            if($this->GenerateTokenUrls && ($result['contact_id']??0 == $this->CurrentUserInfo->GetContactId()
             || $this->CurrentUserInfo->HasEventPerm(PermEvent::EventAdmin))){
                 //Add in the retrieve url
                 $result['retrieve_url'] = $this->FrontendUrlTranslator->GetBadgeLoad($result);
@@ -1999,6 +1999,8 @@ final class badgeinfo
                 $result['retrieve_url'] = $this->FrontendUrlTranslator->routedURL('mybadges?obfusctated');
                 $result['cart_url'] = $this->FrontendUrlTranslator->routedURL('cart?id='. $result['payment_id']);
             }
+            //Always generate admin url — won't work without login anyway, redirects through login flow
+            $result['admin_url'] = $this->FrontendUrlTranslator->GetAdminUrl($result);
         }
 
         if ($includeImageData) {

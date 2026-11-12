@@ -66,4 +66,15 @@ class FrontendUrlTranslator
         }
         return $result;
     }
+
+    public function GetAdminUrl(array $badge): string
+    {
+        $contextCode = $badge['context_code'] ?? 'A';
+        $route = match ($contextCode) {
+            'A' => '/Attendee',
+            'S' => '/Staff',
+            default => '/Application/' . $contextCode . '/Submissions', // fallback
+        };
+        return $this->routedURL('Admin' . $route . '?id=' . ($badge['id'] ?? ''));
+    }
 }
