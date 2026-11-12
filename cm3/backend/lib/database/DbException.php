@@ -11,7 +11,7 @@ class DbException extends \RuntimeException
 
     public function getData()
     {
-        return $this->_data;
+        return $this->data;
     }
     public function getSQL()
     {

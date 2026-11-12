@@ -19,7 +19,7 @@ class error_log extends \CM3_Lib\database\Table
             'request_uri'	=> new cm_Column('VARCHAR', 255, false),
             'message'	=> new cm_Column('VARCHAR', 500, false),
             'level'	=> new cm_Column('VARCHAR', 10, false),
-            'channel'	=> new cm_Column('VARCHAR', 40, false),
+            'channel'	=> new cm_Column('VARCHAR', 100, false),
             'data'	=> new cm_Column('TEXT', null, true),
 
         );
