@@ -5,6 +5,7 @@ use CM3_Lib\Factory\ErrorLoggerFactory;
 use CM3_Lib\Factory\PaymentModuleFactory;
 use CM3_Lib\Middleware\DefaultErrorHandler;
 use CM3_Lib\Middleware\AccessLogMiddleware;
+use CM3_Lib\Middleware\WarningCaptureMiddleware;
 use CM3_Lib\util\TokenGenerator;
 use CM3_Lib\util\CurrentUserInfo;
 use CM3_Lib\AppConfig;
@@ -79,15 +80,17 @@ return [
         /* Apply the default timezone here */
         date_default_timezone_set($config['environment']['timezone']);
         
-        //Disable deprecation warnings and other things that could ruin the output stream before Slim does its thing
+        // Always include warnings/notices in the error_reporting mask.
+        // The error handler (WarningCaptureMiddleware) intercepts them so
+        // they never leak into the response stream.  The mask must include
+        // them or PHP never calls the custom handler at all.
+        error_reporting(E_ALL & ~E_STRICT);
+
         if (!$config['error']['display_error_details']) {
-            // Hide deprecations, warnings, and notices from reporting
-            error_reporting(E_ALL & ~E_NOTICE & ~E_WARNING & ~E_DEPRECATED);
-            
-            // Prevent PHP from outputting errors directly into the response stream
+            // Prevent PHP from outputting errors directly into the response
+            // stream.  WarningCaptureMiddleware will log and suppress them.
             ini_set('display_errors', '0');
         } else {
-            error_reporting(E_ALL);
             ini_set('display_errors', '1');
         }
 
@@ -369,6 +372,18 @@ return [
 
     DefaultErrorHandler::class => autowire()
         ->constructorParameter('loggerFactory', get(ErrorLoggerFactory::class)),
+
+    WarningCaptureMiddleware::class => function (ContainerInterface $container) {
+        $s_config_error = $container->get(AppConfig::class)->get('error');
+        $loggerFactory = $container->get(ErrorLoggerFactory::class);
+        $logger = $loggerFactory->createLogger('WarningCapture');
+
+        return new WarningCaptureMiddleware(
+            $logger,
+            $container->get(ResponseFactoryInterface::class),
+            (bool)$s_config_error['display_error_details']
+        );
+    },
 
     ErrorMiddleware::class => function (ContainerInterface $container) {
         $s_config_error = $container->get(AppConfig::class)->get('error');

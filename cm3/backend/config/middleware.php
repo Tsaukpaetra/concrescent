@@ -4,6 +4,7 @@ use Slim\App;
 use Slim\Middleware\ErrorMiddleware;
 use CM3_Lib\Middleware\AccessLogMiddleware;
 use CM3_Lib\Middleware\GZCompress;
+use CM3_Lib\Middleware\WarningCaptureMiddleware;
 
 return function (App $app, $s_config) {
     $environment = $s_config->get('environment');
@@ -70,6 +71,10 @@ return function (App $app, $s_config) {
     ]));
     //Add the authorization-as-query parameter
     $app->add(new CM3_Lib\Middleware\authInGet());
+
+    // Capture PHP warnings/notices before they reach the response stream,
+    // and catch fatal errors / die()/exit() that bypass Slim's exception handling.
+    $app->add(WarningCaptureMiddleware::class);
 
     $app->add(ErrorMiddleware::class);
     $app->add(AccessLogMiddleware::class);
